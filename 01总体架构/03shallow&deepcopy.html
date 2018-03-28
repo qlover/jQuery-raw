@@ -1,0 +1,275 @@
+<meta charset="UTF-8">
+<title>浅拷贝和深拷贝</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../../Lib/jquery-1.10.2.js"></script> -->
+<script type="text/javascript">
+
+
+// jQuery 源码的判断是否是一个对象方法
+// 该方法除了 Object 其它的都是 false
+// 用于判断是否是一个纯粹的对象
+var isPlainObject = function( obj ) {
+	// Must be an Object.
+	// Because of IE, we also have to check the presence of the constructor property.
+	// Make sure that DOM nodes and window objects don't pass through, as well
+	if ( !obj || toString.call(obj) !== "[object Object]" || obj.nodeType || obj.setInterval ) {
+		return false;
+	}
+	
+	// Not own constructor property must be Object
+	if ( obj.constructor
+		&& !hasOwnProperty.call(obj, "constructor")
+		&& !hasOwnProperty.call(obj.constructor.prototype, "isPrototypeOf") ) {
+		return false;
+	}
+	
+	// Own properties are enumerated firstly, so to speed up,
+	// if last one is own, then all properties are own.
+
+	var key;
+	for ( key in obj ) {}
+	
+	return key === undefined || hasOwnProperty.call( obj, key );
+}
+
+//console.log(isPlainObject(1));  //=> false
+//console.log(isPlainObject('2'));  //=> false
+//console.log(isPlainObject([]));  //=> false
+//console.log(isPlainObject(new Object()), "--");  //=> true
+
+// jQuery 的源码 extend
+var extend = function () {
+  var options, name, src, copy, copyIsArray, clone, target = arguments[0] || {},
+    i = 1,
+    length = arguments.length,
+    deep = false;
+
+  // 判断是否为深拷贝
+  if (typeof target === "boolean") {
+    deep = target;
+
+    // 参数后移
+    target = arguments[i] || {};
+    i++;
+  }
+
+  // 处理 target 是字符串或奇怪的情况，isFunction(target) 可以判断 target 是否为函数
+  if (typeof target !== "object" && !jQuery.isFunction(target)) {
+    target = {};
+  }
+
+  // 判断是否 jQuery 的扩展
+  if (i === length) {
+    target = this; // this 做一个标记，可以指向 jQuery，也可以指向 jQuery.fn
+    i--;
+  }
+
+  for (; i < length; i++) {
+
+    // null/undefined 判断
+    if ((options = arguments[i]) != null) {
+
+      // 这里已经统一了，无论前面函数的参数怎样，现在的任务就是 target 是目标对象，options 是被拷贝对象
+      for (name in options) {
+        src = target[name];
+        copy = options[name];
+
+        // 防止死循环，跳过自身情况
+        if (target === copy) {
+          continue;
+        }
+
+        // 深拷贝，且被拷贝对象是 object 或 array
+        // 这是深拷贝的重点
+        if (deep && copy && (isPlainObject(copy) || (copyIsArray = Array.isArray(copy)))) {
+          // 说明被拷贝对象是数组
+          if (copyIsArray) {
+            copyIsArray = false;
+            clone = src && Array.isArray(src) ? src : [];
+          // 被拷贝对象是 object
+          } else {
+            clone = src && isPlainObject(src) ? src : {};
+          }
+
+          // 递归拷贝子属性
+          target[name] = extend(deep, clone, copy);
+
+          // 常规变量，直接 =
+        } else if (copy !== undefined) {
+            target[name] = copy;
+        }
+      }
+    }
+  }
+
+  // Return the modified object
+  return target;
+}
+
+// 该 extend 最后深拷贝来的对象是一个 window 的属性
+
+
+
+
+
+
+// 再说 extends 之前先说浅拷贝和深拷贝
+// 浅拷贝和深拷贝针对与复杂的 Object 和 Array
+// 简单来说
+// 		浅拷贝就是只把该对象中的第一层所有属性复制一份，如果属性是对象，也只复制引用
+// 		深拷贝就是把该对象中的每一层所的属性复制一份，如果属性也是对象，则把该对象引用得指向都复制一份
+
+
+
+// 浅拷贝
+function shallowCopy(target, obj){
+	for (var prop in obj) {
+		if( obj.hasOwnProperty(prop) ){
+			target[prop] = obj[prop];
+		}
+	}
+	return target;
+}
+
+var obj = {
+	'name' : 'qlover',
+	'arr': ['A','B']
+};
+
+var obj2 = shallowCopy({}, obj);
+
+console.log(obj['arr'] == obj2['arr']); //=> true
+// 浅拷贝没有把属性值是对象的属性拷贝了
+// 可以用 ES6 提供的方法 Object.assign() 进行浅拷贝
+
+obj1 = {
+	'name':'qlover',
+	'arr':[1,2]
+};
+obj2 = obj1;
+
+obj2['name'] = 'honey';
+console.log(obj1);  //=> {name: "honey", arr: Array(2)}
+console.log(obj2);  //=> {name: "honey", arr: Array(2)}
+// 这个就是没有深拷贝执行的结果
+
+
+
+
+
+
+console.log('----深拷贝');
+
+
+// 深拷贝---递归拷贝
+function deepCopy(target, options) {
+	var prop,
+		copy,  // 存放复制属性，就是源对象来的属性
+		clone, // 存放复制属性对应的对象
+		copyIsArray; // 考虑到是深拷贝是 Object 和 Array
+
+	for ( prop in options) {
+		copy = options[prop];
+
+		// 避免相互引用导致死循环
+		if ( copy == target) {
+			continue;
+		}
+
+		// 先保证复制属性有效
+		if( copy && isPlainObject(copy) || (copyIsArray = Array.isArray(copy)) ){
+			if ( copyIsArray ) {
+				copyIsArray = false;
+				clone = [];
+			} else {
+				clone = {};
+			}
+			target[prop] = deepCopy(clone, copy);
+		} else {
+			target[prop] = copy;
+		}
+	}
+
+	return target;
+}
+
+
+
+// 因为深拷贝是在当属性是 Object 或者是 Array 时才会存在的问题
+// 所以需要判断对象中的属性是否是这个两个
+
+
+var obj = {
+	'a': [1,2,3],
+	'b': {
+		'c' : ['4', 5],
+		'd' :{
+			'e' : [6,7]
+		}
+	}
+}
+var obj2 = {};
+deepCopy(obj2, obj);
+
+console.log('------');
+console.log(obj);
+console.log(obj2);
+console.log(obj['a'] === obj2['a']);
+
+
+
+
+
+
+// 深拷贝对象还有其它解决方法，在对象中不含有函数的时候，使用JSON解析反解析就可以得到一个深拷贝对象
+
+// JSON 实现深拷贝
+{
+	console.log('--json--');
+
+	let obj = {
+		'a': [1,2,3],
+		'b': {
+			'c' : ['4', 5],
+			'd' :{
+				'e' : [6,7]
+			}
+		}
+	}
+
+	let obj2 = JSON.parse(JSON.stringify(obj));
+	console.log(obj2);
+	console.log(obj === obj2);
+
+
+// 这个方法简单易用
+// 但是也有不少坏处
+// 	1. 会抛弃对象的 constructor 不管这个对象原来的构造函数是什么，在深拷贝之后都会变成Object
+//  2. 也只能处理 Number, String, Boolean, Array, 扁平对象
+//  只有可以转成JSON格式的对象才可以这样用，像function没办法转成JSON
+}
+
+
+
+// Object.create() 方法
+// 还有 loadsh 这个库的 _.cloneDeep() 
+</script>
+
+<script type="text/javascript" src="../loadsh-4.17.5.js"></script>
+<script>
+console.log('--loadsh--')
+var obj = {
+	'a': [1,2,3],
+	'b': {
+		'c' : ['4', 5],
+		'd' :{
+			'e' : [6,7]
+		}
+	}
+}
+var obj2 = _.cloneDeep(obj1);
+console.log(obj1 === obj2);
+
+
+
+</script>

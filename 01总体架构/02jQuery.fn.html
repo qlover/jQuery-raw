@@ -1,0 +1,89 @@
+<meta charset="UTF-8">
+<title>jQuery.fn</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../../Lib/jquery-1.10.2.js"></script> -->
+<script type="text/javascript">
+
+// jQuery 构造器
+var jQuery = function _jQuery(){  // _jQuery 只是 jQuery() 构造器的名字
+	console.log('get jQuery');
+	return new jQuery.prototype.init();
+};
+
+// jQuery 原型
+jQuery.fn = jQuery.prototype = {
+	constructor: jQuery,  // 原型的构造器是 jQuery() 构造器
+	init: function(){
+		this.jquery = '1.0';
+		return this;  // 注意，该地方返回的 this 是当前 init 的引用
+	},
+	jquery: '2.0',
+	each : function(){
+		console.log('each');
+		return this;
+	},
+};
+
+// 直接修改原型
+/*
+// 将 init 的原型指向 jQuery 原型
+jQuery.prototype.init.prototype = jQuery.prototype;
+
+console.log(jQuery.prototype.init.prototype);
+console.log(jQuery.prototype);
+
+// 这只是 fn 的引用
+console.log(jQuery.fn); // 也不难看出 fn 就是 prototype 
+// 而 fn 的原型则是
+console.log(jQuery.fn.prototype); //=> undefined
+*/
+
+// fn 就是 prototype，所以 jQuery 的 fn 和 prototype 属性指向 fn 对象
+// 而 init 函数本身就是 jQuery.prototype 中的方法，且 init 函数的 prototype 原型指向 fn
+// fn 仅仅是充当一个对原型的引用
+// 所以
+
+
+// 修改 fn 对原型的引用
+jQuery.fn.init.prototype = jQuery.fn;  // 与上面的效果相同
+
+console.log(jQuery.fn.init);
+console.log(jQuery.fn.init.prototype);
+
+
+// 链式调用
+jQuery() //=> get jQuery
+.each()  //=> each
+.each(); //=> each
+
+
+var class2type = {
+    "[object Boolean]": "boolean",
+    "[object Number]": "number",
+    "[object String]": "string",
+    "[object Function]": "function",
+    "[object Array]": "array",
+    "[object Date]": "date",
+    "[object RegExp]": "regexp",
+    "[object Object]": "object",
+    "[object Error]": "error",
+    "[object Symbol]": "symbol"
+}
+var toString = Object.prototype.toString;
+
+jQuery.type = function (obj) {
+    if (obj == null) {
+        return obj + "";
+    }
+    return 
+      typeof obj === "object" || typeof obj === "function" ? 
+        class2type[toString.call(obj)] || "object" : 
+        typeof obj;
+}
+
+console.log(jQuery.type(1233123123));
+
+
+
+
+</script>

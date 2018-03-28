@@ -1,0 +1,56 @@
+<meta charset="UTF-8">
+<title>jQuery.extend</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<script src="../../Lib/jquery-1.10.2.js"></script>
+
+<script type="text/javascript">
+// 
+// 先看两个东西
+console.log($);
+console.log($());
+console.log(jQuery);
+console.log(jQuery());
+
+
+// 能看到 $ 和 jQuery 是指向一个引用也就是说是相同的,也就是类本身
+// 因为 window.jQuery = window.$ = jQuery; 对外的公共接口
+
+// 而 jQuery() 返回的是一个 init() 而，init() 返回的是一个对象
+// 构造器就是类， new 出来就是对象
+// 对象， 		类， 	原型
+// 对象方法，静态方法，原型方法
+
+
+
+
+// 看以下两个方法的区别
+// jQuery.extend()
+jQuery.extend({
+	'hello': function(){
+		console.log('hello jQuery.extend');
+	},
+});
+// 为类的本身添加方法，也就是静态方法
+
+// jQuery.fn.extend()
+jQuery.fn.extend({
+	'hello': function(){
+		console.log('hello jQuery.fn.extend');
+	},
+});
+// 为每一个对象添加，也就是实例方法
+
+
+// $ 也和 jQuery.fn 一样，都是为了简洁，而代替 
+$.hello();  	// hello jQuery.extend
+$().hello(); 	// hello jQuery.fn.extend
+
+
+// 这是因为在 jQuery 中
+// 它让对象和原型都具有了扩展的能力
+// 	jQuery.extend = jQuery.fn.extend = function() {};
+
+
+// 由此看来设计真的是巧妙
+
+</script>
