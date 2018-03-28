@@ -1,0 +1,239 @@
+<meta charset="UTF-8">
+<title>jQuery.extend</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<!-- <script src="../minjquery.js"></script> -->
+
+<ul id="ullist">
+	<li class="class1">111</li>
+	<li class="class2">222</li>
+	<li class="class3">333</li>
+</ul>
+
+
+<script type="text/javascript">
+/* 之前的 js 在 minjquyer.js 中*/
+
+
+// 还是以 3.1.1 为例
+// jQuery.fn.init() 该方法在 jQuery 的原型中
+// 是入口函数
+
+/*
+ *
+ * init = jQuery.fn.init = function( selector, context, root ){}
+ * 
+ * jQuery()，空参数，这个会直接返回一个空的 jQuery 对象，return this
+ * 
+ * jQuery( selector [, context ] )，这是一个标准且常用法
+ * 	selector 表示一个 css 选择器，这个选择器通常是一个字符串，#id 或者 .class 等
+ * 	context 表示选择范围，即限定作用，可为 DOM，jQuery 对象。
+ * 
+ * jQuery( element|elements )，用于将一个 DOM 对象或 DOM 数组封装成 jQuery 对象。
+ * 
+ * jQuery( jQuery object|object )，会把普通的对象或 jQuery 对象包装在 jQuery 对象中。
+ * 
+ * jQuery( html [, ownerDocument ] )，这个方法用于将 html 字符串先转成 DOM 对象后在生成 jQuery 对象。
+ * 
+ * jQuery( html, attributes )，和上一个方法一样，不过会将 attributes 中的方法和属性绑定到生成的 html DOM 中，比如 class 等。
+ * 
+ * jQuery( callback )，此方法接受一个回掉函数，相当于 window.onload 方法，只是相对于。
+ *
+ * 
+ */
+
+var jQuery = function(){}
+
+// 先看一个演示,这个两个方法是只模拟一下 jQuery 在内部的做法
+var init = function(selector, context, rootjQuery) {
+	// 简单点，假设此时 selector 用 querySelectorAll
+	var ele = document.querySelectorAll(selector);
+	// 把 this 当作数组，每一项都是 DOM 对象
+	for(var i = 0; i < ele.length; i++){
+		this[i] = ele[i];
+	}
+	this.length = ele.length;
+	return this;				
+};
+// 当前 this 数组里若只有一个对象，则取其第一个 DOM 对象
+// 若 css 有两个参数，则对每一个 DOM 对象都设置 css
+var css = function(attr, val){
+	for(var i = 0; i < this.length; i++){
+		// 如果只有一个参数，则返回该对象的值
+		if(val == undefined){
+			if(typeof attr === 'object'){
+				for(var key in attr){
+					this.css(key, attr[key]);
+				}
+			}else if(typeof attr === 'string'){
+				// 返回计算后的值
+				return getComputedStyle(this[i])[attr];
+			}
+		}
+		// 如果有两个参数，则设置值
+		else{
+			this[i].style[attr] = val;
+		}
+	}
+};
+
+
+
+// jQuery 源码，识别 html 字符串的正则表达式
+var rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]+))$/;
+console.log(rquickExpr.exec('<div>'));
+console.log(rquickExpr.exec('<div></div>'));
+console.log(rquickExpr.exec('#top'));
+console.log(rquickExpr.exec('.one'));
+
+// jQuery 源码 ，对 html 字符串进行验证
+var rsingleTag = ( /^<([a-z][^\/\0>:\x20\t\r\n\f]*)[\x20\t\r\n\f]*\/?>(?:<\/\1>|)$/i );
+
+
+
+// exec()
+// 该方法是 JS 内置的方法，用于返回匹配项的数组
+// 数组第一个是匹配的到的值
+// 		第二个是匹配到的开始索引值
+// 		第三个是匹配的字符串
+// 否则返回 null
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+//=======================================================
+// jQuery 源码 片段 
+var init =  function( selector, context, root ) {
+	var match, elem;
+
+	// HANDLE: $(""), $(null), $(undefined), $(false)
+	if ( !selector ) {
+		return this;
+	}
+
+	// 表示 document 
+	// 默认 rootjQuery ,而 rootjQuery = jQuery(document)
+	root = root || rootjQuery;
+
+	/**
+	 * 判断也只有三种情况
+	 * 1. 是字符串
+	 * 2. 是一个 DOM 对象
+	 * 3. 是一个函数
+	 */
+	
+	// 判断选择器是不是一个字符串
+	// 包括 $("<div>")、$("#id")、$(".class")
+	if( typeof selector === "string" ){
+		// 强行判断以 <> 开头和 </> 结尾的字符串 
+		if (selector[0] === "<" && selector[selector.length - 1] === ">" && selector.length >= 3) {
+		    // 这个其实是强行构造了匹配 html 的情况的数组
+		    match = [null, selector, null];
+
+		} else {
+		    match = rquickExpr.exec(selector);
+		}
+
+		// 匹配 html 或确保没有指定 id 的
+		// macth[1] 限定了 html，!context 对 #id 处理
+		if (match && (match[1] || !context)) {
+
+		    // HANDLE: $(html) -> $(array)
+		    if (match[1]) {
+		        //排除 context 是 jQuery 对象情况
+		        context = context instanceof jQuery ? context[0] : context;
+
+		        // jQuery.merge 是专门针对 jQuery 合并数组的方法
+		        // jQuery.parseHTML 是针对 html 字符串转换成 DOM 对象
+		        // ownerDocument 返回元素的根元素
+		        jQuery.merge(this, jQuery.parseHTML(
+		        match[1], context && context.nodeType ? context.ownerDocument || context : document, true));
+
+		        // HANDLE: $(html, props)
+		        if (rsingleTag.test(match[1]) && jQuery.isPlainObject(context)) {
+		            for (match in context) {
+
+		                // 此时的 match 非彼时的 match
+		                if (jQuery.isFunction(this[match])) {
+		                    this[match](context[match]);
+
+		                    // ...and otherwise set as attributes
+		                } else {
+		                    this.attr(match, context[match]);
+		                }
+		            }
+		        }
+
+		        return this;
+
+		    // $(#id)
+		    } else {
+		        elem = document.getElementById(match[2]);
+
+			    if (elem) {
+
+			        // this[0] 返回一个标准的 jQuery 对象
+			        this[0] = elem;
+			        this.length = 1;
+			    }
+			    return this;
+			}
+		// 处理一般的情况，find 实际上是 Sizzle，jQuery 已经将其包括进来，下章详细介绍
+		// jQuery.find() 为 jQuery 的选择器，性能良好
+		} else if (!context || context.jquery) {
+		    return (context || root).find(selector);
+		// 处理 !context 情况
+		} else {
+		    // 这里 constructor 其实是 指向 jQuery 的
+		    return this.constructor(context).find(selector);
+		}
+	} else if ( selector.nodeType ) {
+			this[ 0 ] = selector;
+			this.length = 1;
+			return this;
+
+	// HANDLE: $(function)
+	// 文档准备快捷方式
+	} else if ( jQuery.isFunction( selector ) ) {
+		return root.ready !== undefined ?
+			root.ready( selector ) :
+
+			// 准备就绪时立即执行
+			selector( jQuery );
+	}
+
+	return jQuery.makeArray( selector, this );
+};
+//=======================================================
+
+// 那么接下来就从简单的看起走
+</script>
+
+

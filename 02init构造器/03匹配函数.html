@@ -1,0 +1,82 @@
+<meta charset="UTF-8">
+<title>jQuery.extend</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<!-- <script src="../minjquery.js"></script> -->
+<script>
+(function(window) {
+	var jQuery = (function() {
+
+		var class2type = {};
+
+		var toString = class2type.toString;
+
+		var hasOwn = class2type.hasOwnProperty;
+
+		// 切记写了构造器就紧接着写原型！！！
+		var jQuery = function(selector, context) {
+			return new jQuery.fn.init(selector, context, rootjQuery);
+		};
+		jQuery.fn = jQuery.prototype = {
+			constructor: jQuery,
+			init: function(selector, context, root) {
+				var match, elem;
+
+				// $(""), $(null), $(undefined), $(false)
+				if ( !selector ) {
+					return this;
+				}
+				// 表示 document 
+				// 默认 rootjQuery ,而 rootjQuery = jQuery(document)
+				root = root || rootjQuery;
+				// rootjQuery 对根的引用
+				if ( selector.nodeType ) {
+					this[ 0 ] = selector;
+					this.length = 1;
+					return this;
+				}else if ( jQuery.isFunction( selector ) ) {
+					// root 是 documnet 的引用
+					return root.ready !== undefined ?
+						root.ready( selector ) :
+
+						// 准备就绪，立刻执行
+						selector( jQuery );
+				}
+
+
+			}
+		};
+		
+		// 取得对文档的中心引用
+		var rootjQuery = jQuery( document );
+
+
+		jQuery.fn.init.prototype = jQuery.fn;
+		jQuery.extend = jQuery.fn.extend = function() {};
+		jQuery.extend({
+				isFunction: function( obj ) {
+					return jQuery.type( obj ) === "function";
+				},
+				type: function( obj ) {
+					if ( obj == null ) {
+						return obj + "";
+					}
+					return typeof obj === "object" || typeof obj === "function" ?
+						class2type[ toString.call( obj ) ] || "object" :
+						typeof obj;
+				},
+		});
+		return jQuery;
+	})();
+	window.jQuery = window.$ = jQuery;
+})(window);
+</script>
+<script>
+	
+$(function(){
+
+});
+// 大致，如此，但是 jQuery 操作有专门操作事件，所以这里不说
+alert("操作事件，没有完成！");
+
+</script>

@@ -1,0 +1,66 @@
+<meta charset="UTF-8">
+<title>jQuery.extend</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<!-- <script src="../minjquery.js"></script> -->
+
+<ul id="ullist">
+	<li class="class1">111</li>
+	<li class="class2">222</li>
+	<li class="class3">333</li>
+</ul>
+
+
+<script>
+(function(window) {
+	var jQuery = (function() {
+		// 切记写了构造器就紧接着写原型！！！
+		var jQuery = function(selector, context) {
+			return new jQuery.fn.init(selector, context, rootjQuery);
+		};
+		jQuery.fn = jQuery.prototype = {
+			constructor: jQuery,
+			init: function(selector, context, root) {
+				var match, elem;
+
+				// $(""), $(null), $(undefined), $(false)
+				if ( !selector ) {
+					return this;
+				}
+				// 表示 document 
+				// 默认 rootjQuery ,而 rootjQuery = jQuery(document)
+				root = root || rootjQuery;
+				// rootjQuery 对根的引用
+				if ( selector.nodeType ) {
+					this[ 0 ] = selector;
+					this.length = 1;
+					return this;
+				}
+
+
+			}
+		};
+		
+		// 取得对文档的中心引用
+		var rootjQuery = jQuery( document );
+
+
+		jQuery.fn.init.prototype = jQuery.fn;
+		jQuery.extend = jQuery.fn.extend = function() {};
+		jQuery.extend({});
+		return jQuery;
+	})();
+	window.jQuery = window.$ = jQuery;
+})(window);
+	
+	
+
+console.log($() == $("")); // false
+console.log($(false));
+
+// 返回 DOM 元素
+console.log($(document.getElementById('ullist')));
+// 这也是将 DOM 包装成 jQuery 的方法
+
+
+</script>
