@@ -1,0 +1,64 @@
+<script src="jquery-3.1.1.js"></script>
+
+<div id="top"><p>hello</p> <p>jquery</p></div>
+<p></p>
+<script>
+// console.log($("#top"));
+
+// console.log($(document.getElementById('top')));
+
+
+// console.log($('p', $('#top')));
+
+
+// console.log($('p', document.getElementById('top')))
+
+
+// console.log($('#top').find('p'));
+
+function createCache() {
+
+	var keys = [];
+
+	function cache(key, value) {
+		if (keys.push(key + " ") > 50) {
+			delete cache[keys.shift()];
+		}
+		console.log('keys =>', keys)
+		return (cache[key + " "] = value);
+	}
+	return cache;
+}
+
+var tokenCache = createCache();
+
+console.log(tokenCache('#top li.li1, #mid', [1,1,1]));
+
+
+console.log(tokenCache('#top2 li.li1, #mid2', [1,1,1]));
+
+console.log(tokenCache)
+</script>
+
+<script>
+var whitespace = "[\\x20\\t\\r\\n\\f]";
+var runescape = new RegExp("\\\\([\\da-f]{1,6}" + whitespace + "?|(" + whitespace + ")|.)", "ig");
+var funescape = function(_, escaped, escapedWhitespace) {
+	var high = "0x" + escaped - 0x10000;
+	// NaN means non-codepoint
+	// Support: Firefox<24
+	// Workaround erroneous numeric interpretation of +"0x"
+	return high !== high || escapedWhitespace ?
+		escaped :
+		high < 0 ?
+		// BMP codepoint
+		String.fromCharCode(high + 0x10000) :
+		// Supplemental Plane codepoint (surrogate pair)
+		String.fromCharCode(high >> 10 | 0xD800, high & 0x3FF | 0xDC00);
+},
+rtrim = new RegExp("^" + whitespace + "+|((?:^|[^\\\\])(?:\\\\.)*)" + whitespace + "+$", "g");
+
+
+
+
+</script>

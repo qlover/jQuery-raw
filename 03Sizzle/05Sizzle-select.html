@@ -1,0 +1,201 @@
+<meta charset="UTF-8">
+<title>sizzle-select</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script src="../sizzle.js"></script>
+
+<div id="div1">
+    <ul id="top">
+        <li class="li1">hello</li>
+        <li class="li1">js</li>
+        <li class="li2">jquery</li>
+    </ul>
+</div>
+<p>--分界线--</p>
+<div id="div2">
+    <ul id="mid">
+        <li class="li2">php</li>
+        <li class="li2">java</li>
+        <li class="li1">python</li>
+    </ul>
+    <p>---分界线---</p>
+</div>
+
+<div id="text">
+  <p>
+     <input type="text" />
+  </p>
+  <div class="aaron">
+     <input type="checkbox" name="readme" value="Submit" />
+     <p>Sizzle</p>
+  </div>
+</div>
+
+<script>
+console.info($.tokenize('div > div.seq h2 ~ p'))
+
+
+// Sizzle 会将选择器从右向左的查找
+// 也就是上面的会先找到 TAG 类型的 token 对象
+// 而对于~+ 这样的符号，可以用 Expr.relative 对象来判断
+
+
+// 先将 Expr.find 初始化为了一个空对象
+// 开先说了一个方法很重要,它是打开  Sizzle 的开端,也就是 setDocument()
+// 该方法会在 Sizzle 初始化时第一个被调用
+// 在这个方法中就兼容了 Expr.find 中的许多的对象
+
+
+// 其实 Expr.find 对象可以简化一下如
+/*
+Expr.find = {
+  "ID": document.getElementById,
+  "CLASS": document.getElementsByClassName,
+  "TAG": document.getElementsByTagName
+}
+
+ */
+
+
+
+// 同样的在看源码之前,先看几个正则
+
+var runescape = /\\([\da-f]{1,6}[\x20\t\r\n\f]?|([\x20\t\r\n\f])|.)/gi
+// 用来对转义字符特殊处理，带个反斜杠的 token
+console.log(runescape.exec('\\ab')) ; //["\ab", "ab", undefined]
+console.log(runescape.exec('')) ; //["\ab", "ab", undefined]
+var rsibling = /[+~]/; //匹配 +、~
+
+
+// 这个正则也很重要,在 matchExpr 对象中的一个 ['needsContext']
+// 它是用来匹配不完整的 token 
+var matchExprNeedsContext = /^[\x20\t\r\n\f]*[>+~]|:(even|odd|eq|gt|lt|nth|first|last)(?:\([\x20\t\r\n\f]*((?:-\d)?\d*)[\x20\t\r\n\f]*\)|)(?=[^-]|$)/i
+
+console.log(matchExprNeedsContext.test('+ p')) //=> true
+console.log(matchExprNeedsContext.test(':first-child p')) //=> true
+
+// 该正则往往都是配合 repalce() 来使用  
+// @serchvalue  字符串或要替换的模式的 RegExp 对象
+// @newvalue    一个字符串值。规定了替换文本或生成替换文本的函数
+// String.replace(searchvalue,newvalue) 
+// !!! 该方法不会改变原始字符串
+
+
+
+// Sizzle 中的用 replace() 替换时用的第二个参数是一个函数
+// 而这个函数就是下面这个函数
+//  该方法目前不明白逻辑是怎么的,但只知道用它来替换
+var funescape = function(_, escaped, escapedWhitespace) {
+    var high = "0x" + escaped - 0x10000;
+    // NaN means non-codepoint
+    // Support: Firefox<24
+    // Workaround erroneous numeric interpretation of +"0x"
+    return high !== high || escapedWhitespace ?
+        escaped :
+        high < 0 ?
+        // BMP codepoint
+        String.fromCharCode(high + 0x10000) :
+        // Supplemental Plane codepoint (surrogate pair)
+        String.fromCharCode(high >> 10 | 0xD800, high & 0x3FF | 0xDC00);
+};
+
+var str = '\nab';
+str = str.replace(runescape, funescape);
+console.log(str);
+
+
+</script>
+
+<script>
+
+// 首先模拟一次 select() 调用的情况 
+console.log($.select('#top li.li1  ~   li', document, []));
+
+
+// slice()
+// 可从已有的数组中返回选定的元素。
+// 可提取字符串的某个部分，并以新的字符串返回被提取的部分。
+
+
+
+// select 源码
+// 该方法只被在 Sizzle 的构造器中被调用 ,作为构造器的返回值
+var select = Sizzle.select = function(selector, context, results, seed) {
+    var i, tokens, token, type, find, compiled = typeof selector === "function" && selector,
+        match = !seed && tokenize((selector = compiled.selector || selector));
+
+    results = results || [];
+
+    // 长度为 1，即表示没有逗号，Sizzle 尝试对此情况优化
+    if (match.length === 1) {
+        // 在 match 匹配组中从第 0 个元素将后面的所有元素取得
+        tokens = match[0] = match[0].slice(0);
+        // 第一个 TAG 为一个 ID 选择器，设置快速查找
+        if (tokens.length > 2 && (token = tokens[0]).type === "ID" && context.nodeType === 9 && documentIsHTML && Expr.relative[tokens[1].type]) {
+            //将新 context 设置成那个 ID
+            context = (Expr.find["ID"](token.matches[0].replace(runescape, funescape), context) || [])[0];
+            if (!context) {
+                // 第一个 ID 都找不到就直接返回
+                return results;
+
+                // 此时 selector 为 function，应该有特殊用途
+            } else if (compiled) {
+                context = context.parentNode;
+            }
+
+            selector = selector.slice(tokens.shift().value.length);
+        }
+
+        // 在没有 CHILD 的情况，从右向左，仍然是对性能的优化
+        i = matchExpr["needsContext"].test(selector) ? 0 : tokens.length;
+        while (i--) {
+            token = tokens[i];
+
+            // 碰到 +~ 等符号先停止
+            if (Expr.relative[(type = token.type)]) {
+                break;
+            }
+            if ((find = Expr.find[type])) {
+                // Search, expanding context for leading sibling combinators
+                if ((seed = find(
+                        token.matches[0].replace(runescape, funescape), rsibling.test(tokens[0].type) && testContext(context.parentNode) || context))) {
+                    // testContext 是判断 getElementsByTagName 是否存在
+                    // If seed is empty or no tokens remain, we can return early
+                    tokens.splice(i, 1);
+                    selector = seed.length && toSelector(tokens);
+                    //selector 为空，表示到头，直接返回
+                    if (!selector) {
+                        push.apply(results, seed);
+                        return results;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+
+    // 下面是一个正则的 compile() 的用法，就是编译或者重新编译正则的方法 compile()
+    // 反正目前看不懂
+    // Compile and execute a filtering function if one is not provided
+    // Provide `match` to avoid retokenization if we modified the selector above
+    (compiled || compile(selector, match))(
+        seed, context, !documentIsHTML, results, !context || rsibling.test(selector) && testContext(context.parentNode) || context);
+    return results;
+}
+// 而此时
+// selector 可能已经不上最初那个，经过各种去头去尾；
+// match 没变，仍是 tokensize 的结果；
+// seed 事种子集合，所有等待匹配 DOM 的集合；
+// context 可能已经是头（#ID）；
+// results 没变。
+
+
+
+// 总结下
+// 将 tokenize 处理 selector 的结果赋给 match，所以 match 实为 tokens 数组；
+// 在长度为 1，且第一个 token 为 ID 的情况下，对 context 进行优化，把 ID 匹配到的元素赋给 context；
+// 若不含 needsContext 正则，则生成一个 seed 集合，为所有的最右 DOM 集合；
+// 最后事 compile 函数，参数真多...
+
+</script>

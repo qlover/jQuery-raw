@@ -1,0 +1,96 @@
+<meta charset="UTF-8">
+<title>jQuery.callbcks()</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-2.0.3.js"></script> -->
+<script src="../jquery-3.1.1.js"></script>
+
+
+<script>
+
+// 两个作为 callback 函数
+function f1 (arg) {
+	console.log(arg);
+}
+function f2 (arg) {
+	console.log( arg);
+	// 当返回 false 时停止
+	return false;
+}
+
+// 调用 jQuery 的 callback 生成 callbacks 
+var callbacks = $.Callbacks();
+// 添加一个方法到回调
+callbacks.add(f1);
+// 执行添加的方法
+callbacks.fire('foo!');
+callbacks.add(f2);
+callbacks.fire('bar!');
+
+
+
+// $.Callbacks() 还支持几个参数，表示执行回调的几种效果，$.Callbacks('once')：
+
+// once: 确保这个回调列表只执行（ .fire() ）一次(像一个递延 Deferred)
+// memory: 保持以前的值，将添加到这个列表的后面的最新的值立即执行调用任何回调 (像一个递延 Deferred)
+// unique: 确保一次只能添加一个回调(所以在列表中没有重复的回调)
+// stopOnFalse: 当一个回调返回false 时中断调用
+// 也可以多个参数同时写
+
+</script>
+
+
+
+<script>
+
+// 先模拟一次自己的 回调处理
+var Callbacks = function(){
+	var cb = {
+		// 需要回调的列表
+		callbacks : [],
+		// 向回调列表添加
+		add : function(fn){
+			this.callbacks.push(fn);
+		},
+		// 执行回调列表中的方法
+		fire : function(value){
+			this.callbacks.forEach(function(fn){
+				fn(value);
+			});
+			return this;
+		}
+	}
+	// 将 cb 这个内部的回调对象返回
+	return cb;
+};
+
+var cbs = Callbacks();
+cbs.add(function(val){
+	console.log(val);
+});
+cbs.fire('hello callback');
+cbs.fire('hello callback2');
+
+// 其实实现还是简单，接下来看源码 
+</script>
+
+
+
+
+<script>
+console.log('\n');
+$.Callbacks().add(function _run(qlover){
+	console.log(qlover);
+}).fire('hello qlover');
+
+// 其实 jQuery.Callbacks() 源码结构很简单
+// 1. 处理 options 
+// 2. 参数的定义
+// 3. fire 的遍历回调的执行
+// 4. self 对象，最终返回的就是该对象
+
+// jQuery 源码  Callbacks()
+// 见源码分析
+
+
+
+</script>

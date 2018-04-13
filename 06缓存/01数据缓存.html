@@ -1,0 +1,95 @@
+<meta charset="UTF-8">
+<title>jQuery.data()</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-2.0.3.js"></script> -->
+
+
+<div id="top" data-id="#top">TOP</div>
+<div id="mid" data-id="null">MID</div>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+	
+// jQurey 缓存机制
+//  jQuery 中提高的数据缓存机制，有两个函数
+//  分别是 jQuery.data()和 jQuery.fn.data()
+//  一个是原型(实例)上一个是 jQuery 对象(静态)上
+// 也就是分别在静态池和堆
+
+
+// jQuery.data()
+// 有两种使用
+// 绑定 jQuery.data( element, key, value )
+// 查询 jQuery.data( elment, key )
+// element 可以是 DOM 对象也可以是 jQuery 对象
+$.data(document.body, 'foo', 52);
+$.data(document.body, 'bar', 'test');
+$.data(document.body, 'foo'); // 52
+$.data(document.body, 'bar'); // "test"
+console.log($.data(document.body)); //=> {foo: 52, bar: "test"}
+
+// jQuery.fn.data()
+$("body").data("foo", 52);
+$("body").data("bar", { myType: "test", count: 40 });
+$("body").data({'baz': [ 1, 2, 3 ] });
+// 取 body 上绑定的所有数据
+console.log($("body").data()); // { foo: 52, bar: { myType: "test", count: 40 }, baz: [ 1, 2, 3 ] }
+
+
+var jq1 = $('#top');
+var jq2 = $('#top');
+
+jq1.data('a', 1);
+jq2.data('a', 2);
+
+console.log(jq1.data('a')); //=> 2
+console.log(jq2.data('a')); //=> 2
+
+$.data(jq1, 'b', 3);
+$.data(jq2, 'b', 4);
+
+console.log($.data(jq1, 'b')); //=> 3
+console.log($.data(jq2, 'b')); //=> 4
+
+// 通过 fn.data() 方法会覆盖前面 key 相同的值
+
+
+
+
+
+
+
+</script>
+
+
+
+
+<script>
+// 源码 
+
+
+// jQuery.expando 用于 jQuery 的标识
+// Sizzle.expando 用于每个 jQuery 对象的标识
+// jQuery.camelCase() 专门用于生成 cache 的存放 key
+// dataAttr()
+// access() 
+$.camelCase('name'); //=> "name"
+$.camelCase('-ms-name'); //=> "msName"
+
+
+
+var rmultiDash = /[A-Z]/g;
+console.log("BOOK".replace( rmultiDash, "-$&" ).toLowerCase()); //=> -b-o-o-k
+console.log("Book".replace( rmultiDash, "-$&" ).toLowerCase()); //=> -book
+console.log("book".replace( rmultiDash, "-$&" ).toLowerCase()); //=> book
+
+
+console.log('--')
+$('#mid').data('age', 200);
+$('#mid').data();
+
+
+
+
+
+
+</script>

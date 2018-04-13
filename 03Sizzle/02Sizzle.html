@@ -1,0 +1,77 @@
+<meta charset="UTF-8">
+<title>sizzle</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script src="../sizzle.js"></script>
+<div id="top">
+    <ul>
+    	<li class="li1">hello</li>
+    	<li class="li2">jquery</li>
+    	<li class="li3">sizzle</li>
+    </ul>
+</div>
+<p></p>
+
+
+<script>
+	
+// Sizzle 以下三个工作步骤
+// 1. 词法分析  Tokens
+// 2. 过滤函数	select
+// 3. 编译函数	compile
+
+// 先看词法分析
+// 一个类 CSS 选择器经过 tokensize() 会返回一个数组
+// 该数组在函数中称为 groups，也就是 tokens 数组
+// 有两个元素
+// 分别是 tokens0 和 tokens1
+// 代表选择器的两部分， tokens 也是数组，它的每一个元素都是一个 token 对象
+
+
+
+console.log($('#top .li1'));
+
+// 说词法分析前先说一个方法
+// 在每一次实例化 Sizzle 之前，都做了一个大量的工作，那就是 setDocument()
+// 该方法用于初始化文档参数与兼容 
+
+var rnative = /^[^{]+\{\s*\[native \w/;
+
+// assert(fn)	该方法是一个测试方法,用于使用参数元素测试
+// 		参数 fn是一个函数,
+/**
+ * Support testing using an element
+ * @param {Function} fn Passed the created element and returns a boolean result
+ */
+function assert(fn) {
+	var el = document.createElement("fieldset");
+
+	try {
+		return !!fn(el);
+	} catch (e) {
+		return false;
+	} finally {
+		// 默认情况下从父级移除
+		if (el.parentNode) {
+			el.parentNode.removeChild(el);
+		}
+		// 释放资源在 IE 8
+		el = null;
+	}
+}
+console.log(
+	assert(function(el){
+		el.appendChild(document.createComment(""));
+		return !el.getElementsByTagName("*").length;
+	})
+)
+
+console.log(rnative.test(document.getElementsByClassName));
+
+// 就是用测试是否支持某些功能 
+
+// document.defautlView  DOM2 2级  该属性返回当前 document 对象所关联的 window 对象，如果没有，会返回 null。 IE9+
+
+// Expr 
+
+</script>

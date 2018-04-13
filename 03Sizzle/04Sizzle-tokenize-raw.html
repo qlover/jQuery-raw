@@ -1,0 +1,250 @@
+<meta charset="UTF-8">
+<title>sizzle-tokenize-Raw</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script src="../sizzle.js"></script>
+<div id="div1">
+    <ul id="top">
+    	<li class="li1">hello</li>
+    	<li class="li1">jquery</li>
+    	<li class="li2">sizzle</li>
+    </ul>
+</div>
+<p>--分界--</p>
+<div id="div2">
+    <ul id="mid">
+    	<li class="li2">hi</li>
+    	<li class="li1">js</li>
+    	<li class="li2">php</li>
+    </ul>
+</div>
+
+
+
+<script>
+// 在源码中有两个对象 Expr 和 matchExpr
+// Expr 是一个非常关键的对象，它涵盖了几乎所有的可能的参数
+
+
+
+
+
+// Expr 对象
+// 有两很重要的参数 
+var Expr = {};
+Expr.filter = {
+    "TAG": function(){ },
+    "CLASS": function(){ },
+    "ATTR": function(){ },
+    "CHILD": function(){ },
+    "ID": function(){ },
+    "PSEUDO": function(){ }
+}
+Expr.preFilter = {
+    "ATTR": function(){ },
+    "CHILD": function(){ },
+    "PSEUDO": function(){ }
+}
+
+
+// matchExpr 对象
+// 这个对象全是一些正则匹配的对象,为匹配选择器提供一些参数
+
+// 匹配参数
+// !! 不要被下面的正则吓到,用心一个一个看
+var booleans = "checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped",
+    whitespace = "[\\x20\\t\\r\\n\\f]",  // 匹配空白
+    identifier = "(?:\\\\.|[\\w-]|[^\0-\\xa0])+",  // 
+    attributes = "\\[" + whitespace + "*(" + identifier + ")(?:" + whitespace +
+        "*([*^$|!~]?=)" + whitespace +
+        "*(?:'((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\"|(" + identifier + "))|)" + whitespace +
+        "*\\]",
+    pseudos = ":(" + identifier + ")(?:\\((" +
+        // To reduce the number of selectors needing tokenize in the preFilter, prefer arguments:
+        // 1. quoted (capture 3; capture 4 or capture 5)
+        "('((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\")|" +
+        // 2. simple (capture 6)
+        "((?:\\\\.|[^\\\\()[\\]]|" + attributes + ")*)|" +
+        // 3. anything else (capture 2)
+        ".*" +
+        ")\\)|)";
+
+// matchExpr 对象
+// 该对象的每一个 key 都是前面 token 的一个 type 值
+// 该对象作用就是将匹配到的选择器的 type ,也就是 key 的值交给后面的函数处理
+var matchExpr = {
+    "ID": new RegExp("^#(" + identifier + ")"),
+    "CLASS": new RegExp("^\\.(" + identifier + ")"),
+    "TAG": new RegExp("^(" + identifier + "|[*])"),
+    "ATTR": new RegExp("^" + attributes),
+    "PSEUDO": new RegExp("^" + pseudos),
+    "CHILD": new RegExp("^:(only|first|last|nth|nth-last)-(child|of-type)(?:\\(" + whitespace +
+        "*(even|odd|(([+-]|)(\\d*)n|)" + whitespace + "*(?:([+-]|)" + whitespace +
+        "*(\\d+)|))" + whitespace + "*\\)|)", "i"),
+    "bool": new RegExp("^(?:" + booleans + ")$", "i"),
+    // For use in libraries implementing .is()
+    // We use this for POS matching in `select`
+    "needsContext": new RegExp("^" + whitespace + "*[>+~]|:(even|odd|eq|gt|lt|nth|first|last)(?:\\(" +
+        whitespace + "*((?:-\\d)?\\d*)" + whitespace + "*\\)|)(?=[^-]|$)", "i")
+};
+
+
+
+console.log($.tokenize('#top > li.li1, #mid'));
+// console.log($.tokenize('#top > li.li1'));
+
+
+</script>
+
+
+<script>
+
+    // 目前接收两个参数
+    // selector 选择器
+    // parseOnly 现在没有用上,可能以后会用上
+    tokenize = Sizzle.tokenize = function(selector, parseOnly) {
+        console.log('enter tokenize----')
+        var matched, // 用于存放匹配到的连接符号
+            match,   // 存放匹配到的值,就是前面说的 match 
+            tokens,  // tokens 对象,就是 groups 中的每一个元素, 是一个数组
+            type,   // 存放 type 类型,就是 matchExpr 对象匹配到的 key 值
+            soFar,  // 用于方法内部处理选择器的临时变量
+            groups,  // 存放 groups 对象, 是一个数组
+            preFilters,  // 存放  Expr.preFilter 的参数引用
+            cached = tokenCache[selector + " "];
+        if (cached) {
+            return parseOnly ? 0 : cached.slice(0);
+        }
+        // 临时接收选择器
+        soFar = selector;
+
+        // 初始化一个 groups 
+        groups = [];
+        console.log('> tokenize init groups', groups)
+        // 得到 Expr.preFilter 对象的引用
+        preFilters = Expr.preFilter;
+
+
+        // 循环处理 选择器
+        while (soFar) {
+            // 当第一次执行时, 判断一个 group 是否结束, 也就是判断是否有逗号的分隔符号
+            // 第一次并没有匹配到有连接符号，所以执行
+            // 因为这里是用于判断是否有逗号的
+            if (!matched || (match = rcomma.exec(soFar))) {
+                if (match) {
+                    // 改变选择器的值，将逗号之前的
+                    soFar = soFar.slice(match[0].length) || soFar;
+                }
+                // 向 groups 中添加一个空的 tokens 元素对象
+                groups.push((tokens = []));
+            }
+            // 将记录值赋值
+            matched = false;
+
+            // 只匹配连接符号
+            if ((match = rcombinators.exec(soFar))) {
+                // 此时 match 是匹配到了的数组
+                // matched 得到连接符的数组第一个元素就是 > 连接符
+                matched = match.shift();
+                // 为 tokens 数组中添加一个 token 对象
+                tokens.push({
+                    // 因为 matched 并不是一个选择器，只是一个连接符，所以值就是它
+                    value: matched,
+                    // 得到这个连接符的的类型
+                    // 将匹配到的连接符去掉前后空白
+                    type: match[0].replace(rtrim, " ")
+                });
+                // 然后将选择器重新赋值成连接符后面的选择器
+                soFar = soFar.slice(matched.length);
+            }
+
+            // 过滤
+            // Expr.filter 中的键有
+            // "TAG" "CLASS" "ATTR" "CHILD" "PSEUDO"
+            for (type in Expr.filter) {
+                // console.log(matchExpr[type].exec(soFar))
+                // console.log(preFilters[type]);
+                // console.log(preFilters[type] ? preFilters[type].name : 0);
+                if (
+                    // 循环 Expr.filter 中的每一个键
+                    // 与对象 matchExpr 这个正则判断选择器
+                    (match = matchExpr[type].exec(soFar)) && 
+                    // 并且同时用 type 查看 Expr.preFilters 中是否有 type 这个处理方法
+                    // 有就返回该处理方法的结果
+                    (!preFilters[type] || (match = preFilters[type](match)))
+                ) {
+                    matched = match.shift();
+                    // 同样添加一个 token 对象
+                    tokens.push({
+                        value: matched,
+                        type: type,
+                        matches: match
+                    });
+                    soFar = soFar.slice(matched.length);
+                }
+            }
+
+            if (!matched) {
+                break;
+            }
+        }
+
+        // parseOnly 可能以后会用上该参数
+        // 如果此时 parseOnly 不成立，则返回结果需从 tokenCache 这个函数中来查找：
+        return parseOnly ?
+            soFar.length :
+            (soFar ? Sizzle.error(selector) :
+            // 存入缓存
+            tokenCache(selector, groups).slice(0));
+    };
+
+// 当源码看到最后，需要补充的就是一个东西就是 tokenCache() 
+// 其实，该方法就是一个 createCache() 的引用
+
+</script>
+
+
+<script>
+console.log('=== createCache ===')
+function createCache() {
+    // keys 这个变量在 cache() 中被使用，
+    // 这个变量的值就会将驻留在内存中
+    // 也就是说 createCache() 是在内存中做缓存
+    var keys = [];
+
+    function cache(key, value) {
+            console.log('>cache', key, value)
+            // Use (key + " ") to avoid collision with native prototype properties (see Issue #157)
+            // 向 keys 中添加一个元素，注意，这里用了下一个作用域的变量，所以，cache() 是一个闭包
+            // 使用(key“”)避免与本机原型属性发生冲突
+            if (keys.push(key + " ") > 50) {
+                // 删除第一个，只保留最后的条目
+                delete cache[keys.shift()];
+            }
+            // console.log('createCache', (cache[key + " "] = value))
+            // 返回是 value 
+            // a['top']='123' //=> '123'
+            // 先执行括号中的，而括号中返回的是 value 
+            return (cache[key + " "] = value);
+        }
+
+        // 返回的是 cache() 方法的引用
+        // 也就是说这个方法是一个闭包
+        // 闭包的特点就是会将数据驻留到内存中
+        return cache;
+}
+
+var tokenCache = createCache();
+
+tokenCache['#top' + ' ']; // 关于这句话的意思，目前也还没有明白
+
+console.log(tokenCache('#top li.li1, #mid', [1,1,1]));
+// keys => ["#top li.li1, #mid "]
+// [1, 1, 1]
+console.log(tokenCache('#top2 li.li1, #mid2', [1,1,1]));
+// keys => (2) ["#top li.li1, #mid ", "#top2 li.li1, #mid2 "]
+// [1, 1, 1]
+
+
+
+</script>

@@ -1,0 +1,239 @@
+<meta charset="UTF-8">
+<title>find 和 fn.find</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<!-- 为了方便, 将之前写的代码放到 minjquery.sizzle.js 中 -->
+<script src="../minjquery.sizzle.js"></script>
+<div id="top">
+    <p>hello</p>
+    <p>jquery</p>
+</div>
+<p></p>
+<script>
+// jquery/sizzle 已经成单独的项目
+// 在 jQuery 中是一个直接闭包，拿来用
+// sizzle 就是 $.find 的代替
+
+
+// console.log(!!document.querySelectorAll); // chrome true
+// console.log(!!document.querySelectorAll); // IE false
+
+// 也就是存在兼容的问题
+// 说白了 Sizzle 就是为了代替 qsa 而存在的
+// 当然也有两种形式
+// 一 原型上, 每个对象
+// 二 类上静态方法
+
+
+
+// jQuery 原型上的 find()
+// => fn.pushStack()
+// => fn.filter()
+// => $.contains()
+// => $.find()
+// => $.uniqueSort()
+jQuery.fn.extend({
+	// 该方法仅存于每个 jQuery 对象上
+    find: function(selector) {
+        var i, ret,
+            len = this.length,  // 存放当前 jQuery 对象数组长度
+            self = this;  // 对自己的引用
+
+        if (typeof selector !== "string") {
+            // fn.pushStack 和 jquery.merge 很像，但是返回一个 jquery 对象，且
+            // jquery 有个 prevObject 属性指向自己
+            return this.pushStack(jQuery(selector).filter(function() {
+                for (i = 0; i < len; i++) {
+                	// jQuery.contains(a, b) 判断 a 是否是 b 父亲
+                    if (jQuery.contains(self[i], this)) {
+                        return true;
+                    }
+                }
+            }));
+        }
+        // fn.pushStack() 也是合并数组，但是返回的是 jQuery 对象
+        ret = this.pushStack([]);
+
+        for (i = 0; i < len; i++) {
+        	// 用到了 $.find() 
+            jQuery.find(selector, self[i], ret);
+        }
+        // $.uniqueSort() 去重
+        return len > 1 ? jQuery.uniqueSort(ret) : ret;
+    }
+});
+
+
+// 来看看上面的 $.find()
+// 看 $.find() 先看个正则
+
+//var rquickExpr = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/;
+// 该正则是用来区分 Tag、Id、Class
+
+// 在源码的 :2801 
+// jQuery.find = Sizzle;
+
+console.log($.find);
+console.log($().find);
+
+
+
+
+
+/**
+ * nodeType 属性
+ *
+	元素 1  
+	属性 2 
+	文本 3 
+	CDATA 4 
+	实体参考 5 
+	实体 6 
+	处理指令 7 
+	注释 8 
+	文档根 9 
+	doctype 10 
+	文档片段  11 
+	符号  12 
+
+ */
+
+// 这一个则是只存在于 jQuery 类上
+// 看源码
+function Sizzle(selector, context, results, seed) {
+  var m, i, elem, nid, match, groups, newSelector, newContext = context && context.ownerDocument,
+
+  // noteType 默认为 9 ，因为上下文默认是 document
+  nodeType = context ? context.nodeType : 9;
+
+  results = results || [];
+
+  // 如果是无效的选择器
+  // 也就是看选择器是不是字符串
+  if (typeof selector !== "string" || !selector || nodeType !== 1 && nodeType !== 9 && nodeType !== 11) {
+
+    return results;
+  }
+
+  // 尝试快捷查找HTML文档中的操作(与筛选器相反)
+  if (!seed) {
+
+  	// 如果有传入上下文
+  	// 判断上下文是否有根元素，只有 document.ownerDocument == null
+  	// 否则就是 preferredDoc, preferredDoc == window.document
+    if ((context ? context.ownerDocument || context : preferredDoc) !== document) {
+      // setDocument 函数其实是用来将 context 设置成 document，考虑到浏览器的兼容性
+      // 该方法位于 Sizzle 内部
+      setDocument(context);
+    }
+
+    // 上面其实就是判断兼容的，这句话就是直接将 context 得到
+    context = context || document;
+    // true，初始化是 undefined
+    // 
+    // 该参数也和 preferredDoc 一样是在 Sizzle 中内部声明的
+    // 并且他的值会在第一次执行 setDocument() 时被改变
+    //   setDocument() 也是 Sizzle 内部中的一个方法
+    if (documentIsHTML) {
+
+      // match 就是那个有规律的数组
+      // 用 rquickExpr 正则
+      if (nodeType !== 11 && (match = rquickExpr.exec(selector))) {
+
+        // selector 是 id 的情况
+        if ((m = match[1])) {
+
+          // Document context
+          if (nodeType === 9) {
+            if ((elem = context.getElementById(m))) {
+
+              if (elem.id === m) {
+                  results.push(elem);
+                  return results;
+              }
+            } else {
+              return results;
+            }
+
+          // 非 document 的情况
+          } else {
+
+            if (newContext && (elem = newContext.getElementById(m)) && contains(context, elem) && elem.id === m) {
+
+                results.push(elem);
+                return results;
+            }
+          }
+
+        // selector 是 tagName 情况
+        } else if (match[2]) {
+            // 这里的 push：var push = arr.push
+            push.apply(results, context.getElementsByTagName(selector));
+            return results;
+
+        // selector 是 class 情况
+        } else if ((m = match[3]) && support.getElementsByClassName && context.getElementsByClassName) {
+
+            push.apply(results, context.getElementsByClassName(m));
+            return results;
+        }
+      }
+
+      // 如果浏览器支持 querySelectorAll
+      if (support.qsa && !compilerCache[selector + " "] && (!rbuggyQSA || !rbuggyQSA.test(selector))) {
+
+        if (nodeType !== 1) {
+          newContext = context;
+          newSelector = selector;
+
+          // qSA looks outside Element context, which is not what we want
+          // Support: IE <=8,还是要考虑兼容性
+        } else if (context.nodeName.toLowerCase() !== "object") {
+
+          // Capture the context ID, setting it first if necessary
+          if ((nid = context.getAttribute("id"))) {
+            nid = nid.replace(rcssescape, fcssescape);
+          } else {
+            context.setAttribute("id", (nid = expando));
+          }
+
+          // Sizzle 词法分析的部分
+          groups = tokenize(selector);
+          i = groups.length;
+          while (i--) {
+            groups[i] = "#" + nid + " " + toSelector(groups[i]);
+          }
+          newSelector = groups.join(",");
+
+          // Expand context for sibling selectors
+          newContext = rsibling.test(selector) && testContext(context.parentNode) || context;
+        }
+
+        if (newSelector) {
+          try {
+            push.apply(results, newContext.querySelectorAll(newSelector));
+            return results;
+          } catch(qsaError) {} finally {
+            if (nid === expando) {
+                context.removeAttribute("id");
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // All others，select 函数和 tokenize 函数后文再谈
+  return select(selector.replace(rtrim, "$1"), context, results, seed);
+}
+
+
+
+// 这里总的介绍了下源码中的 find() 
+// 一个 Sizzle 中主要包括以下三部分
+// Tokens
+// select
+// complie
+
+// 接下来说专说说 Sizzle 
+</script>

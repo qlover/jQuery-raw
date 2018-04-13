@@ -1,48 +1,4 @@
-<meta charset="UTF-8">
-<title>jQuery.extend</title>
-<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
-<!-- <script src="../jquery-3.1.1.js"></script> -->
-<!-- <script src="../minjquery.js"></script> -->
-<div id="top"><p>hello</p><p>jquery</p></div>
-<p></p>
-
-<script>
-// 为什么会是从左向右
-// 为什么效率就高
-// 看下面这个例子
-function f1 (selector, context) {
-	console.log('f1', selector, context)
-	// return this
-}
-f1(2,f1(1));
-// => 1  undefined
-// => 2  undefined
-// 打印出来是 1 ，然后是1
-
-
-// 也不难看出
-// f1() 有两个参数
-// 参数一模拟 selector
-// 参数二模拟 context
-
-// 首先会执行 f1(1)
-// 都知道有括号先执行括号中的再执行外面
-// 当一执行 f1(1) 注意，返回值是 undefined 
-// 	而执行这一次时，参数二是没有的， 所以也是 undefined
-// 	然后执行，执行外面的 f1(1, f1(2)), 参数一是 1, 参数二则是刚刚才执行完成的 f1(2) 的返回值
-// 		undefined 
-// 所以结果是两个 undefined 
-// 看下面，jQuery 如果如何利用这一点的
-console.log('-------------------')
-</script>
-
-
-
-
-
-
-<script>
-// 还是按照上一个继续操作
+// jQuery 的结构
 (function(window) {
 	var jQuery = (function() {
 
@@ -102,73 +58,73 @@ console.log('-------------------')
 		// => jQuery.isPlainObject()
 		// => jQuery.isFunction()
 		jQuery.extend = jQuery.fn.extend = function() {
-			  var options, name, src, copy, copyIsArray, clone, target = arguments[0] || {},
-			    i = 1,
-			    length = arguments.length,
-			    deep = false;
+			var options, name, src, copy, copyIsArray, clone, target = arguments[0] || {},
+				i = 1,
+				length = arguments.length,
+				deep = false;
 
-			  // 判断是否为深拷贝
-			  if (typeof target === "boolean") {
-			    deep = target;
+			// 判断是否为深拷贝
+			if (typeof target === "boolean") {
+				deep = target;
 
-			    // 参数后移
-			    target = arguments[i] || {};
-			    i++;
-			  }
+				// 参数后移
+				target = arguments[i] || {};
+				i++;
+			}
 
-			  // 处理 target 是字符串或奇怪的情况，isFunction(target) 可以判断 target 是否为函数
-			  if (typeof target !== "object" && !jQuery.isFunction(target)) {
-			    target = {};
-			  }
+			// 处理 target 是字符串或奇怪的情况，isFunction(target) 可以判断 target 是否为函数
+			if (typeof target !== "object" && !jQuery.isFunction(target)) {
+				target = {};
+			}
 
-			  // 判断是否 jQuery 的扩展
-			  if (i === length) {
-			    target = this; // this 做一个标记，可以指向 jQuery，也可以指向 jQuery.fn
-			    i--;
-			  }
+			// 判断是否 jQuery 的扩展
+			if (i === length) {
+				target = this; // this 做一个标记，可以指向 jQuery，也可以指向 jQuery.fn
+				i--;
+			}
 
-			  for (; i < length; i++) {
+			for (; i < length; i++) {
 
-			    // null/undefined 判断
-			    if ((options = arguments[i]) != null) {
+				// null/undefined 判断
+				if ((options = arguments[i]) != null) {
 
-			      // 这里已经统一了，无论前面函数的参数怎样，现在的任务就是 target 是目标对象，options 是被拷贝对象
-			      for (name in options) {
-			        src = target[name];
-			        copy = options[name];
+					// 这里已经统一了，无论前面函数的参数怎样，现在的任务就是 target 是目标对象，options 是被拷贝对象
+					for (name in options) {
+						src = target[name];
+						copy = options[name];
 
-			        // 防止死循环，跳过自身情况
-			        if (target === copy) {  // 防止 options[name] == target
-			          continue;
-			        }
+						// 防止死循环，跳过自身情况
+						if (target === copy) { // 防止 options[name] == target
+							continue;
+						}
 
-			        // 深拷贝，且被拷贝对象是 object 或 array
-			        // 这是深拷贝的重点
-			        if (deep && copy && (isPlainObject(copy) || (copyIsArray = Array.isArray(copy)))) {
-			          // 说明被拷贝对象是数组
-			          if (copyIsArray) {
-			            copyIsArray = false;
-			            clone = src && Array.isArray(src) ? src : [];
-			          // 被拷贝对象是 object
-			          } else {
-			            clone = src && isPlainObject(src) ? src : {};
-			          }
+						// 深拷贝，且被拷贝对象是 object 或 array
+						// 这是深拷贝的重点
+						if (deep && copy && (isPlainObject(copy) || (copyIsArray = Array.isArray(copy)))) {
+							// 说明被拷贝对象是数组
+							if (copyIsArray) {
+								copyIsArray = false;
+								clone = src && Array.isArray(src) ? src : [];
+								// 被拷贝对象是 object
+							} else {
+								clone = src && isPlainObject(src) ? src : {};
+							}
 
-			          // 递归拷贝子属性
-			          target[name] = extend(deep, clone, copy);
+							// 递归拷贝子属性
+							target[name] = extend(deep, clone, copy);
 
-			          // 常规变量，直接 =
-			        } else if (copy !== undefined) {
-			            target[name] = copy;
-			        }
-			      }
-			    }
-			  }
+							// 常规变量，直接 =
+						} else if (copy !== undefined) {
+							target[name] = copy;
+						}
+					}
+				}
+			}
 
-			  return target;
+			return target;
 		}
 		
-		// 扩展第一批方法
+		// 扩展的第一批静态方法
 		jQuery.extend({
 				
 				isFunction: function( obj ) {
@@ -353,32 +309,3 @@ console.log('-------------------')
 	})();
 	window.jQuery = window.$ = jQuery;
 })(window);
-</script>
-
-
-
-<script>
-$('p', $('#top'));
-
-// 该选择哭表示在 #top 中查找所有的 p
-// 
-// 
-// 返回的第一个 document 是因为 jQuery 中 rootjQuery = jQuery( document ); 这句话搞怪
-// 因为第一次在自己内部都已经被执行了一次，此时传入的就是 document
-// document 是 DOMElement 对象，所以第一次又走了 noteType
-// 此时的 this 就是 {0:document, length:1}
-// 此时的 context 并没有值， undefined 即使有返回值
-// 
-// 
-// 第二次，selector 为字符串 #top, 进入字符串，context 为 undefined 
-// 判断出来为 id ，则进入  id 得到了 id = top 的 jQuery 对象
-// 返回值则是这个  top 元素
-// 
-// 
-// 第三次， selector 为 p, context 为 top 
-// 走 msg ， $('#top').find() 查找了所有的 p 在 top 下
-// 	find() 方法比较重要，后面就详细解释
-// 
-// 
-//  整个个过程是这样，奇妙的逻辑
-</script>

@@ -1,0 +1,96 @@
+<meta charset="UTF-8">
+<title>jQuery.prevObject</title>
+
+
+<div id="top" data-id="#top">TOP</div>
+<div id="mid" data-id="null">MID</div>
+<div id="btn" data-id="#btn">BTN</div>
+
+<div id="father">
+	<div id="son">SON</div>
+	<div class="son2">SON2</div>
+</div>
+
+<hr />
+
+<script src="../jquery-1.4.2.js"></script>
+<script>
+var $a = $('body');
+console.log($a);
+// [
+// 0:body
+// context:document
+// length:1
+// selector:"body"
+// ]
+</script>
+
+
+<script src="../jquery-2.0.3.js"></script>
+<script>
+	var $a = $('body');
+console.log($a);
+
+// [
+// 0:body
+// context:document
+// length:1
+// prevObject:init [document, context: document]
+// selector:"body"
+// ]
+</script>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+
+var $a = $('body');
+console.log($a);
+// [
+// 0:body
+// length:1
+// prevObject:jQuery.fn.init [document]
+// ]
+</script>
+
+
+
+
+<script>
+// 从 jQuery 2 以后，jQuery 对象就多了一个属性
+// prevObject
+
+
+// 在 jQuery 对象的内部，有着一个 jQuery 对象栈，用来维护所有已经操作过的 jQuery 对象
+// 这样子的话可以写出很流畅的 jQuery 代码，比如操作父元素，操作子元素，再回到父元素的时候就很方便。
+
+// 比如看下面这个例子
+var $f = $('#father');
+var $s = $f.find('.son');
+console.log($s.prevObject);
+console.log($s.prevObject === $f); //=> true
+
+// jQuery.fn.end()
+// 		单纯的进行出栈操作，并返回出栈的这个 jQuery 对象
+// jQuery.fn.addBack()
+// 		不会执行出栈，而是把栈顶对象和当前的对象组成一个新对象，入栈
+// 这个两个方法是 prevObject 的应用
+
+$('#father').find('#son').css({'color':'red'})
+	.end()
+	.find('.son2').css({'color':'blue'});
+
+
+// 全部变成了 blue
+$('#father').find('#son').nextAll()
+	.addBack().css({'color':'blue'});
+
+
+// 接下来看这几个源码
+// $.fn.end()
+// $.fn.addBack()
+// $.fn.add()
+// $.fn.pushStack()
+
+</script>

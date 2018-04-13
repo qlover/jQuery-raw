@@ -1,0 +1,118 @@
+<meta charset="UTF-8">
+<title>sizzle-compile</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<script src="../jquery-2.0.3.js"></script>
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<!-- <script src="../sizzle.js"></script> -->
+
+<div id="div1">
+    <ul id="top">
+        <li class="li1">hello</li>
+        <li class="li1">js</li>
+        <li class="li2">jquery</li>
+    </ul>
+</div>
+<p>--分界线--</p>
+<div id="div2">
+    <ul id="mid">
+        <li class="li2">php</li>
+        <li class="li2">java</li>
+        <li class="li1">python</li>
+    </ul>
+    <p>---分界线---</p>
+</div>
+
+
+<script>
+// 在进入 Sizzle 引擎中之前，从正则入手
+
+// jQuery 源码中的 rquickExpr
+// 匹配 HTML 标记和 ID 表达式（<前面可以匹配任何空白字符，包括空格、制表符、换页符等等）
+var rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]*))$/;
+// 该正则可以分为两个部分
+// 一是匹配前面
+// 二是匹配后面
+
+// 1.分解上面的正则，匹配字符串前面部分
+/*
+    (?:pattern) : 匹配 pattern 但不获取匹配结果，也就是说这是一个非获取匹配，不进行存储供以后使用
+    \s* : 匹配任何空白字符，包括空格、制表符、换页符等等 零次或多次 等价于{0,}
+    (pattern) : 匹配pattern 并获取这一匹配。所获取的匹配可以从产生的 Matches 集合得到，使用 $0…$9 属性
+    [\w\W]+ : 匹配于'[A-Za-z0-9_]'或[^A-Za-z0-9_]' 一次或多次， 等价{1,}
+    (<[wW]+>) :这个表示字符串里要包含用<>包含的字符，例如<p>,<div>等等都是符合要求的
+    [^>]* : 负值字符集合,字符串尾部是除了>的任意字符或者没有字符,零次或多次等价于{0,},
+ */
+var beforeExpr = /^(?:\s*(<[\w\W]+>)[^>]*)/;
+console.log(beforeExpr.exec(' div'));   //=> null
+console.log(beforeExpr.exec(' <div>'))  //=> [" <div>", "<div>", index: 0, input: " <div>"]
+console.log(beforeExpr.exec(' <div></div>'))//=> [" <div></div>", "<div></div>", index: 0, input: " <div></div>"]
+
+// 2. 分解上面的正则，匹配字符串后面部分
+var after = /(#([\w-]*))$/;
+console.log(after.exec(' div'));   //=> null
+console.log(after.exec(' div #top'));  //=> ["#top", "#top", "top", index: 5, input: " div #top"]
+console.log(after.exec(' <div>')); //=> null
+console.log(after.exec(' <div id="top"> </div> '));  //=> null
+
+// @ exec()
+// 1.如果执行exec方法的正则表达式没有分组（没有括号括起来的内容）
+//      那么如果有匹配，他将返回一个只有一个元素的数组，这个数组唯一的元素就是该正则表达式匹配的第一个串
+//      如果没有匹配则返回null。
+// 2.exec如果找到了匹配，而且包含分组的话，返回的数组将包含多个元素
+//      第一个元素是找到的匹配
+//      之后的元素依次为该匹配中的第一、第二...个分组（反向引用）
+console.log(rquickExpr.exec(' <div id="top"></div>')); 
+//=> [" <div id="top"></div>", "<div id="top"></div>", undefined, index: 0, input: " <div id="top"></div>"]
+console.log(rquickExpr.exec('#top'));
+//=> ["#top", undefined, "top", index: 0, input: "#top"]
+
+
+
+// Sizzle 是 jQuery 中的一个闭包，也就可以相当于一个内部类
+// jQuery 对 Sizzle 的引用就在 jQuery.find 
+// 而 jQuery 本身就是一个构造器
+// 所以在 jQuery 中 jQuery() 就是入口
+console.log(jQuery());  //=> init{}
+console.log($());       //=> init{}
+
+// jQuery 可处理以下 9 种情况
+// 1.$(document)   
+// 2.$(‘<div>’) 
+// 3.$(‘div’) 
+// 4.$(‘#test’) 
+// 5.$(function(){}) 
+// 6.$("input:radio", document.forms[0]); 
+// 7.$(‘input’, $(‘div’)) 
+// 8.$()        // 这只是实例化一次对象
+// 9.$("<div>", { 
+//          "class": "test", 
+//          text: "Click me!", 
+//          click: function(){ $(this).toggleClass("test"); } 
+//       }).appendTo("body"); 
+// 10$($(‘.test’))
+
+
+//>> jQuery这个选择器重构了几次后，现在逻辑结构相当的清晰了，一看大概就知道
+//>> 不能不得说jQuery的反模式，非职责单一深受开发者喜欢，一个接口承载的职责越多内部处理就越复杂了
+
+// 查看 init 就可以得知，在 init 中处理了以下几种匹配模式
+// 
+// 1.处理"",null,undefined,false,返回this ，增加程序的健壮性
+// 2.处理字符串
+//      ownerDocument是Node对象的一个属性，返回的是某个元素的根节点文档对象：即document对象
+//      documentElement是Document对象的属性，返回的是文档根节点
+//      对于HTML文档来说
+//          documentElement是<html>标签对应的Element对象
+//          ownerDocument是document对象
+
+// 3.处理DOMElement,返回修改过后的this,给this添加了
+// 4.处理$(function(){})
+
+
+// 总结：
+//>> 单个DOM元素，如$(ID),直接把DOM元素作数组传递给this对象
+//>> 多个DOM元素，集合形式，可以通过CSS选择器匹配是有的DOM元素，过滤操作,构建数据结构
+// 而在 jQuery 中用 css　选择器匹配是通过  jQuery.find() 来完成
+// 这也就是 jQuery 对 Sizzle 引擎的引用
+
+</script>

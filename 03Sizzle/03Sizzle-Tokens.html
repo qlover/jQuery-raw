@@ -1,0 +1,116 @@
+<meta charset="UTF-8">
+<title>sizzle-Tokens</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script src="../sizzle.js"></script>
+<div id="div1">
+    <ul id="top">
+    	<li class="li1">hello</li>
+    	<li class="li1">jquery</li>
+    	<li class="li2">sizzle</li>
+    </ul>
+</div>
+<p>--分界--</p>
+<div id="div2">
+    <ul id="mid">
+    	<li class="li2">hi</li>
+    	<li class="li1">js</li>
+    	<li class="li2">php</li>
+    </ul>
+</div>
+
+
+<script>
+
+
+// 词法分析   Tokens 
+
+// Sizzle 就是用来处理像那种复杂的 CSS 选择器时
+// 和 jQuery.fn.init 一样，都是用一种从右向左的解析，这样更快速
+
+
+// css 选择器主要有两类
+// 一是用基本符号 , space > + ~ 这些符号构成的选择器
+// 二是用伪类或属性，比如 :nth-chlid, a, input 这两个特殊的标签 input[type=text] 类似的选择器
+// Sizzle 都可以支持
+
+// 当一个选择器被词法分析后，也就是经过 tokenize() 会返回一个数组 groups 
+// groups 里面的每一个元素就是一部分选择器匹配到的一组元素，就好比 #mid > li.li1 , #top 
+// 		元素一就是匹配到的第一部分的 #mid > li.li1
+// 		元素二就是匹配到的第二部分的 #top
+// 其中每一个元素也是一个数组，存放的就是 token 对象, 也就是一个 tokens 
+
+// token 对象结构如下
+// 
+// token: {
+//   value: matched, 	// 匹配到的字符串
+//   type: type, 		// token 类型
+//   matches: match 	// 就是匹配的 match ，前面说过 jQuery 用 match 来确认一次匹配
+// }
+// token 对象表示选择器的一部分
+// 比如 #top 对应的 token 对象就是
+// {
+// 	type:'ID',
+// 	value: '#top',
+//  matches : ["top", index: 0, input: "#top"]
+// }
+
+
+
+
+// 分别来看看上面说到的几个对象是什么
+// 见源码
+
+// 用 #top > li.li1 例子来演示
+var groups = $.tokenize('#top > li.li1, #mid');
+console.log(groups);
+// 这里只有一部分选择器所以就只有一个元素
+// 该数组就是一个 groups 
+
+// 数组的第一个元素就是 #top > li.li1 匹配到的 token 对象数组
+console.log(groups[0]);
+// 数组的第二个元素就是 #mid 匹配到的 token 对象数组
+console.log(groups[1]);
+
+// groups[0] 的第一个元素，也就是 tokens 
+// tokens[0] 就是对应的 #top 的选择器的 toekn 对象
+console.log(groups[0][0])
+console.log(groups[0][1]) //=> {value: " > ", type: ">"}
+// 当 token 不是一个选择器，而只是一个基本符号时，会没有 matches 值
+// 并且 type 值也是 value.trim() 的值
+
+// 该数组，也就是 groups 数组会交给 Sizzle 的 select 处理，后面再说
+
+
+
+
+</script>
+
+
+<script>
+console.log("tokenize 源码-------")
+// tokenize 源码 
+
+
+
+// 先看正则
+var whitespace = "[\\x20\\t\\r\\n\\f]";
+
+var 
+	// 该正则主要是判断是否有下一个规则，也就是逗号后面是否还有规则
+	// 也就是如果有，则把匹配到的结果加到刚才的 groups 中的下一个元素
+	rcomma = new RegExp( "^" + whitespace + "*," + whitespace + "*" ),
+	// 该正则用于匹配规则的前第一个符号，判断规则
+	rcombinators = new RegExp( "^" + whitespace + "*([>+~]|" + whitespace + ")" + whitespace + "*" ),
+
+	rtrim = new RegExp( "^" + whitespace + "+|((?:^|[^\\\\])(?:\\\\.)*)" + whitespace + "+$", "g" );
+
+console.log(rcomma.exec(' ,#id p')); //=> [" ,", index: 0, input: " ,#id p"]
+console.log(rcombinators.exec(' > div.seq h2 ~ p')); //=> [" > ", ">"]
+console.log(rcombinators.exec(' ~ p')); //=> [" ~ ", "~"]
+
+
+// 接下来看源码
+// 
+
+</script>

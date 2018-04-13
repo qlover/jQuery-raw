@@ -1,0 +1,99 @@
+<meta charset="UTF-8">
+<title>sizzle-compile</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script src="../sizzle.js"></script>
+
+<div id="div1">
+    <ul id="top">
+        <li class="li1">hello</li>
+        <li class="li1">js</li>
+        <li class="li2">jquery</li>
+    </ul>
+</div>
+<p>--分界线--</p>
+<div id="div2">
+    <ul id="mid">
+        <li class="li2">php</li>
+        <li class="li2">java</li>
+        <li class="li1">python</li>
+    </ul>
+    <p>---分界线---</p>
+</div>
+
+<script>
+// 再看 compile 之前
+// 还是在说说一个对象 Expr 
+// 该对象很重要在 Szzile 中的三个步骤
+// 特别是 Expr.filter 是用来编译函数执行的，用来判断元素是否符合 token 的约束
+
+// 先来看个简单的例子
+
+// tokenize // 返回 tokens 
+var tn = $.tokenize('#top li.li1  ~   li');
+console.log('tn', tn);
+
+// select // 优化 tokens 
+var sl = $.select('div #top li.li1  ~   li', document, [], undefined);
+console.log('sl', sl);
+
+
+// 先看上面的执行过程 
+
+    
+</script>
+
+
+<script>
+// compile 源码 
+var compile = function(selector, match) {
+    var i, setMatchers = [],
+        elementMatchers = [],
+        cached = compilerCache[selector + " "];
+    // 判断有没有缓存，好像每个函数都会判断
+    if (!cached) {
+        if (!match) {
+            // 判断 match 是否生成 tokens
+            match = tokenize(selector);
+        }
+        i = match.length;
+        while (i--) {
+            // 这里将 tokens 交给了这个函数
+            cached = matcherFromTokens(match[i]);
+            if (cached[expando]) {
+                setMatchers.push(cached);
+            } else {
+                elementMatchers.push(cached);
+            }
+        }
+
+        // 放到缓存
+        cached = compilerCache(
+            selector,
+            // 这个函数生成最终的匹配器
+            matcherFromGroupMatchers(elementMatchers, setMatchers)
+        );
+
+        // Save selector and tokenization
+        cached.selector = selector;
+    }
+    return cached;
+};
+
+
+// 到此，现为止，因为在 select 优化后
+// compile 所做的事很复杂
+// 不过在 jQuery 中的代表就是 jQuery.find 函数
+// 这两个函数其实就是同一个，完全等价的
+// tokensize 函数，这个函数的被称为词法分析
+//      作用就是将 selector 划分成 tokens 数组，数组每个元素都有 value 和 type 值
+// select 函数，这个函数的功能起着优化作用，去头去尾，并 Expr.find 函数生成 seed 种子数组
+// 而 compile 函数
+//  进行预编译，就是对去掉 seed 后剩下的 selector 生成闭包函数
+//  又把闭包函数生成一个大的 superMatcher 函数
+//  这个时候就可用这个 superMatcher(seed) 来处理 seed 并得到最终的结果。
+
+// 这下对 Sizzle 有个印象，这下就开始进入真下的主题
+// Sizzle 引擎到底是怎么样？
+// 还有 jQuery 奇妙的构造
+</script>

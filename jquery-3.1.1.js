@@ -264,6 +264,9 @@ jQuery.extend = jQuery.fn.extend = function() {
 jQuery.extend( {
 
 	// Unique for each copy of jQuery on the page
+	// jQuery 对象的一个标识符
+	// 由 jQuery + 版本号 + 随机数，并将非数字去掉
+	// 这个 expando 是 静态的，还有个在 Sizzle 中，那个表示的是实例的
 	expando: "jQuery" + ( version + Math.random() ).replace( /\D/g, "" ),
 
 	// Assume jQuery is ready without the ready module
@@ -320,6 +323,7 @@ jQuery.extend( {
 		return typeof Ctor === "function" && fnToString.call( Ctor ) === ObjectFunctionString;
 	},
 
+	// 判断 obj 是否为空
 	isEmptyObject: function( obj ) {
 
 		/* eslint-disable no-unused-vars */
@@ -348,9 +352,14 @@ jQuery.extend( {
 		DOMEval( code );
 	},
 
+	// 用于生成
 	// Convert dashed to camelCase; used by the css and data modules
+	// -> 将冲向CamelCase；使用CSS和数据模块
 	// Support: IE <=9 - 11, Edge 12 - 13
 	// Microsoft forgot to hump their vendor prefix (#9572)
+	// -> 微软忘了增加他们的供应商前缀
+	// $.camelCase('name'); //=> "name"
+	// $.camelCase('-ms-name'); //=> "msName"
 	camelCase: function( string ) {
 		return string.replace( rmsPrefix, "ms-" ).replace( rdashAlpha, fcamelCase );
 	},
@@ -405,7 +414,13 @@ jQuery.extend( {
 		return ret;
 	},
 
+	// 判断元素 elem 是否在 arr 中
 	inArray: function( elem, arr, i ) {
+		// item 出现的位置
+		// start 从那个索引开始查找到末尾
+		// array.indexOf(item,start)
+		// 查找数组中 item 出现的位置
+		// 查到返回 item 所有索引，否则返回 -1
 		return arr == null ? -1 : indexOf.call( arr, elem, i );
 	},
 
@@ -577,6 +592,7 @@ var i,
 	contains,
 
 	// Instance-specific data
+	// 这个 expando 是每 Sizzle 引擎解析出来对象的唯一标识
 	expando = "sizzle" + 1 * new Date(),
 	preferredDoc = window.document,
 	dirruns = 0,
@@ -3255,6 +3271,7 @@ function createOptions( options ) {
  *					values (like a Deferred)
  *
  *	unique:			will ensure a callback can only be added once (no duplicate in the list)
+ *					-> 将确保只能添加一次回调(列表中没有重复)。
  *
  *	stopOnFalse:	interrupt callings when a callback returns false
  *
@@ -3263,70 +3280,112 @@ jQuery.Callbacks = function( options ) {
 
 	// Convert options from String-formatted to Object-formatted if needed
 	// (we check in cache first)
+	// 1. 处理 options 
 	options = typeof options === "string" ?
 		createOptions( options ) :
 		jQuery.extend( {}, options );
 
+
+	// createOptions() 返回的是一个对象
+	// 键值分别是 flag 和 boolean
+	// console.info('$> Callbacks', options);
+	// 默认为空对象
+
+
+	// 定义四个 flag 
 	var // Flag to know if list is currently firing
+		// 是否正在触发
 		firing,
 
-		// Last fire value for non-forgettable lists
+		// Last fire value for non-forgettable list
+		// 记录执行的回调
 		memory,
 
 		// Flag to know if list was already fired
+		// 是否已经被触发
 		fired,
 
 		// Flag to prevent firing
+		// 记录是否只调一次回调
 		locked,
 
 		// Actual callback list
+		// 真实传入的回调列表
 		list = [],
 
 		// Queue of execution data for repeatable lists
+		// 执行的队列
 		queue = [],
 
 		// Index of currently firing callback (modified by add/remove as needed)
+		// 当前触发回调的索引(根据需要通过添加/删除修改)
 		firingIndex = -1,
 
 		// Fire callbacks
+		// 遍历可执行队列，并执行回调
 		fire = function() {
-
 			// Enforce single-firing
 			locked = options.once;
 
 			// Execute callbacks for all pending executions,
 			// respecting firingIndex overrides and runtime changes
+			// 对所有挂起的准备执行,允许索引发生更改
 			fired = firing = true;
+			// 循环可执行队列长度次数
 			for ( ; queue.length; firingIndex = -1 ) {
+				// shift()
+				// 从数组中移除第一个元素并返回
 				memory = queue.shift();
+
 				while ( ++firingIndex < list.length ) {
+					// console.log('>while', list[ firingIndex ].name, memory);
 
 					// Run callback and check for early termination
+					// 运行回调并检查是否提前终止
+					// apply() 和 call()
+					// 参数固定用 call()
+					// 参数不固定用 apply()
+					// 两个方法的第一个参数分别都是 context ，但这里用 apply()
+					// 而 memory 是以数组的形式记下
+					// 	[
+					// 		执行的当前对象(也就是 Callbacks 返回的对象), 
+					// 		形参
+					// 	]
+					// 	因为回调列表有会有很多方法
+					// 	又因为不明确传入的方法参数是否只有一个
+					// 	所以用 apply()
+					// console.log('options.stopOnFalse', options.stopOnFalse)
+					// console.log('options.memory', options.memory)
+					// 当调用该方法返回的是 false 时并且
 					if ( list[ firingIndex ].apply( memory[ 0 ], memory[ 1 ] ) === false &&
 						options.stopOnFalse ) {
 
 						// Jump to end and forget the data so .add doesn't re-fire
+						// 跳到末尾，忘记数据，这样 add() 就不会重新启动
 						firingIndex = list.length;
 						memory = false;
 					}
 				}
 			}
 
-			// Forget the data if we're done with it
+			// Forget the data if we're done with it -> 如果我们把它处理完的话，忘了这些数据吧
 			if ( !options.memory ) {
 				memory = false;
 			}
 
 			firing = false;
 
-			// Clean up if we're done firing for good
+			// Clean up if we're done firing for good -> 如果我们结束了 firing 
+			// 就是参数是 once 传入时 
 			if ( locked ) {
-
-				// Keep an empty list if we have data for future add calls
+				// console.log('is locked');
+				// Keep an empty list if we have data for future add calls 
+				// -> 如果我们有未来添加调用的数据，则保留一个空列表。
 				if ( memory ) {
 					list = [];
 
 				// Otherwise, this object is spent
+				//  -> 否则这个对象是用掉的
 				} else {
 					list = "";
 				}
@@ -3334,33 +3393,59 @@ jQuery.Callbacks = function( options ) {
 		},
 
 		// Actual Callbacks object
+		// Callbacks() 返回的对象，就是它
 		self = {
 
+			// 并且该对象的这几个add, remove, empty, disable, lock, firewith, fire 将返回 this
+
 			// Add a callback or a collection of callbacks to the list
+			// 将回调或回调集合添加到列表中
 			add: function() {
+				// 如果回调列表不是 "" 或是 [] 就添加
 				if ( list ) {
 
 					// If we have memory from a past run, we should fire after adding
+					// -> 如果我们有过去运行的内存，我们应该在添加
+					// 也就是如果有运行过的回调，并且当前没有在运行
 					if ( memory && !firing ) {
+						// 重置回调索引
 						firingIndex = list.length - 1;
+						// 将运行过的再次添加
 						queue.push( memory );
 					}
 
+					// 向回调列表中添加
 					( function add( args ) {
+						// 在内部遍历传入的回调集合
+						// 用的是 jQuery.each() 
+						// _ 表示索引
+						// arg 表示 value
 						jQuery.each( args, function( _, arg ) {
+							// 如果是函数
 							if ( jQuery.isFunction( arg ) ) {
+								// unique 是options 对象的一个键
+								// 表示是只添加过一次
+								
+								// 没有添加过，或者 arg 没有在 list 中
 								if ( !options.unique || !self.has( arg ) ) {
+									// 将 arg 压入 list
 									list.push( arg );
 								}
-							} else if ( arg && arg.length && jQuery.type( arg ) !== "string" ) {
+							}
+							// 如果不是函数
+							// arg 存在，长度存在，并且类型为 string
+							else if ( arg && arg.length && jQuery.type( arg ) !== "string" ) {
 
 								// Inspect recursively
+								// -> 递归查检
 								add( arg );
 							}
 						} );
 					} )( arguments );
 
+					// 也就是如果有运行过的回调，并且当前没有在运行
 					if ( memory && !firing ) {
+						// 则执行
 						fire();
 					}
 				}
@@ -3368,10 +3453,12 @@ jQuery.Callbacks = function( options ) {
 			},
 
 			// Remove a callback from the list
+			// 移除一个回调在 list 中
 			remove: function() {
 				jQuery.each( arguments, function( _, arg ) {
 					var index;
 					while ( ( index = jQuery.inArray( arg, list, index ) ) > -1 ) {
+						// splice() 删除替换元素，这种方法会改变原始数组！。
 						list.splice( index, 1 );
 
 						// Handle firing indexes
@@ -3384,14 +3471,19 @@ jQuery.Callbacks = function( options ) {
 			},
 
 			// Check if a given callback is in the list.
+			// -> 检查 list 中 是否有回调
 			// If no argument is given, return whether or not list has callbacks attached.
+			// -> 如果没有给定参数，则返回List是否附加了回调。
 			has: function( fn ) {
 				return fn ?
+					// 因为 list 是一个数组，所以用 jQuery.inArray() 判断
 					jQuery.inArray( fn, list ) > -1 :
+					// 返回长是否大于 0 
 					list.length > 0;
 			},
 
 			// Remove all callbacks from the list
+			// 清空所有回调
 			empty: function() {
 				if ( list ) {
 					list = [];
@@ -3400,20 +3492,25 @@ jQuery.Callbacks = function( options ) {
 			},
 
 			// Disable .fire and .add
+			// -> 禁用 fire() 和 add()
 			// Abort any current/pending executions
 			// Clear all callbacks and values
 			disable: function() {
+				// 将执行队列，调用一次 falg ，memory 和 list 都清空
 				locked = queue = [];
 				list = memory = "";
 				return this;
 			},
+			// 使回调列表变假
 			disabled: function() {
 				return !list;
 			},
 
 			// Disable .fire
+			// -> 禁用 fire()
 			// Also disable .add unless we have memory (since it would have no effect)
 			// Abort any pending executions
+			// --> 也禁用.add，除非我们有内存(因为它没有效果)中止任何待执行的执行
 			lock: function() {
 				locked = queue = [];
 				if ( !memory && !firing ) {
@@ -3426,11 +3523,13 @@ jQuery.Callbacks = function( options ) {
 			},
 
 			// Call all callbacks with the given context and arguments
+			// 调用到 Callbcaks 的 fire ，传入的 上下文和参数, 在该内部拼成一个待执行回调
 			fireWith: function( context, args ) {
 				if ( !locked ) {
 					args = args || [];
 					args = [ context, args.slice ? args.slice() : args ];
 					queue.push( args );
+					// 如果当前没有正在执行的，则执行
 					if ( !firing ) {
 						fire();
 					}
@@ -3439,17 +3538,20 @@ jQuery.Callbacks = function( options ) {
 			},
 
 			// Call all the callbacks with the given arguments
+			// 该方法是 Callbacks 返回的对象所执行的 fire
+			// 传入参数调用 fireWith()
 			fire: function() {
 				self.fireWith( this, arguments );
 				return this;
 			},
 
 			// To know if the callbacks have already been called at least once
+			// -> 要知道回调是否至少已被调用过一次
 			fired: function() {
+				// 返回是否已经触发的布尔值
 				return !!fired;
 			}
 		};
-
 	return self;
 };
 
@@ -3945,16 +4047,22 @@ if ( document.readyState === "complete" ||
 }
 
 
-
-
+// 参数 value 就是 fn(value) 处理的 value
+// value 也可以是一个函数
+// raw    true 表示 value 不是函数
 // Multifunctional method to get and set values of a collection
 // The value/s can optionally be executed if it's a function
+// -> 获取和设置集合值的多功能方法如果是函数，则可以选择执行值
+// 返回四种情况
 var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
+	console.info('$> access ->', arguments);
 	var i = 0,
 		len = elems.length,
+		// 记录 key 是否是 null
 		bulk = key == null;
 
 	// Sets many values
+	// 设置多个值
 	if ( jQuery.type( key ) === "object" ) {
 		chainable = true;
 		for ( i in key ) {
@@ -3962,34 +4070,63 @@ var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 		}
 
 	// Sets one value
+	// 设置一个值
 	} else if ( value !== undefined ) {
+		// console.log('value !== undefined')
 		chainable = true;
 
+		// 判断 value 不是一个函数
 		if ( !jQuery.isFunction( value ) ) {
+			// console.log('value not is function')
 			raw = true;
 		}
 
+		// 当 key 为 null 时, bulk = true
 		if ( bulk ) {
 
 			// Bulk operations run against the entire set
+			// value 不是一个函数
 			if ( raw ) {
+				// fn 一个参数被调用
+				// console.info('$> access fn(value)')
 				fn.call( elems, value );
 				fn = null;
 
 			// ...except when executing function values
-			} else {
+			} 
+			// value 是一个函数
+			else {
+				// console.info('$> access fn 被重新定义')
+				// 将原本传入的 fn 的引用得到
 				bulk = fn;
+				// 然后重新定义这个方法，接收三个参数
+				// fn 只会在 value 是一个函数时被重新定义
+				// 这里接收到的 value 就是 value() 返回的值
 				fn = function( elem, key, value ) {
+					// console.log('\t> access fn(elem, key, value)', elem, key, value)
+					// fn 一个参数被调用，这是间接调用 fn(value)
 					return bulk.call( jQuery( elem ), value );
 				};
+
+				// 其实这里就相当于有两个方法
+				// 一个是原本要执行的方法，另一个就是重新定义的那个方法
 			}
 		}
 
+		// 如果参数二，也就是 fn 存在，就循环执行它
+		// 还有就是前面判断的如果 value 也是一个函数，这是用 raw 控制
+		// 为 elems 的每一个元素都执行一次
 		if ( fn ) {
 			for ( ; i < len; i++ ) {
+				// console.info('$> access fn(elem, key, value)', fn);
+				// fn 三个参数被调用, 此时的 fn 就是被重新定义的 fn
 				fn(
 					elems[ i ], key, raw ?
 					value :
+					// 这里的 fn(elems[i], key) 也是调用的重新定义过的那个 fn
+					// 这个 fn(elems[i], key) 就是 fn(elems, key, value) 的返回值
+					// 返回的是 bulk.call( jQuery( elem ), value )
+					// 		也就是原始 fn(value) 返回的值
 					value.call( elems[ i ], i, fn( elems[ i ], key ) )
 				);
 			}
@@ -4001,14 +4138,36 @@ var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 	}
 
 	// Gets
+	// 得到
 	if ( bulk ) {
+		// fn 空参被调用
+		// console.info('$> access fn() ')
 		return fn.call( elems );
 	}
-
+	// fn 二个参数被调用
 	return len ? fn( elems[ 0 ], key ) : emptyGet;
 };
-var acceptData = function( owner ) {
+// access() 测试
+// value 不是函数时
+// access(jQuery('#top'), function(value){
+// 	console.log('传入的 value', value)
+// }, null, 'qlover', true, null, true); // bulk = true
 
+// value 是函数时
+// access(jQuery('#top'), function(value){
+// 	// 接收到的 value 就是 value() 返回的值
+// 	console.log('传入的 value -> ', value);
+// 	return 1000;
+// }, null, function(index, key){
+// 	console.log('value()', index, key);//=> 0 1000
+// 	return 9999;
+// }, true, null, null); // bulk = true
+
+
+
+// 判断元素是什么类型
+var acceptData = function( owner ) {
+	console.info('$> acceptData ->', arguments);
 	// Accepts only:
 	//  - Node
 	//    - Node.ELEMENT_NODE
@@ -4020,22 +4179,30 @@ var acceptData = function( owner ) {
 
 
 
-
+// Data 构造器
 function Data() {
+	console.info('$> Data', arguments);
+	// jQuery.expando 是 jQuery 的一个标识符
 	this.expando = jQuery.expando + Data.uid++;
 }
-
+// 将 uid 初始为 1
+// 就是存放的是缓存索引
 Data.uid = 1;
 
+// Data 原型
+// 有以下几个方法 cache,set,get,access,remove,hasData
 Data.prototype = {
-
+	// 建立一个 cache
 	cache: function( owner ) {
 
 		// Check if the owner object already has a cache
+		// 检查当前对象的 expando 是否已经存在，也就是检查是否已经有缓存
 		var value = owner[ this.expando ];
 
 		// If not, create one
+		// 如果没有，则创建缓存
 		if ( !value ) {
+			// 该对象就是 jQuery 缓存内部本身的一个缓存对象
 			value = {};
 
 			// We can accept data for non-element nodes in modern browsers,
@@ -4045,6 +4212,7 @@ Data.prototype = {
 
 				// If it is a node unlikely to be stringify-ed or looped over
 				// use plain assignment
+				// 判断这个对象是否合格
 				if ( owner.nodeType ) {
 					owner[ this.expando ] = value;
 
@@ -4060,18 +4228,24 @@ Data.prototype = {
 			}
 		}
 
+		// 有缓存则直接返回
 		return value;
 	},
+	// 设置 key, value
 	set: function( owner, data, value ) {
 		var prop,
 			cache = this.cache( owner );
 
 		// Handle: [ owner, key, value ] args
+		// 操作三个参数
 		// Always use camelCase key (gh-2257)
+		// 骆驼命名法
 		if ( typeof data === "string" ) {
+			// jQuery.camelCase() 方法专门用于生成一个驼峰命名的 key 
 			cache[ jQuery.camelCase( data ) ] = value;
 
 		// Handle: [ owner, { properties } ] args
+		// 操作两个参数
 		} else {
 
 			// Copy the properties one-by-one to the cache object
@@ -4083,11 +4257,14 @@ Data.prototype = {
 	},
 	get: function( owner, key ) {
 		return key === undefined ?
+			// 返回所有缓存
 			this.cache( owner ) :
 
 			// Always use camelCase key (gh-2257)
 			owner[ this.expando ] && owner[ this.expando ][ jQuery.camelCase( key ) ];
 	},
+	// 该方法结合了 get 和 set 
+	// 并返回 key 或者是 value 
 	access: function( owner, key, value ) {
 
 		// In cases where either:
@@ -4130,12 +4307,16 @@ Data.prototype = {
 		if ( key !== undefined ) {
 
 			// Support array or space separated string of keys
+			// 用数组形式的 key 去删除
 			if ( jQuery.isArray( key ) ) {
 
 				// If key is an array of keys...
 				// We always set camelCase keys, so remove that.
 				key = key.map( jQuery.camelCase );
-			} else {
+			}
+			// 如果不是一个数组，只是一个 键 
+			else {
+				// 则强行构建一个数组
 				key = jQuery.camelCase( key );
 
 				// If a key with the spaces exists, use it.
@@ -4146,13 +4327,14 @@ Data.prototype = {
 			}
 
 			i = key.length;
-
+			// 删除
 			while ( i-- ) {
 				delete cache[ key[ i ] ];
 			}
 		}
 
 		// Remove the expando if there's no more data
+		// cache 为空的时候，删除整个缓存
 		if ( key === undefined || jQuery.isEmptyObject( cache ) ) {
 
 			// Support: Chrome <=35 - 45
@@ -4166,14 +4348,18 @@ Data.prototype = {
 			}
 		}
 	},
+	// 判断是否有缓存
 	hasData: function( owner ) {
 		var cache = owner[ this.expando ];
 		return cache !== undefined && !jQuery.isEmptyObject( cache );
 	}
 };
+// 目前应该是用于存放缓存的两个变量对象
+// 而且还是全局的
 var dataPriv = new Data();
 
 var dataUser = new Data();
+// dataPriv.expando < dataUser.expando;
 
 
 
@@ -4190,7 +4376,12 @@ var dataUser = new Data();
 var rbrace = /^(?:\{[\w\W]*\}|\[[\w\W]*\])$/,
 	rmultiDash = /[A-Z]/g;
 
+// 取参数中的值
+// 将字符串数字转换成数字
+// 将数组，对象字符串转换成对应的数组，对象的对象
+// 其它则返回本身 
 function getData( data ) {
+	console.iinfo('$> getData', arguments);
 	if ( data === "true" ) {
 		return true;
 	}
@@ -4204,10 +4395,12 @@ function getData( data ) {
 	}
 
 	// Only convert to a number if it doesn't change the string
+	// -> 只有在不更改字符串的情况下才转换为数字
 	if ( data === +data + "" ) {
 		return +data;
 	}
 
+	// 如果是一个对象字符串
 	if ( rbrace.test( data ) ) {
 		return JSON.parse( data );
 	}
@@ -4215,21 +4408,31 @@ function getData( data ) {
 	return data;
 }
 
+
+// 从 DOM 中搜索以 data- 开头属性的函数
 function dataAttr( elem, key, data ) {
+	// console.info('$> dataAttr', elem, key, data)
 	var name;
 
+	// 也就是取 data-* 的属性
+	// 当 data 为 undefined 时 并且 元素是节点元素
 	// If nothing was found internally, try to fetch any
 	// data from the HTML5 data-* attribute
+	// -> 如果内部没有发现任何东西，请尝试获取任何来自HTML 5数据的数据-*属性
 	if ( data === undefined && elem.nodeType === 1 ) {
+		// 得到将 key 变成小写后的键
 		name = "data-" + key.replace( rmultiDash, "-$&" ).toLowerCase();
+		// 调用原生 API，得到该属性值
 		data = elem.getAttribute( name );
-
+		// console.log('\t> dataAttr', name, data);
+		// 如果 data 的值是字符串，也就是有值，有 name 这个缓存 data- 数据
 		if ( typeof data === "string" ) {
 			try {
 				data = getData( data );
 			} catch ( e ) {}
-
+			console.log('\t> data', data)
 			// Make sure we set the data so it isn't changed later
+			// -> 确保设置数据，以便以后不再更改
 			dataUser.set( elem, key, data );
 		} else {
 			data = undefined;
@@ -4237,7 +4440,13 @@ function dataAttr( elem, key, data ) {
 	}
 	return data;
 }
+// dataAttr 的测试
+// dataAttr(jQuery('#top')[0], 'id');//=> > data #top
+// dataAttr(jQuery('#mid')[0], 'id');//=> > data null
 
+
+
+// $.data
 jQuery.extend( {
 	hasData: function( elem ) {
 		return dataUser.hasData( elem ) || dataPriv.hasData( elem );
@@ -4261,19 +4470,34 @@ jQuery.extend( {
 		dataPriv.remove( elem, name );
 	}
 } );
-
+// $.fn.data
 jQuery.fn.extend( {
 	data: function( key, value ) {
+		// console.iinfo('$> jQuery.fn.data ->', key, value);
 		var i, name, data,
+			// 得到这一组 jQuery 对象的第一个 DOM 对象
 			elem = this[ 0 ],
+			// 并取得这个元素的所有属性
 			attrs = elem && elem.attributes;
 
+		// 当没有参数时，获得所有的值
 		// Gets all values
 		if ( key === undefined ) {
+			// 如果当前  jQuery 数组不为空
 			if ( this.length ) {
+				// 从当前的 dataUser 得到这组对象的所有缓存
+				// 这个 get() 是 Data.prototype 下的方法
 				data = dataUser.get( elem );
 
-				if ( elem.nodeType === 1 && !dataPriv.get( elem, "hasDataAttrs" ) ) {
+				// nodeType 值
+				// 1  ELEMENT_NODE
+				// 2  ATTRIBUTE_NODE
+				// 判断这个 jQuery 数组对象中是不是 ELEMENT_NODE
+				// console.log('\t>', dataPriv.get( elem, "hasDataAttrs" ));
+				// "dataAttr" 对象的这个键表示是否有属性缓存的标识
+				if ( elem.nodeType === 1 && !dataPriv.get( elem, "dataAttr" ) ) {
+					// 搜索该元素的所有属性
+					// 也就是看该元素有没有以 data- 开头的属性
 					i = attrs.length;
 					while ( i-- ) {
 
@@ -4283,10 +4507,12 @@ jQuery.fn.extend( {
 							name = attrs[ i ].name;
 							if ( name.indexOf( "data-" ) === 0 ) {
 								name = jQuery.camelCase( name.slice( 5 ) );
+								console.log('$.fn.data() -> dataAttr');
 								dataAttr( elem, name, data[ name ] );
 							}
 						}
 					}
+					// 设置了属性缓存，就将标识设置为 true
 					dataPriv.set( elem, "hasDataAttrs", true );
 				}
 			}
@@ -4294,13 +4520,20 @@ jQuery.fn.extend( {
 			return data;
 		}
 
+		// 设置多个值
 		// Sets multiple values
 		if ( typeof key === "object" ) {
 			return this.each( function() {
 				dataUser.set( this, key );
 			} );
 		}
-
+		// elem = this, 
+		// fn = function(value){}, 
+		// key = null, 
+		// value = value, 
+		// chainable = arguments.length > 1, 
+		// emptyGet = null, 
+		// raw = true
 		return access( this, function( value ) {
 			var data;
 
@@ -4309,8 +4542,9 @@ jQuery.fn.extend( {
 			// `value` parameter was not undefined. An empty jQuery object
 			// will result in `undefined` for elem = this[ 0 ] which will
 			// throw an exception if an attempt to read a data cache is made.
+			// 这是就是 access 中空参的那个 fn 调用
 			if ( elem && value === undefined ) {
-
+				console.log('return 空参 fn 被调用 ')
 				// Attempt to get data from the cache
 				// The key will always be camelCased in Data
 				data = dataUser.get( elem, key );
@@ -4320,6 +4554,7 @@ jQuery.fn.extend( {
 
 				// Attempt to "discover" the data in
 				// HTML5 custom data-* attrs
+				// console.log('$.fn.data() -> return access() -> dataAttr')
 				data = dataAttr( elem, key );
 				if ( data !== undefined ) {
 					return data;
@@ -10218,3 +10453,4 @@ if ( !noGlobal ) {
 
 return jQuery;
 } );
+console.log('\n');

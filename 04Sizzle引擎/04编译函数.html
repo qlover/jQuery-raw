@@ -1,0 +1,248 @@
+<meta charset="UTF-8"> 每条选择器规则最小的几个单元可以划分为：ATTR | CHILD | CLASS | ID | PSEUDO | TAG<title>sizzle-解析原理</title>
+<!-- <script src="/Qpublic/lib/jquery-1.10.2/jquery.js"></script> -->
+<!-- <script src="../jquery-2.0.3.js"></script> -->
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script src="../sizzle2.js"></script>
+
+<div id="div1">
+    <ul id="top">
+        <li class="li1">hello</li>
+        <li class="li1">js</li>
+        <li class="li2">jquery</li>
+    </ul>
+</div>
+<p>--分界线--</p>
+<div id="div2">
+    <ul id="mid">
+        <li class="li2">php</li>
+        <li class="li2">java</li>
+        <li class="li1">python</li>
+    </ul>
+    <p>---分界线---</p>
+</div>
+
+<div id="text">
+  <p>
+     <input type="text" />
+  </p>
+  <div class="aaron">
+     <input type="checkbox" name="readme" value="Submit" />
+     <p>Sizzle</p>
+  </div>
+</div>
+
+
+<script>
+  
+// sizzle引入这个实现主要的作用是分词的筛选，提高逐个匹配的效率
+
+
+// var a = 1;
+// setTimeout(function(){
+//   a++;
+// }, 1000);
+// console.log(a);
+
+var a = 1;
+var b = function(callback){
+    setTimeout(function(){
+        a++;
+        callback();
+    }, 1000);
+};
+b(function(){
+    console.log(a);//=> 2
+});
+
+// 这里的“回调”并不是“阻塞”，而会空出执行线程，直至操作完成
+// 而且，假如系统本身没有提供阻塞的API，我们甚至没有“阻塞”代码的方法（当然，本就不该阻塞）
+
+
+
+// JavaScript是单线程的，代码也是同步从上向下执行的，执行流程不会随便地暂停
+// 当遇到异步的情况，从而改变了整个执行流程的时候，我们需要对代码进行自动改写
+// 也就是在程序的执行过程中动态生成并执行新的代码，这个过程我想称之为编译函数的一种运用吧.
+// 其实说白了，就是一种闭包的使用，只是在不同的场景中换了一个优雅的词汇罢了
+
+
+
+
+// Sizzle 元匹配器
+// 就是最小最开始的那个匹配器，Expr.filter 
+// 每条选择器规则最小的几个单元可以划分为：ATTR | CHILD | CLASS | ID | PSEUDO | TAG
+// 并用其中有工厂方法用来返回生成对应的这些元匹配器 Expr.filter
+// 其实元匹配器工厂就是用来匹配几个单元的，而这几个元匹配器工厂专门用于返回对应匹配到的匹配器
+// 
+// 可以把每个匹配器工厂当成一个工厂类
+// 而返回的元匹配器就是工厂类生产的类
+// 比如： 
+//      Student 学生类
+//      StudentFactory  学生工厂类
+//      
+// 只是在 Sizzle 中的匹配器是用来判断的，返回 true 和 false 的
+
+// 比如 属性元匹配器工厂
+var ATTR = function(name, operator, check) {
+    //返回一个元匹配器
+    return function(elem) {
+        //先取出节点对应的属性值
+        var result = Sizzle.attr(elem, name);
+
+         //看看属性值有木有！
+        if (result == null) {
+            //如果操作符是不等号，返回真，因为当前属性为空 是不等于任何值的
+            return operator === "!=";
+        }
+        //如果没有操作符，那就直接通过规则了
+        if (!operator) {
+            return true;
+        }
+
+        result += "";
+
+        //如果是等号，判断目标值跟当前属性值相等是否为真
+        return operator === "=" ? result === check :
+           //如果是不等号，判断目标值跟当前属性值不相等是否为真
+            operator === "!=" ? result !== check :
+            //如果是起始相等，判断目标值是否在当前属性值的头部
+            operator === "^=" ? check && result.indexOf(check) === 0 :
+            //这样解释： lang*=en 匹配这样 <html lang="xxxxenxxx">的节点
+            operator === "*=" ? check && result.indexOf(check) > -1 :
+            //如果是末尾相等，判断目标值是否在当前属性值的末尾
+            operator === "$=" ? check && result.slice(-check.length) === check :
+            //这样解释： lang~=en 匹配这样 <html lang="zh_CN en">的节点
+            operator === "~=" ? (" " + result + " ").indexOf(check) > -1 :
+            //这样解释： lang=|en 匹配这样 <html lang="en-US">的节点
+            operator === "|=" ? result === check || result.slice(0, check.length + 1) === check + "-" :
+            //其他情况的操作符号表示不匹配
+            false;
+    };
+},
+
+
+// 也就是说，Sizzle 将词法分析分析过后的每一个规则，分别从 Expr.filter 里面去找对应的方法执行具体的查询或者过滤的操作
+// 但是如果每一个规则都去找一次，效率会很底
+// 所以 Sizzle 引入了编译函数的概念
+
+// Sizzle.compile()
+//  matcherFromTokens()
+//  matcherFromGroupMatchers()
+// 这两个内部的方法把分析关系表，生成用于匹配单个选择器群组的函数
+
+// matcherFromTokens，它充当了selector“分词”与Expr中定义的匹配方法的串联与纽带的作用
+// 可以说选择符的各种排列组合都是能适应的了
+// Sizzle巧妙的就是它没有直接将拿到的“分词”结果与Expr中的方法逐个匹配逐个执行
+// 而是先根据规则组合出一个大的匹配方法，最后一步执行
+
+
+
+// compile 源码 
+
+//编译函数机制
+//通过传递进来的selector和match生成匹配器：
+var compile = function(selector, group /* Internal Use Only */ ) {
+    var i,
+        setMatchers = [],
+        elementMatchers = [],
+        cached = compilerCache[selector + " "];
+    if (!cached) { //依旧看看有没有缓存
+        // Generate a function of recursive functions that can be used to check each element
+        if (!group) {
+            //如果没有词法解析过
+            group = tokenize(selector);
+        }
+        i = group.length; //从后开始生成匹配器
+        //如果是有并联选择器这里多次等循环
+        while (i--) {
+            //这里用matcherFromTokens来生成对应Token的匹配器
+            cached = matcherFromTokens(group[i]);
+            if (cached[expando]) {
+                setMatchers.push(cached);
+            } else { //普通的那些匹配器都压入了elementMatchers里边
+                elementMatchers.push(cached);
+            }
+        }
+        // Cache the compiled function
+        // 这里可以看到，是通过matcherFromGroupMatchers这个函数来生成最终的匹配器
+        cached = compilerCache(selector, matcherFromGroupMatchers(elementMatchers, setMatchers));
+    }
+    //把这个终极匹配器返回到select函数中
+    return cached;
+};
+
+
+//生成用于匹配单个选择器组的函数
+//充当了selector“tokens”与Expr中定义的匹配方法的串联与纽带的作用，
+//可以说选择符的各种排列组合都是能适应的了
+//Sizzle巧妙的就是它没有直接将拿到的“分词”结果与Expr中的方法逐个匹配逐个执行，
+//而是先根据规则组合出一个大的匹配方法，最后一步执行。但是组合之后怎么执行的
+function matcherFromTokens(tokens) {
+    var checkContext, matcher, j,
+       len = tokens.length,
+       leadingRelative = Expr.relative[tokens[0].type],
+       implicitRelative = leadingRelative || Expr.relative[" "], //亲密度关系
+       i = leadingRelative ? 1 : 0,
+
+       // The foundational matcher ensures that elements are reachable from top-level context(s)
+       // 确保这些元素可以在context中找到
+       matchContext = addCombinator(function(elem) {
+           return elem === checkContext;
+       }, implicitRelative, true),
+       matchAnyContext = addCombinator(function(elem) {
+           return indexOf.call(checkContext, elem) > -1;
+       }, implicitRelative, true),
+
+       //这里用来确定元素在哪个context
+       matchers = [
+           function(elem, context, xml) {
+               return (!leadingRelative && (xml || context !== outermostContext)) || (
+                   (checkContext = context).nodeType ?
+                   matchContext(elem, context, xml) :
+                   matchAnyContext(elem, context, xml));
+           }
+       ];
+
+    for (; i < len; i++) {
+       // Expr.relative 匹配关系选择器类型
+       // "空 > ~ +"
+       if ((matcher = Expr.relative[tokens[i].type])) {
+           //当遇到关系选择器时elementMatcher函数将matchers数组中的函数生成一个函数
+           //（elementMatcher利用了闭包所以matchers一直存在内存中）
+           matchers = [addCombinator(elementMatcher(matchers), matcher)];
+       } else {
+           //过滤  ATTR CHILD CLASS ID PSEUDO TAG
+           matcher = Expr.filter[tokens[i].type].apply(null, tokens[i].matches);
+
+           // Return special upon seeing a positional matcher
+           //返回一个特殊的位置匹配函数
+           //伪类会把selector分两部分
+           if (matcher[expando]) {
+               // Find the next relative operator (if any) for proper handling
+               // 发现下一个关系操作符（如果有话）并做适当处理
+               j = ++i;
+               for (; j < len; j++) {
+                   if (Expr.relative[tokens[j].type]) { //如果位置伪类后面还有关系选择器还需要筛选
+                       break;
+                   }
+               }
+               return setMatcher(
+                   i > 1 && elementMatcher(matchers),
+                   i > 1 && toSelector(
+                       // If the preceding token was a descendant combinator, insert an implicit any-element `*`
+                       tokens.slice(0, i - 1).concat({
+                           value: tokens[i - 2].type === " " ? "*" : ""
+                       })
+                   ).replace(rtrim, "$1"),
+                   matcher,
+                   i < j && matcherFromTokens(tokens.slice(i, j)), //如果位置伪类后面还有选择器需要筛选
+                   j < len && matcherFromTokens((tokens = tokens.slice(j))), //如果位置伪类后面还有关系选择器还需要筛选
+                   j < len && toSelector(tokens)
+               );
+           }
+           matchers.push(matcher);
+       }
+   }
+
+   return elementMatcher(matchers);
+}
+</script>
