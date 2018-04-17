@@ -1,0 +1,175 @@
+<meta charset="UTF-8">
+<title>$.event 源码</title>
+
+<style>
+	#wrap{ padding: 10px; background: #f00; }
+	button{ padding: 10px 20px; font-size: 20px;}
+</style>
+
+<div id="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+</div>
+
+
+<script>
+// $('body').on('click', function(event) {
+// 	console.log(event.target.tagName);
+// });
+
+// 将 Dean Edward 大牛的 addEvent 库之后，会发现兼容并不是那们的复杂
+// addEvent 兼容性超级棒，对于 IE4,5 都有很好的兼容，jQuery 的原理与它是一致的
+// 在 jQuery 与之相对的就是 $.event
+// 这个对象就是实现了 addEvent 所实现过的东西
+
+// $.event
+// add() 是添加事件函数，在当前 dom 上监听事件，生成处理函数；
+// remove() 移除事件；
+// dispatch() 是实际的事件执行者；
+// handlers() 在 dispatch 执行的时候，对事件进行校正，区分原生与委托事件；
+// addProp() 是绑定参数到对象上；
+// fix() 将原生的 event 事件修复成一个可读可写且有统一接口的对象；
+// special() 是一个特殊事件表。
+
+
+// 那么接下来就是源码过程
+</script>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// 先上一个比对图
+/*
+	addEvent == jQuery.event.add;
+	handleEvent == eventHandle;
+	handler.$$guid == handler.guid;
+	element.events == dataPriv[elem].events;
+ */
+
+// 
+// 1. add() 方法的开始会有一大堆的属性
+// 其实这些属性是组成一个对象用的属性，这个对象就是 handleObj
+// 在 addEvent 中，处理是为每个 DOM 元素添加了一个 events 的对象
+// 		这个对象是用来存放所有事件的事件处理对象(列表)
+// 	而 handleObj 就是这个事件处理列表
+// 	
+// 回到 Data 那部分，Data 用于缓存 handleObj 就在这个缓存中
+// dataPriv 和 dataUser
+// 在添加了两行 用于测试时，来看看 dataPriv 和 dataUser 的缓存过程
+/*
+handleObj 结构如下：
+handleObj = {
+  type: type,
+  origType: origType,
+  data: data,
+  handler: handler,
+  guid: handler.guid,
+  selector: selector,
+  needsContext: selector && jQuery.expr.match.needsContext.test( selector ),
+  namespace: namespaces.join( "." )
+}
+
+
+ */
+
+
+// $.event.add()
+// 会生成三个非常重要的对象
+// events 		所有事件处理对象列表
+// handleObj	事件处理操作对象
+// eventHandle	
+
+function callback(e){
+	// 得到每一个 handler.handler
+	console.log(callback.handler);
+}
+
+// jQuery('#btn').on('click', function _cb1(e) {
+// 	console.log(e.handleObj.guid);//=> 1
+// });
+// 不错吧，handleObj 存在！！！
+
+
+// jQuery('#btn3').on('click', callback);
+
+// 如果 type 是一个 object
+
+// $('#btn3')[0].addEventListener('click', function _adl(e){
+// 	console.log('elemData.handler click')
+// }, false);
+// $('#btn3')[0].addEventListener('click', function _adl2(e){
+// 	console.log('elemData.handler click2')
+// }, false);
+
+
+// $('#btn3').each(function(){
+// 	$.event.add( this, 'click mouseover', function _add(e){
+// 		console.log('elemData.events', e.type);
+// 	}, 'data');
+// })
+// 在 dataPriv 中缓存中的得到 events 和 handle 两个对象
+console.log('$.dp', $.dp.get($('#btn3')[0]));
+// 得到 $.event.special 这个特殊的事件处理
+console.log('$.event.special', $.event.special)
+
+
+</script>
+
+<script>
+
+// $.event.dispache()
+
+
+// $.event.handlers()
+// 区分出事件类型,组成事件队列
+/*
+$('body').each(function(){
+	$.event.add( this, 'click', function _add(e){
+		//console.log($.dp.get($('body')[0]).events[e.type].delegateCount);//=> 0
+		console.log($.dp.get($('body')[0]).events[e.type])
+	}, 'send-data');
+});
+
+// div 委托给 body
+$('body').each(function(){
+	$.event.add( this, 'click', function _add(e){
+		// console.log($.dp.get($('body')[0]).events[e.type].delegateCount);//=> 1
+		console.log($.dp.get($('body')[0]).events[e.type])
+	}, 'send-data', 'div');
+});
+// 注意了哦,当有委托,其 events 对象的对应事件的 delegateCount 是为 1 的
+*/
+
+// 普通绑定
+// $('body').each(function(){
+// 	$.event.add( this, 'click', function (e){
+// 		console.log($.dp.get($('body')[0], 'events'))
+// 	}, '普通');
+// });
+// 为 div 委托
+$('body').each(function(){
+	$.event.add( this, 'click', function (e){
+		console.log($.dp.get($('body')[0], 'events'))
+	}, '委托', 'div');
+});
+
+
+
+// 源码看到这,也就发现了 $.event.add() $.event.dispatch() 和 $.event.handler() 三个之间的关系了
+
+// 1.同一节点事件需要绑2次，各处理各的流程，写入数据缓存elemData
+// 2.这里要注意个问题，同一个节点上绑定多个事件，这个是在jQuery初始化绑定阶段就优化掉的了
+// 	所以触发时只会执行一次回调指令
+// 3.触发节点的时候，先包装兼容事件对象，然后取出对应的elemData
+// 4.遍历绑定事件节点上的delegateCount数，分组事件
+// 5.delegate绑定从队列头部推入，而普通绑定从尾部推入，形成处理的handlerQueue
+// 6.遍历handlerQueue队列，根据判断是否isPropagationStopped，isImmediatePropagationStopped来处理对应是否执行
+// 7.如果reuturn false则默认调用 event.preventDefault(); event.stopPropagation();
+
+
+// matchesSelector()
+</script>

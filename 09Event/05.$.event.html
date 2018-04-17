@@ -1,0 +1,124 @@
+<meta charset="UTF-8">
+<title>$.event</title>
+
+<style>
+	#wrap{ padding: 10px; background: #f00; }
+	button{ padding: 10px 20px; font-size: 20px;}
+</style>
+
+<div id="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+</div>
+
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script>
+
+
+
+
+// $('body').on('click', function(event) {
+// 	console.log(event);
+// });
+// 当 on 绑定的事件发生，触发的则是 $.Event
+// 而不是 event , 不是 window 的 event
+
+// jQuery 的事件流程
+// $.fn.on
+// on -> jQuery 内部的 on 参数校正器 
+// $.event.add
+// 		给选中元素注册事件处理
+// $.event.dispatch
+// 		执行事件处理函数
+// $.event.fix
+// 		修正 Event 对象
+// $.event.handlers
+// 		组装事件处理器队列
+// 执行事件处理函数
+
+// 再说 $.event 之前需要说个东西
+// addEvent 这个是一个在 DOM2 级上
+
+</script>
+
+<script src="../addEvent.js"></script>
+<script>
+
+var btn = document.getElementById('btn');
+var btn3 = document.getElementById('btn3');
+// addEvent(btn, 'click',function _callback(e){
+// 	console.log(this.events, e.type, _callback.$$guid);//=> click 1
+// });
+// addEvent(btn, 'mouseover', function _callback2(e){
+// 	console.log(this.events, e.type, _callback2.$$guid);//=> mouseover 2
+// })
+
+// addEvent(btn3, 'click',function _callback3(e){
+// 	console.log(this.events, e.type, _callback3.$$guid);//=> click 3
+// });
+// addEvent(btn3, 'mouseover', function _callback4(e){
+// 	console.log(this.events, e.type, _callback4.$$guid);//=> mouseover 4
+// })
+
+// 从上面看出来，如果不支持 addEventListener() 时，会为每一个事件函数添加一个标识
+// $$guid 该标识用于标识每个事件处理函数的唯一
+
+
+// 绑定多个相同类型事件处理函数
+addEvent(btn, 'click', function _cb1(e){
+	console.log(e.type, _cb1.$$guid);
+});
+addEvent(btn, 'click', function _cb2(e){
+	console.log(e.type, _cb2.$$guid);
+	return false;
+});
+addEvent(btn, 'click', function _cb3(e){
+	console.log(e.type, _cb3.$$guid);
+});
+//=>
+// click 1
+// click 2
+// click 3
+// 将三个同时触发了
+// console.log(btn.events);
+//=>
+// { click : { 1: f _cb1, 2 : f _cb2, 3: f _cb3}}
+
+
+
+
+
+/*
+接下来分析一下 addEvent 
+
+
+1. 首先 用 addEvent(elem, type, fn) 函数绑定事件对象 
+	如果可以使用 addEventListener() 则优先使用，当然 removeEventListener() 也是一样
+	(这里只是在源码中模拟一下这两个方法不存在的情况)
+
+2. 添加各种参数
+	如果不支持 w3c 提供的两个方法，则重构绑定事件
+	为该元素添加一个 events 对象
+	并且为每个添加的 fn 添加一个 guid 
+	events 对象用于存放所有事件处理程序
+	当 addEvent() 的第二个参数传入的 type 时，为该 type 创建一个对象 handlers 
+		该对象用来存放每次的 type : fn 这样的键值对
+	也就可以存放多个事件处理，就实现了绑定多个事件处理
+	其它在底层还是用 on + type 存在于每个 DOM 元素中
+3. 执行 handEvent(event)
+	所有事件的委托函数
+	该函数做的第一件事就是得到 event ，而且还考虑到了多种情况
+	然后用 event 得到 type 
+	遍历对应的 events 的 type
+	最后循环执行
+ */
+
+// addEvent 并没有用其它的事件绑定
+// 而用不同的 fn.guid 来绑定相同事件多个处理程序
+
+</script>
+
+

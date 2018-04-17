@@ -1,0 +1,132 @@
+<meta charset="UTF-8">
+<title>on off</title>
+
+<style>
+	#wrap{ padding: 10px; background: #f00; }
+	button{ padding: 10px 20px; font-size: 20px;}
+</style>
+
+<div id="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+</div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 上面有三个按钮
+
+// 最后的 document 处理
+// $(document).on('click', function(event) {
+// 	console.log('document event')
+// 	// 阻止 document 向 window 冒泡
+// 	event.stopPropagation();
+// });
+
+// 委托一
+// $('body').on('click', function(event){
+// 	var tag = event.target;
+// 	var target = tag.tagName.toLowerCase();
+// 	console.log(target);
+// 	// 如果点击的是 a 则阻止默认操作
+// 	if( target == 'a'){
+// 		// jQuery 兼容后的阻止默认操作
+// 		event.preventDefault();
+// 	}
+
+// 	// 阻止向 document 冒泡
+// 	event.stopPropagation();
+// });
+
+// 委托二
+// 为 body 下的 a 调用处理函数
+// 阻止默认操作
+$('body').on('click', 'a', false);
+
+// on 委托时 this 是指向当前元素并不是过滤后的元素
+
+
+// 参数一可以是一个集合
+// 当点击和悬浮
+// $('button').on('click mouseover', function(event) {
+// 	console.log('click or mouseover');
+// });
+
+// 还可以 
+// function handler(event){
+// 	console.log('click or mouseover')
+// }
+// $('button').on('click mouseover', handler);
+// hover 不是一个事件，只是一个 jQuery 封装了的一个方法
+
+// 还有一种奇怪操作
+// 可分别执行不同操作
+// $('button').on({
+// 	click : function(){
+// 		console.log('button click')
+// 	},
+// 	mouseover : function(){
+// 		console.log('button mouserover');
+// 	}
+// });
+
+
+
+
+// on 的第二种用法，传递参数
+function handler2(event){
+	// 接收 event 传递过来的数据
+	console.log(event.data.name +'-'+ $(this).text());
+}
+
+// $('button').on('click', {'name': 'qlover'}, handler2);
+
+
+// 还有一个就是 $.fn.one()
+// 用只绑定一次事件
+// $('body').one('click', function(event) {
+// 	console.log('body click, has one');
+// });
+
+
+// 也过渡委托事件给 button 下的 a
+// $('button').on({
+// 	click : function(){
+// 		console.log('button click')
+// 	},
+// 	mouseover : function(){
+// 		console.log('button mouserover');
+// 	}
+// }, 'a');
+
+
+// $('button').on({
+// 	click : function(e){
+// 		console.log('button click', e.data.name)
+// 	},
+// 	mouseover : function(e){
+// 		console.log('button mouserover', e.data.name);
+// 	}
+// }, {'name':'qlover'});
+// 也可以传递参数
+
+
+// on() 源码 
+// 当 on() 源码看完后,理解 on() 只是一个参数校正器时
+// 而最后  $.event 才是真真的源头
+
+
+// off(event,selector,function(eventObj),map)
+// 用于移除通过 on() 绑定的事件
+// 如需移除指定的事件处理程序，当事件处理程序被添加时
+// 选择器字符串必须匹配 on() 方法传递的参数
+
+// 将 button 用  on 绑定的 click 移除
+$('button').on('click',  callback);
+$('button').off('click'); 
+
+
+
+</script>

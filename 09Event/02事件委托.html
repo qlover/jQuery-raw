@@ -1,0 +1,83 @@
+<meta charset="UTF-8">
+<title>JS 事件委托</title>
+
+<body style="padding: 80px; background: #ff0;">
+	<div class="" style="padding: 50px; background: #f00;">
+        <ul style="padding: 30px; background: #0f0;">
+            <li style="padding: 10px; background: #00f;">Hello jQuery!</li>
+        </ul>
+    </div>
+</body>
+
+<script>
+// 事件委托 或 事件代理
+// 		具体来说，事件委托就是事件目标自身不处理事件
+// 		而是把处理任务委托给其父元素或者祖先元素，甚至根元素（document）
+// 不管用的是什么事件， click/bind/delegate/
+// 都是用的 jQuery  底层的 on()
+
+// 还是用之前的例子，现在用事件委托来实现
+// 事件委托的基本原理就是将任务处理交给父元素或祖先元素，基本根元素
+
+/*    var body = document.body;
+    var div = body.querySelector('div');
+    var ul = body.querySelector('ul');
+    var li = body.querySelector('li');
+    // 为所有元素的父元素绑定
+	document.addEventListener('click', callback, false);
+
+	// 事件处理函数
+	function callback(event){
+		var tag = event.target;
+		var target = tag.tagName.toLowerCase();
+		console.log(target);
+		// 如果点击的事 li 让其颜色改变
+		if( target == 'li'){
+			tag.style.background = "#fff";
+		}
+	}
+*/
+// 所以一旦出现这样的问题就可以用一个办法去优化，就是事件委托
+
+</script>
+
+<script>
+// 所有的事情都会有对立面，事件的冒泡阶段虽然看起来很好，也会有不适合的场所
+// 比较复杂的应用，由于事件监听比较复杂，可能会希望只监听发生在具体节点的事件
+// 这个时候就需要停止事件冒泡。
+	
+// 现在处理任务改变
+// 当点击了大于 ul 的标记，不让 document 委托到
+// 简单来说就是让最后一个元素不冒泡
+// 这个时候就需要阻止冒泡
+	var body = document.body;
+    var div = body.querySelector('div');
+    var ul = body.querySelector('ul');
+    var li = body.querySelector('li');
+	// 让 ul 阻止冒泡
+	ul.addEventListener('click', function(event){
+		console.log('ullll')
+		// 阻止冒泡，这样当点击  li 时最多冒泡到 ul 
+		// 不会再冒泡到 div
+		event.stopPropagation();
+	}, false);
+	div.addEventListener('click', function(){
+		console.log('i am div');
+	}, false);
+    // 为所有元素的父元素绑定
+	document.addEventListener('click', callback, false);
+
+
+	// 事件处理函数
+	function callback(event){
+		var tag = event.target;
+		var target = tag.tagName.toLowerCase();
+		console.log(target);
+		// 如果点击的事 li 让其颜色改变
+		if( target == 'li'){
+			tag.style.background = "#fff";
+		}
+	}
+
+
+</script>

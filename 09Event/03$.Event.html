@@ -1,0 +1,59 @@
+<meta charset="UTF-8">
+<title>$.Event</title>
+
+<body style="padding: 80px; background: #ff0;">
+	<div class="" style="padding: 50px; background: #f00;">
+        <ul style="padding: 30px; background: #0f0;">
+            <li style="padding: 10px; background: #00f;">Hello jQuery!</li>
+        </ul>
+    </div>
+</body>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// 因为在 3.0 之后的 jQuery 很多的像 bind() live() 这样的方法都被删除了
+// 取代的就是 on()
+// 所以看看 on() 和 off()
+
+
+
+// $.fn.on, $.fn.one
+// 	存在于原型上
+// 	这两个方法都是用于绑定事件
+// 	$.fn.one() 用于只运行一次的事件，然后就移除
+// on() 
+// 	而这个方法在源码中是单独的一个方法
+// 	并且 fn.on() fn.one() 都调的这个方法
+
+
+
+// $.fn.on(event,childSelector,data,function)
+// 	方法在被选元素及子元素上添加一个或多个事件处理程序
+// 	event  			事件集合
+// 	childSelector 	一个选择器字符串，用以过滤选定的元素，该选择器的后裔元素将调用处理程序\
+// 					如果选择是空或被忽略，当它到达选定的元素，事件总是触发
+// 	data 			传递到函数的额外数据
+// 	function 		事件发生时运行的函数
+
+$('body')[0].addEventListener('click', function(event){
+	console.log(event)
+}, false); //=> MouseEvent
+
+$('body').on('click', function(event) {
+	console.log(event);
+	// event.preventDefault();
+}); //=> jQuery.Event
+
+
+// on() 方法默认是要冒泡的
+// 为说 on 之前说说为什么 jQuery 的事件是 jQuery.Event
+// 看源码，会发现 $.Event 只是一个构造器，什么都没有
+// 因为在不同的版本的 on 方法体现都有点不同，这里在就用 3.1.1 的 on() 来说
+</script>
+
+
+<script>
+// 接下来就看看 on() 方法有几个参数的用法
+// 
+</script>

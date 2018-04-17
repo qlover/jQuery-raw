@@ -1,3 +1,4 @@
+console.log('\njQuery3.1.1 >>>>');
 /*!
  * jQuery JavaScript Library v3.1.1
  * https://jquery.com/
@@ -140,12 +141,17 @@ jQuery.fn = jQuery.prototype = {
 
 	// Take an array of elements and push it onto the stack
 	// (returning the new matched element set)
+	// // 该方法生成一个新的 jQuery 对象
+	// ret 就是新生成对象
+	// 而 ret 的 prevObject 指向调用该方法的那个 jQuery 对象
 	pushStack: function( elems ) {
 
 		// Build a new jQuery matched element set
+		// 将 elems 合并到 jQuery 对象中
 		var ret = jQuery.merge( this.constructor(), elems );
 
 		// Add the old object onto the stack (as a reference)
+		// 实现对象栈
 		ret.prevObject = this;
 
 		// Return the newly-formed element set
@@ -181,7 +187,10 @@ jQuery.fn = jQuery.prototype = {
 		return this.pushStack( j >= 0 && j < len ? [ this[ j ] ] : [] );
 	},
 
+	// 回溯方法
 	end: function() {
+		// 如果该对象有 prevObject 就返回其上一个对象
+		// 没有则返回 jQuery() 
 		return this.prevObject || this.constructor();
 	},
 
@@ -426,6 +435,7 @@ jQuery.extend( {
 
 	// Support: Android <=4.0 only, PhantomJS 1 only
 	// push.apply(_, arraylike) throws on ancient WebKit
+	// 将 second 合并到 first 中
 	merge: function( first, second ) {
 		var len = +second.length,
 			j = 0,
@@ -492,6 +502,7 @@ jQuery.extend( {
 	},
 
 	// A global GUID counter for objects
+	// 主要用于事件处理函数的标识,一个事件处理函数就有一个 guid 
 	guid: 1,
 
 	// Bind a function to a context, optionally partially applying any
@@ -1111,7 +1122,7 @@ function testContext( context ) {
 support = Sizzle.support = {};
 
 /**
- * Detects XML nodes
+ * Detects XML nodes -> 检测 XML 节点
  * @param {Element|Object} elem An element or a document
  * @returns {Boolean} True iff elem is a non-HTML XML node
  */
@@ -3154,6 +3165,7 @@ jQuery.fn.extend( {
 		);
 	},
 
+	// 向当前 jQuery 数组对象添加 jQuery 对象
 	add: function( selector, context ) {
 		return this.pushStack(
 			jQuery.uniqueSort(
@@ -3161,7 +3173,8 @@ jQuery.fn.extend( {
 			)
 		);
 	},
-
+	// 用来替换 andSelf() 
+	// 也就在 DOM 操作的最后将自己添加到 jQuery 数组中
 	addBack: function( selector ) {
 		return this.add( selector == null ?
 			this.prevObject : this.prevObject.filter( selector )
@@ -4147,7 +4160,7 @@ var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 	// fn 二个参数被调用
 	return len ? fn( elems[ 0 ], key ) : emptyGet;
 };
-// access() 测试
+// access() 用于测试
 // value 不是函数时
 // access(jQuery('#top'), function(value){
 // 	console.log('传入的 value', value)
@@ -4167,7 +4180,7 @@ var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 
 // 判断元素是什么类型
 var acceptData = function( owner ) {
-	console.info('$> acceptData ->', arguments);
+	// console.info('$> acceptData ->', arguments);
 	// Accepts only:
 	//  - Node
 	//    - Node.ELEMENT_NODE
@@ -4354,12 +4367,23 @@ Data.prototype = {
 		return cache !== undefined && !jQuery.isEmptyObject( cache );
 	}
 };
-// 目前应该是用于存放缓存的两个变量对象
-// 而且还是全局的
+// -目-前-应-该-是-用-于-存-放-缓-存-的-两-个-变-量-对-象-
+// 看了 $.event 现在知道了这两个缓存对象是什么了
+
+// 用于 DOM 事件，$.event 中的缓存都在这
+// 主要缓存两个对象，events 和 handle
+// event 东西比较多，比如绑定了一个 click 事件，则 events['click'] = []
+// handle 则是 addEvenetListener 添加的那个回调
 var dataPriv = new Data();
 
+// 用于 $ , 就是 jQuery 通用
 var dataUser = new Data();
 // dataPriv.expando < dataUser.expando;
+
+
+// 用于测试
+jQuery.dp = dataPriv;
+jQuery.du = dataUser;
 
 
 
@@ -4440,7 +4464,7 @@ function dataAttr( elem, key, data ) {
 	}
 	return data;
 }
-// dataAttr 的测试
+// dataAttr 用于测试
 // dataAttr(jQuery('#top')[0], 'id');//=> > data #top
 // dataAttr(jQuery('#mid')[0], 'id');//=> > data null
 
@@ -5132,62 +5156,101 @@ function safeActiveElement() {
 	} catch ( err ) { }
 }
 
+/**
+ * 事件绑定函数-> 其实只对参数校正
+ * @param  {jQuery}   elem     事件绑定元素
+ * @param  {string|object}   types    事件名或事件处理对象
+ * @param  {string}   selector 过滤的选择器
+ * @param  {object}   data     传递的参数，evenet.data
+ * @param  {Function} fn       处理程序
+ * @param  {number}   one      绑定次数
+ * @return {[type]}            [description]
+ */
 function on( elem, types, selector, data, fn, one ) {
+	// console.info('$> innner on')
+	// 该方法有个很重要的思想就是重组参数,让每个形参位上都有值
+	// 也就是说如果在外部像这样的调用时 on(elem, 'click', function(){})
+	// 其形参 selector 应该是 undefined
+	// 形参 data 也应该是 undefined 
+	// 这个时候就需要重组参数
+	// 其实就是以不同的方法调用
+	// 再看下面的时候,将 types 当做第一个形参
+	// 因为在外部调用时,只有 4 个参数
+	
+	// type 用于局部变量存入 types 是对象情况的每一个键
+	// origFn 在内部存放 fn 的引用
 	var origFn, type;
 
 	// Types can be a map of types/handlers
+	// types 可以是单个事件名，多个事件名
+	// types 为对象时, 先处理
 	if ( typeof types === "object" ) {
-
 		// ( types-Object, selector, data )
 		if ( typeof selector !== "string" ) {
-
 			// ( types-Object, data )
 			data = data || selector;
 			selector = undefined;
 		}
+		// 递归执行每一个
 		for ( type in types ) {
+			// console.log('\t> recursion on')
 			on( elem, type, selector, data, types[ type ], one );
 		}
+		// 直接返回该元素
 		return elem;
 	}
 
+	// 外部调用只有两个参数
 	if ( data == null && fn == null ) {
-
 		// ( types, fn )
 		fn = selector;
 		data = selector = undefined;
-	} else if ( fn == null ) {
+	}
+	// 外部调用只有三个参数
+	else if ( fn == null ) {
 		if ( typeof selector === "string" ) {
-
 			// ( types, selector, fn )
 			fn = data;
 			data = undefined;
 		} else {
-
 			// ( types, data, fn )
 			fn = data;
 			data = selector;
 			selector = undefined;
 		}
 	}
+
+	// 经过上面的判断形参位都已经被重组
+	// 这个时候,如果  fn 为 false ,则表示直接返回 false 阻止默认行为
 	if ( fn === false ) {
 		fn = returnFalse;
-	} else if ( !fn ) {
+	}
+	// 如果为其它情况则直接返回该元素
+	else if ( !fn ) {
 		return elem;
 	}
 
+	// 次数等于一时
+	// 当其它正常流程走完,则调用  $.fn.off() 将该绑定的事件取消掉
 	if ( one === 1 ) {
+		// 得到传入的 fn 引用
 		origFn = fn;
+		// 在内部重新定义 fn 
 		fn = function( event ) {
 
-			// Can use an empty set, since event contains the info
+			// Can use an empty set, since event contains the info 
+			// jQuery() 得到一个空的 jQuery 对象
 			jQuery().off( event );
 			return origFn.apply( this, arguments );
 		};
 
 		// Use same guid so caller can remove using origFn
+		// -> 使用相同的GUID，以便调用者可以使用OrigFn删除
 		fn.guid = origFn.guid || ( origFn.guid = jQuery.guid++ );
 	}
+
+	// 到这该  on() 方法只是重组参数来校正参数
+	// 而真正的源头是 jQuery.event
 	return elem.each( function() {
 		jQuery.event.add( this, types, fn, data, selector );
 	} );
@@ -5196,78 +5259,136 @@ function on( elem, types, selector, data, fn, one ) {
 /*
  * Helper functions for managing events -- not part of the public interface.
  * Props to Dean Edwards' addEvent library for many of the ideas.
+ * -> 用于管理事件的辅助函数--而不是公共接口的一部分
+ * -> 为迪恩·爱德华兹的AdEvent图书馆提供许多创意的道具。
  */
 jQuery.event = {
 
+	// 该对象用于记录某个事件是否已经被添加
+	// 并没有什么用
 	global: {},
 
+
+	// 添加事件，类 addEvent 的 addEvent()
+	// 也是 $.fn.on() 最终添加事件的地方
+	/**
+	 * 绑定事件的源头
+	 * @param {Element|object} elem     元素对象
+	 * @param {string|object} types    事件名或集合
+	 * @param {function} handler  处理的函数
+	 * @param {data} data     附带传入的数据
+	 * @param {string} selector 选择器，用于过滤
+	 */
 	add: function( elem, types, handler, data, selector ) {
-
-		var handleObjIn, eventHandle, tmp,
-			events, t, handleObj,
-			special, handlers, type, namespaces, origType,
+		// console.info('$> $.event.on', arguments)
+		// 一大堆的属性
+		// 分开来看
+		// type, origType, data, handler, guid, selector, needsContext, namespaces
+		// 这几个属性是用于构造一个 handleObj 对象的属性
+		var handleObjIn, 
+			eventHandle,  // 与 addEvent 的 handleEvent 函数一样
+			tmp,
+			events, 
+			t, 
+			handleObj,  // 事件处理对象
+			special, 
+			handlers,  // 该 type 类型事件的处理对象 存在于 dataPriv['events'][type]
+			type,  // 事件类型
+			namespaces, 
+			origType, // 原始事件类型
+			// 查看 elem 的在 dataPriv 上的缓存是什么数据
+			// 如果是 文本或注释节点，则不添加事件
 			elemData = dataPriv.get( elem );
-
+			// console.log('\> elemData', elemData)
 		// Don't attach events to noData or text/comment nodes (but allow plain objects)
+		// -> 不要将事件附加到noData或文本/注释节点(但允许普通对象)
 		if ( !elemData ) {
 			return;
 		}
-
+		// console.log('\t> handler.handler', handler);
+		
 		// Caller can pass in an object of custom data in lieu of the handler
+		// 如果  handler 是一个事件处理对象，并且有 handler 属性
 		if ( handler.handler ) {
+			console.log('\t> handleObjIn', handleObj)
+			// 构造一个小的 handleObjIn 外部对象
 			handleObjIn = handler;
 			handler = handleObjIn.handler;
 			selector = handleObjIn.selector;
 		}
 
 		// Ensure that invalid selectors throw exceptions at attach time
+		// -> 确保无效的选择器在附加时间引发异常
 		// Evaluate against documentElement in case elem is a non-element node (e.g., document)
 		if ( selector ) {
 			jQuery.find.matchesSelector( documentElement, selector );
 		}
 
 		// Make sure that the handler has a unique ID, used to find/remove it later
+		// 确保这个 handler 是有 guid 的， 用于 find/remove 它
 		if ( !handler.guid ) {
+			// $.guid 是一个静态的 guid 
 			handler.guid = jQuery.guid++;
 		}
 
 		// Init the element's event structure and main handler, if this is the first
+		// -> 元素的事件结构和主处理程序，如果这是第一个
+		// 初始化 events 和 handle 两个对象
+		
+		// 整个关键,  elemData 从缓存得到的两个对象  events handle
+		// 之后可见都是对这两个对象筛选 ,分组
+
+		// 初始化 events 
 		if ( !( events = elemData.events ) ) {
 			events = elemData.events = {};
 		}
+		// 初始化 handle
 		if ( !( eventHandle = elemData.handle ) ) {
-			eventHandle = elemData.handle = function( e ) {
-
+			eventHandle = elemData.handle = function ( e ) {
+				// console.log('\t> eventHandle')
 				// Discard the second event of a jQuery.event.trigger() and
 				// when an event is called after a page has unloaded
+				// -> 放弃jQuery.Event.trigger()和在页卸载后调用事件时
+				// 最终执行在这
 				return typeof jQuery !== "undefined" && jQuery.event.triggered !== e.type ?
 					jQuery.event.dispatch.apply( elem, arguments ) : undefined;
 			};
 		}
 
 		// Handle multiple events separated by a space
+		// 多个事件数组
 		types = ( types || "" ).match( rnothtmlwhite ) || [ "" ];
 		t = types.length;
+		// 每个事件都处理
 		while ( t-- ) {
+			// 参数处理
 			tmp = rtypenamespace.exec( types[ t ] ) || [];
+			// 得到事件类型，和原始事件类型，也就是说事件类型有没有 on 开头的
 			type = origType = tmp[ 1 ];
+			// 得到是否有命名空间,就是事件中没有得点
 			namespaces = ( tmp[ 2 ] || "" ).split( "." ).sort();
 
 			// There *must* be a type, no attaching namespace-only handlers
+			// -> 必须有一个类型，没有附加名称空间的处理程序。
 			if ( !type ) {
 				continue;
 			}
 
 			// If event changes its type, use the special event handlers for the changed type
+			// -> 如果事件更改其类型，则使用已更改类型的特殊事件处理程序
 			special = jQuery.event.special[ type ] || {};
 
 			// If selector defined, determine special event api type, otherwise given type
+			// 根据是否已定义selector，决定使用哪个特殊事件api，如果没有非特殊事件，则用type
 			type = ( selector ? special.delegateType : special.bindType ) || type;
 
 			// Update special based on newly reset type
+			// type状态发生改变，重新定义特殊事件
 			special = jQuery.event.special[ type ] || {};
 
 			// handleObj is passed to all event handlers
+			// -> handleObj 是传递给所有处理程序
+			// 进行浅拷贝
 			handleObj = jQuery.extend( {
 				type: type,
 				origType: origType,
@@ -5280,11 +5401,27 @@ jQuery.event = {
 			}, handleObjIn );
 
 			// Init the event handler queue if we're the first
+			// 如果添加的不是第一个，也就是说该 type 事件没有添加过
+			// events[ type ] 对应的 事件处理列表
 			if ( !( handlers = events[ type ] ) ) {
+				// 就让该事件处理列表为一个空数组
 				handlers = events[ type ] = [];
+				// delegateCount 用来记录是否委托数
+				// 通过传入的selector判断，此刻就能派上用场了
+				// 1 表示是委托
+				// 0 表示普通绑定
+				// 但此时有两种情况
+				// 	- 元素本身有事件
+				// 	- 元素又要处理委托事件
+				// 这个主要交给 $.event.handler() 来处理
 				handlers.delegateCount = 0;
 
+				// 采用自定义事件或者浏览器接口绑定事件
+
 				// Only use addEventListener if the special events handler returns false
+				// addEventListener 也只是添加过了一次
+				// 目前 special.setup 只支持的是 focusion 和 focusout 两个事件
+		        // 如果获取特殊事件监听方法失败，则使用addEventListener进行添加事件
 				if ( !special.setup ||
 					special.setup.call( elem, data, namespaces, eventHandle ) === false ) {
 
@@ -5303,13 +5440,21 @@ jQuery.event = {
 			}
 
 			// Add to the element's handler list, delegates in front
+			// -> 添加到事件列表, delegates 要在前面
+			// 这也就是判断是否存在委托
 			if ( selector ) {
+				// 如果有委托则在队列头添加执行对象
 				handlers.splice( handlers.delegateCount++, 0, handleObj );
 			} else {
+				// 否则添加再后面
 				handlers.push( handleObj );
 			}
+			// 这样就达到了事件队列的委托在前，自身事件在后的顺序
+			// 这样也跟浏览器事件执行的顺序一致了
+
 
 			// Keep track of which events have ever been used, for event optimization
+			// 在 $.event.global 中注册，该 type 事件已经被添加
 			jQuery.event.global[ type ] = true;
 		}
 
@@ -5389,17 +5534,30 @@ jQuery.event = {
 		}
 	},
 
+	// 事件的执行
+	// nativeEvent 是 $.event.add 方法传来的参数
+	// 是一个 arguments 一个类数组
 	dispatch: function( nativeEvent ) {
-
+		// console.info('$> $.event.dispatch');
 		// Make a writable jQuery.Event from the native event object
+		// 把 nativeEvent 变成可读写，jQuery 认可的 event
 		var event = jQuery.event.fix( nativeEvent );
-
-		var i, j, ret, matched, handleObj, handlerQueue,
+		// event.__proto__ == $.Event.prototype //=> true
+		var i, 
+			j, 
+			ret, 
+			matched, 
+			handleObj, 
+			handlerQueue,  // 
+			// 得到一个 arguments 的副本
 			args = new Array( arguments.length ),
+			// 从 缓存 中搜索处理的事件
 			handlers = ( dataPriv.get( this, "events" ) || {} )[ event.type ] || [],
+			// 得到特殊的事件
 			special = jQuery.event.special[ event.type ] || {};
 
 		// Use the fix-ed jQuery.Event rather than the (read-only) native event
+		// 将 args 的第一个元素置为 $.Event 对象
 		args[ 0 ] = event;
 
 		for ( i = 1; i < arguments.length; i++ ) {
@@ -5414,8 +5572,9 @@ jQuery.event = {
 		}
 
 		// Determine handlers
+		// 对 handlers 处理，区分事件类型，并按照顺序排好
 		handlerQueue = jQuery.event.handlers.call( this, event, handlers );
-
+		// console.log('\t> handlerQueue', handlerQueue)
 		// Run delegates first; they may want to stop propagation beneath us
 		i = 0;
 		while ( ( matched = handlerQueue[ i++ ] ) && !event.isPropagationStopped() ) {
@@ -5429,14 +5588,18 @@ jQuery.event = {
 				// a subset or equal to those in the bound event (both can have no namespace).
 				if ( !event.rnamespace || event.rnamespace.test( handleObj.namespace ) ) {
 
+					// 传递参数，将 handleObj 参数交给 event 
 					event.handleObj = handleObj;
 					event.data = handleObj.data;
 
+					// 最终执行在这里
+					// 先执行特殊的事件，或者是原生的事件, 再执行 events 中的事件
 					ret = ( ( jQuery.event.special[ handleObj.origType ] || {} ).handle ||
 						handleObj.handler ).apply( matched.elem, args );
 
 					if ( ret !== undefined ) {
 						if ( ( event.result = ret ) === false ) {
+							// 阻止默认行为和冒泡
 							event.preventDefault();
 							event.stopPropagation();
 						}
@@ -5449,10 +5612,12 @@ jQuery.event = {
 		if ( special.postDispatch ) {
 			special.postDispatch.call( this, event );
 		}
-
+		// console.info('$/> $.event.dispatch', event.result)
 		return event.result;
 	},
 
+	// 在 dispatch 执行的时候，对事件进行校正
+	// 区分原生与委托事件；
 	handlers: function( event, handlers ) {
 		var i, handleObj, sel, matchedHandlers, matchedSelectors,
 			handlerQueue = [],
@@ -5460,6 +5625,7 @@ jQuery.event = {
 			cur = event.target;
 
 		// Find delegate handlers
+		// -> 查找委托处理程序
 		if ( delegateCount &&
 
 			// Support: IE <=9
@@ -5471,12 +5637,18 @@ jQuery.event = {
 			// https://www.w3.org/TR/DOM-Level-3-Events/#event-type-click
 			// Support: IE 11 only
 			// ...but not arrow key "clicks" of radio inputs, which can have `button` -1 (gh-2343)
+			// 火狐浏览器右键或者中键点击时，会错误地冒泡到document的click事件，并且stopPropagation也无效
 			!( event.type === "click" && event.button >= 1 ) ) {
 
+
+			// 在当前元素的父辈或者祖先辈有可能存在着事件绑定
+			// 根据冒泡的特性，我们的依次从当前节点往上遍历一直到绑定事件的节点
+			// 取出每个绑定事件的节点对应的事件处理器
 			for ( ; cur !== this; cur = cur.parentNode || this ) {
 
 				// Don't check non-elements (#13208)
 				// Don't process clicks on disabled elements (#6911, #8165, #11382, #11764)
+				// 过滤一些不能点击的节点
 				if ( cur.nodeType === 1 && !( event.type === "click" && cur.disabled === true ) ) {
 					matchedHandlers = [];
 					matchedSelectors = {};
@@ -5485,7 +5657,7 @@ jQuery.event = {
 
 						// Don't conflict with Object.prototype properties (#13203)
 						sel = handleObj.selector + " ";
-
+						// 用 sizzle 引擎去查找
 						if ( matchedSelectors[ sel ] === undefined ) {
 							matchedSelectors[ sel ] = handleObj.needsContext ?
 								jQuery( sel, this ).index( cur ) > -1 :
@@ -5501,7 +5673,7 @@ jQuery.event = {
 				}
 			}
 		}
-
+		console.log('handlerQueue ->', handlerQueue)
 		// Add the remaining (directly-bound) handlers
 		cur = this;
 		if ( delegateCount < handlers.length ) {
@@ -5539,12 +5711,16 @@ jQuery.event = {
 		} );
 	},
 
+	// 将原生的 event 事件修复成一个可读可写且有统一接口的对象
+	// 这个对象就是 $.Event
 	fix: function( originalEvent ) {
+		// 用来判断 originalEvent 是否是一个 $.Event 对象
 		return originalEvent[ jQuery.expando ] ?
 			originalEvent :
 			new jQuery.Event( originalEvent );
 	},
 
+	// 几个特殊的事件
 	special: {
 		load: {
 
@@ -5609,7 +5785,7 @@ jQuery.removeEvent = function( elem, type, handle ) {
 };
 
 jQuery.Event = function( src, props ) {
-
+	// console.log('$> $.Event', arguments);
 	// Allow instantiation without the 'new' keyword
 	if ( !( this instanceof jQuery.Event ) ) {
 		return new jQuery.Event( src, props );
@@ -5666,6 +5842,7 @@ jQuery.Event.prototype = {
 	isImmediatePropagationStopped: returnFalse,
 	isSimulated: false,
 
+	// 阻止默认操作
 	preventDefault: function() {
 		var e = this.originalEvent;
 
@@ -5675,6 +5852,7 @@ jQuery.Event.prototype = {
 			e.preventDefault();
 		}
 	},
+	// 停止冒泡
 	stopPropagation: function() {
 		var e = this.originalEvent;
 
@@ -5684,6 +5862,7 @@ jQuery.Event.prototype = {
 			e.stopPropagation();
 		}
 	},
+	// 阻止剩下的事件处理程序被执行
 	stopImmediatePropagation: function() {
 		var e = this.originalEvent;
 
@@ -5794,14 +5973,21 @@ jQuery.each( {
 	};
 } );
 
+// 原型上的三个事件操作方法
+// $.fn.on 和 $.fn.one 都是调用了 on() 这个方法
+// 所以 on() 这个才是绑定事件的主要方法
+// 而 $.fn.off() 是自己实现
 jQuery.fn.extend( {
 
+	// 绑定事件
 	on: function( types, selector, data, fn ) {
 		return on( this, types, selector, data, fn );
 	},
+	// 绑定一次事件
 	one: function( types, selector, data, fn ) {
 		return on( this, types, selector, data, fn, 1 );
 	},
+	// 取消事件绑定
 	off: function( types, selector, fn ) {
 		var handleObj, type;
 		if ( types && types.preventDefault && types.handleObj ) {
@@ -5839,6 +6025,17 @@ jQuery.fn.extend( {
 		} );
 	}
 } );
+
+
+// 用于测试
+// jQuery('button').on('click', function _cb1(event) {
+// 	console.log(event, jQuery.dp)
+// });
+// jQuery('button').on('click', function _cb2(event) {
+// 	console.log(event, jQuery.du)
+// });
+
+
 
 
 var
@@ -7702,51 +7899,78 @@ jQuery.fn.extend( {
 
 jQuery.extend( {
 	attr: function( elem, name, value ) {
+		console.log('$> $.attr', arguments)
 		var ret, hooks,
 			nType = elem.nodeType;
 
 		// Don't get/set attributes on text, comment and attribute nodes
+		// 对于 text, comment 和 attribute nodes 不处理
 		if ( nType === 3 || nType === 8 || nType === 2 ) {
 			return;
 		}
 
 		// Fallback to prop when attributes are not supported
+		// 如果连这个函数都不支持，就用 $.prop 方法
 		if ( typeof elem.getAttribute === "undefined" ) {
+			console.log('\t> getAttribute == undefined')
 			return jQuery.prop( elem, name, value );
 		}
 
 		// Attribute hooks are determined by the lowercase version
 		// Grab necessary hook if one is defined
+
+		// 同样和 $.prop 判断一样，看元素是不是一个 Element 或者是否是一个非 XML 元素
+		// 先判断是否是特殊情况，如果是，那就复制 hooks
 		if ( nType !== 1 || !jQuery.isXMLDoc( elem ) ) {
+			// jQuery.expr = Sizzle.selectors
+			// Expr = Sizzle.selectors 
+			// Sizzle.selctors.match = Sizzle.matchExpr
+			// Sizzle.matchExpr = {}
+			// Sizzle.matchExpr.bool = new RegExp( "^(?:" + booleans + ")$", "i" )
+			
+			// 将 name 变成小写
+			// jQuery 式的判断，查看在 attr 钩子中是否有这个键
 			hooks = jQuery.attrHooks[ name.toLowerCase() ] ||
+				// 或者看 name 是否是 HTML 属性是布尔值的
+				// 如果是就调用  boolHook
+				// 	boolHook 是一个用于布尔值属性的钩子，且只有 set 方法
 				( jQuery.expr.match.bool.test( name ) ? boolHook : undefined );
 		}
 
+		// 如果有值
 		if ( value !== undefined ) {
+			
+			// 但如果值为 null ，则移除该属性值
 			if ( value === null ) {
 				jQuery.removeAttr( elem, name );
 				return;
 			}
 
+			// 设置
+			// 如果有钩子处理则优先钩子处理
 			if ( hooks && "set" in hooks &&
 				( ret = hooks.set( elem, value, name ) ) !== undefined ) {
 				return ret;
 			}
-
+			// 否则正常处理
 			elem.setAttribute( name, value + "" );
 			return value;
 		}
 
+		// 取值
+		// 钩子处理优先
 		if ( hooks && "get" in hooks && ( ret = hooks.get( elem, name ) ) !== null ) {
 			return ret;
 		}
-
+		// 普通处理
 		ret = jQuery.find.attr( elem, name );
 
 		// Non-existent attributes return null, we normalize to undefined
 		return ret == null ? undefined : ret;
 	},
 
+	// attr 钩子
+	// 但它只处理 type 这个 HTML 属性，并且钩子只处理 set 
 	attrHooks: {
 		type: {
 			set: function( elem, value ) {
@@ -7833,42 +8057,67 @@ jQuery.fn.extend( {
 } );
 
 jQuery.extend( {
+	// elem DOM 对象
+	// 以 Element.prop | Element[prop]
 	prop: function( elem, name, value ) {
+		console.log('$> $.prop ->', elem, name, value)
 		var ret, hooks,
 			nType = elem.nodeType;
 
 		// Don't get/set properties on text, comment and attribute nodes
+		// 对于 text, comment 和 attribute nodes 不处理
 		if ( nType === 3 || nType === 8 || nType === 2 ) {
 			return;
 		}
 
+		// 先判断是否是特殊情况，如果是，那就复制 hooks
+		// 如果元素不是 ELEMENT_NODE 或者非一个 XML 元素
 		if ( nType !== 1 || !jQuery.isXMLDoc( elem ) ) {
-
+			console.log('\t> not XML', nType)
 			// Fix name and attach hooks
+			
+			// jQuery 式的判断，看没有有 name 这个键
 			name = jQuery.propFix[ name ] || name;
+			// jQuery 式的判断，看钩子中有没有 name 这个键
 			hooks = jQuery.propHooks[ name ];
+			console.log('\t> name, hooks ->', name, hooks)
 		}
-
+		// 设置值
+		// 	看到这先暂停，因为需要看 hooks 才能明白
 		if ( value !== undefined ) {
+			console.log('\t> $.prop set')
+
+			// 查看得到的这个  hooks 中有没有 set 方法
+			// 如果有利用钩子进行 set 
 			if ( hooks && "set" in hooks &&
 				( ret = hooks.set( elem, value, name ) ) !== undefined ) {
+				console.log('\t> prop hook set value')
 				return ret;
 			}
-
+			console.log('\t> prop direct set value')
+			// 如果上面钩子没有 set 方法，则走普通方法直接赋值
 			return ( elem[ name ] = value );
 		}
 
+		// 得到值
+		// 同样取值也是一样，查看 hooks 中有没有 get 方法
+		// 如果有利用钩子进行 get 
 		if ( hooks && "get" in hooks && ( ret = hooks.get( elem, name ) ) !== null ) {
+			console.log('\t> $.prop get')
 			return ret;
 		}
-
+		console.log('\t> $.prop direct get value')
+		// 如果钩子没有 get 方法，则走普通方法护直接取值
 		return elem[ name ];
 	},
 
+	// prop 钩子
+	// 但只有一个需要执行钩子中的操作就是 tabIndex
+	// 其它的只是一个修正
 	propHooks: {
 		tabIndex: {
 			get: function( elem ) {
-
+				// 该方法主要用于兼容 IE9 - IE11
 				// Support: IE <=9 - 11 only
 				// elem.tabIndex doesn't always return the
 				// correct value when it hasn't been explicitly set
@@ -7893,6 +8142,7 @@ jQuery.extend( {
 		}
 	},
 
+	// 保留值属性名字修正
 	propFix: {
 		"for": "htmlFor",
 		"class": "className"
@@ -8130,68 +8380,116 @@ jQuery.fn.extend( {
 var rreturn = /\r/g;
 
 jQuery.fn.extend( {
+	// 参数三种情况
+	// 空 	返回值
+	// 一个参数 	设置值
+	// 函数	函数处理
 	val: function( value ) {
+		// hooks 钩子
+		// isFunction 判断 value 是否是一个函数
 		var hooks, ret, isFunction,
 			elem = this[ 0 ];
 
+		// 取值，空参情况 
+		// 取第一个元素的值，然后直接返回
 		if ( !arguments.length ) {
+			// 如果该元素存在
 			if ( elem ) {
+				// 相似吧
+				// 得到该标签 type 属性为 option 或 select 的钩子处理机制
+				// 如果没有则
 				hooks = jQuery.valHooks[ elem.type ] ||
+					// 得到该标签的名的钩子处理
 					jQuery.valHooks[ elem.nodeName.toLowerCase() ];
 
+
+				// get
+				// 如果有钩子走钩子处理
 				if ( hooks &&
 					"get" in hooks &&
 					( ret = hooks.get( elem, "value" ) ) !== undefined
 				) {
+
 					return ret;
 				}
 
+				// 没则走普通方式
 				ret = elem.value;
 
 				// Handle most common string cases
+				// 处理字符串情况的值
 				if ( typeof ret === "string" ) {
+					// 去掉换行
 					return ret.replace( rreturn, "" );
 				}
 
 				// Handle cases where value is null/undef or number
+				// 返回
 				return ret == null ? "" : ret;
 			}
 
 			return;
 		}
 
+		// 记录 value 是否是一个函数
 		isFunction = jQuery.isFunction( value );
 
+		// 遍历当前 jQuery 对象数组
 		return this.each( function( i ) {
+			// 存入 value() 返回值
 			var val;
-
+			// ELEMENT_NODE 情况
 			if ( this.nodeType !== 1 ) {
 				return;
 			}
 
+			// 如果是函数
 			if ( isFunction ) {
+				// value() 的返回值
+				// 调用了 value()
+				// 并且，注意，还又一次调用了 val() 取值，所以间接的调用  getter
 				val = value.call( this, i, jQuery( this ).val() );
 			} else {
+				// 否则是参数函数的引用
 				val = value;
 			}
 
 			// Treat null/undefined as ""; convert numbers to string
+			// 为 null 
 			if ( val == null ) {
 				val = "";
 
-			} else if ( typeof val === "number" ) {
+			}
+			// 将数字转换成字符串
+			else if ( typeof val === "number" ) {
 				val += "";
 
-			} else if ( jQuery.isArray( val ) ) {
+			}
+			// 如果是 数组，分别转换成字符串
+			else if ( jQuery.isArray( val ) ) {
 				val = jQuery.map( val, function( value ) {
 					return value == null ? "" : value + "";
 				} );
+				// console.log('\t> jQuery.isArray', val)
 			}
 
+			// 同样钩子优先处理
 			hooks = jQuery.valHooks[ this.type ] || jQuery.valHooks[ this.nodeName.toLowerCase() ];
 
 			// If set returns undefined, fall back to normal setting
-			if ( !hooks || !( "set" in hooks ) || hooks.set( this, val, "value" ) === undefined ) {
+			// 如果这里得到了钩子处理
+			// 或者该钩子里有 set 
+			// 或者该钩子的 set 方法设值失败
+			// 		set 设值只有 select 标签才执行
+			// console.log('$/> val()');
+			if ( !hooks || !( "set" in hooks ) || 
+				// 钩子设值，直接在这里操作，如果设置不成功则就走下面的普通设置
+				// 调用的 $.valHooks.select.set(elem, name) 
+				// 但是，也看得出来传入了三个参数，第三个参数
+				hooks.set( this, val, "value") === undefined
+			) {
+				// console.log('$/> val() if')
+				// 普通设值
 				this.value = val;
 			}
 		} );
@@ -8199,10 +8497,14 @@ jQuery.fn.extend( {
 } );
 
 jQuery.extend( {
+	// val 钩子
+	// 处理两个，一是 option, 另一个是 select
 	valHooks: {
 		option: {
 			get: function( elem ) {
-
+				// console.log('$> valHooks.option.get')
+				// jQuery.find = Sizzle
+				// attr = Sizzle.attr(elem, name)
 				var val = jQuery.find.attr( elem, "value" );
 				return val != null ?
 					val :
@@ -8260,6 +8562,9 @@ jQuery.extend( {
 			},
 
 			set: function( elem, value ) {
+				// console.info('$> valHooks.select.set', arguments)
+				// 接收到了第三个参数  "value"
+				// 也不知道这个参数有什么用目前还不清楚
 				var optionSet, option,
 					options = elem.options,
 					values = jQuery.makeArray( value ),
@@ -8283,6 +8588,8 @@ jQuery.extend( {
 				if ( !optionSet ) {
 					elem.selectedIndex = -1;
 				}
+
+				// console.info('$/> valHooks.select.set', values)
 				return values;
 			}
 		}
@@ -8290,6 +8597,7 @@ jQuery.extend( {
 } );
 
 // Radios and checkboxes getter/setter
+// 在内部为 Radios and checkboxes 也做了扩展
 jQuery.each( [ "radio", "checkbox" ], function() {
 	jQuery.valHooks[ this ] = {
 		set: function( elem, value ) {

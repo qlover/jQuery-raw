@@ -1,0 +1,121 @@
+<meta charset="UTF-8">
+<title>JS 冒泡和捕获</title>
+
+<body style="padding: 80px; background: #ff0;">
+	<div class="" style="padding: 50px; background: #f00;">
+        <ul style="padding: 30px; background: #0f0;">
+            <li style="padding: 10px; background: #00f;">Hello jQuery!</li>
+        </ul>
+    </div>
+</body>
+
+<script>
+// DOM2 组在事件处理中有三个阶段
+// 1. 捕获
+// 	当我们在 DOM 树的某个节点发生了一些操作（例如单击、鼠标移动上去），就会有一个事件发射过去
+// 	这个事件从 Window 发出，不断经过下级节点直到目标节点。在到达目标节点之前的过程
+// 	就是捕获阶段（Capture Phase）。
+// 	捕获阶段的任务就是建立这个事件传递路线，以便后面冒泡阶段顺着这条路线返回 Window
+// 2. 目标
+// 	当事件跑啊跑，跑到了事件触发目标节点那里，最终在目标节点上触发这个事件，就是目标阶段。
+// 3. 冒泡
+// 当事件达到目标节点之后，就会沿着原路返回，由于这个过程类似水泡从底部浮到顶部，所以称作冒泡阶段
+// 具体可以见 event.demo.html
+
+
+
+// 为什么 addEventListener() 第三个参数不用 true 
+// true 表示捕获
+// false 表示冒泡
+// 这是因为 IE 不支持捕获阶段监听事件，所以为了统一
+
+
+// 接下来看一个例子，体现一下冒泡过程
+	var html = document.documentElement;
+    var body = document.body;
+    var div = body.querySelector('div');
+    var ul = body.querySelector('ul');
+    var li = body.querySelector('li');
+
+    // Capture
+    window.addEventListener('click', callback, true);
+    html.addEventListener('click', callback, true);
+    body.addEventListener('click', callback, true);
+    div.addEventListener('click', callback, true);
+    html.addEventListener('click', callback, true);
+    ul.addEventListener('click', callback, true);
+    li.addEventListener('click', callback, true);
+
+    // Bubble
+    window.addEventListener('click', callback, false);
+    html.addEventListener('click', callback, false);
+    body.addEventListener('click', callback, false);
+    div.addEventListener('click', callback, false);
+    html.addEventListener('click', callback, false);
+    ul.addEventListener('click', callback, false);
+    li.addEventListener('click', callback, false);
+
+	function callback (event) {
+		var tag = event.currentTarget; 
+		console.log(tag.tagName || "window");
+	}
+
+/*
+当点击 btn div 时
+捕获过程 window -> HTML -> BODY -> DIV -> UL -> LI 
+冒泡过程 LI -> UL -> DIV -> BODY -> HTML -> window
+ */
+
+// 当元素一旦多了，就会出现大量的绑定，性能消耗，而且元素也必须要存在
+// 许多问题
+// 事件有冒泡机制，所有子节、点的事件都会顺着父级节点跑回去
+// 所以我们可以通过监听父级节点来实现监听子节点的功能，这就是事件代理
+
+// 减少事件绑定，提升性能
+// 		之前你需要绑定一堆子节点，而现在你只需要绑定一个父节点即可
+// 		减少了绑定事件监听函数的数量。
+// 动态变化的 DOM 结构，仍然可以监听
+// 		当一个 DOM 动态创建之后，不会带有任何事件监听，除非你重新执行事件监听函数
+// 		而使用事件监听无须担忧这个问题。
+
+
+
+// 事件委托或事件代理
+// 		具体来说，事件委托就是事件目标自身不处理事件
+// 		而是把处理任务委托给其父元素或者祖先元素，甚至根元素（document）
+// 不管用的是什么事件， click/bind/delegate/
+// 都是用的 jQuery  底层的 on()
+
+
+
+
+
+
+
+
+// 所以一旦出现这样的问题就可以用一个办法去优化，就是事件委托
+
+</script>
+
+<!-- <script src="../jquery-3.1.1.js"></script> -->
+<script>
+	// 先来看看 几种绑定
+// jQuery 对事件的绑定分别有几个 API 
+// bind()
+// 	用于直接附加一个事件处理程序到元素上
+// 	处理程序附加到 jQuery 对象中当前选中的元素，所以这个元素必须存在
+// 	没用委托机制
+// live()
+// 	将委托事件处理附加到 document 上
+// delegate()
+// on()
+// 	提供了一种统一绑定事件的方法
+
+
+
+
+
+
+
+
+</script>

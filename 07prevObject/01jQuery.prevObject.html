@@ -83,7 +83,9 @@ $('#father').find('#son').css({'color':'red'})
 
 
 // 全部变成了 blue
-$('#father').find('#son').nextAll()
+$('#father').find('#son').nextAll() // 将 #son 后面的所有得到
+// addBack() 再将 #son 也得到
+// 也就是 #son 后面的所有包括 #son 
 	.addBack().css({'color':'blue'});
 
 
@@ -93,4 +95,27 @@ $('#father').find('#son').nextAll()
 // $.fn.add()
 // $.fn.pushStack()
 
+</script>
+
+<script>
+var $f = $('#father'); // 该对象没有父对象操作过
+var $s = $f.find('.son');
+console.log($f.prevObject); //=> undefined
+console.log($f.constructor); //=> $
+
+console.log($s.prevObject); //=> $f
+console.log($s.constructor); //=> $
+// 所以在调用 end 时，$s 回得到 prevObject
+// 而 $f 不会，得到的是 $ 也就是 jQuery
+console.log($f.end()); //=> jQuery.fn.init {} ,也就是一个空的 jQuery 对象
+console.log($s.end()); //=> jQuery.fn.init [div#father]
+console.log($s.constructor() instanceof $);//=> true
+
+
+
+
+console.log($('#father').find('#son').nextAll());
+//=> jQuery.fn.init [div.son2, prevObject: jQuery.fn.init(1)]
+console.log($('#father').find('#son').nextAll().addBack())
+//=> jQuery.fn.init(2) [div#son, div.son2, prevObject: jQuery.fn.init(1)]
 </script>
