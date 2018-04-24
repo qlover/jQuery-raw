@@ -1,0 +1,166 @@
+<meta charset="UTF-8">
+<title> DOM 操作之 DocumentFragment </title>
+
+<style>
+	.wrap{ padding: 10px; background: #f00; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div class="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+	<button id="btn4">Java</button>
+	<button id="btn5" data-sub="py">Python</button>
+	<input id="ipt" type="text">
+</div>
+
+
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+
+// 在 jQuery 中 DOM 操作有 append() after() before() ，包裹等类似的操作
+// 这样的操作就是 DOM 操作，并非 DOM 元素
+
+// 接下来看看这些方法的用法 
+
+
+
+// 创建节点
+
+
+// 还记得吗，init 构造中，有一段是这样的判断
+// selector[ 0 ] === "<" && 
+// 	selector[ selector.length - 1 ] === ">" &&
+// 	selector.length >= 3
+// 	判断传入的参数是否是一个字符串，一个 HTML 字符串
+// 	则用 parseHTML() 直接解析成 DOM 对象
+// 	然后加入到 this 这个数组中，这一步就是用于生成一个 jQuery 对象的一步
+
+var $btn1 = $('<button id="btn1"></button>');// jQuery.fn.init [button#btn1]
+
+// 向 body 再添加一个 div 
+var $div = $('<div class="wrap"></div>');
+$('body').append($div);
+
+// 向 div 中添加一个 按钮 jQuery 对象
+$div.append($btn1);
+
+// 向按钮中添加一个链接 HTML 字符串
+var $a = $('<a href="#ECMAScript">ECMAScript</a>');
+$btn1.append($a);
+
+// 在 btn1 前面在插入一个按钮
+$btn1.before('<input type="text" />');
+
+// 还可以支持回调形式
+// 插入元素在该集合中的索引的位置
+// 这个回调用于返回，而返回的 HTML,Node,jQuery, 将会插入到 $btn1 当前这个 jQuery 对象 index 元素的位置
+$btn1.after(function (index) {
+	return `<button id="btn6">Bootstrap-${index}</button>`;
+})
+
+</script>
+
+<script>
+// 这些方法在 jQuery 中操作起来很方便的
+// 该方法对封装的节点操作做了参数上的校正支持，与对应处理的调用
+// append、prepend、before、after、replaceWith
+// appendTo、prependTo、insertBefore、insertAfter、replaceAll
+
+// 保证最终操作的永远是dom元素，浏览器的最终API只认识那么几个接口，所以如果传递是字符串或者其他的，当然需要转换
+// 针对节点的大量操作，我们肯定是需要引入文档碎片做优化的，这个必不可少
+
+
+// 说到这就要说说，什么是文档碎片， buildFragment()
+// 该方法是 domManip() 方法的最终方法，其它涉及到 createDocumentFragment 的原生 DOM 操作
+// 这个很有必要说下
+// 而且在看源码之前也要把这个 文档碎片 理解了
+
+</script>
+
+<script>
+// 文档碎片
+
+// DocumentFragment 是一个轻量级的文档对象，能够提取部分文档的树或创建一个新的文档片段
+// 当使用原生 API 操作 DOM 后，就是刷新一次页面，效率也就大打折扣
+// 而使用 文档碎片 把所有的新节点附加在其上，然后把文档碎片的内容一次性添加到 document 中
+// 这就只需要一次页面刷新就可
+
+// 过程如下：
+// 	创建文档片段
+// 	创建文档片段中的节点，就是需要添加到 document 中的节点
+// 		此时，文档片段和片段中的节点都不属于文档树
+// 	利用原生 API 将文档片段中的节点添加到 document 中
+// 		此时，片段中的节点已经属于文档树，而片段始终不属于文档树
+
+
+/*
+	不占用额外资源，不属于文档树，只是文档树的一问他
+	片段中的节点再未添加到树中前也不属于文档树
+	但又可以像普通 Node 一样使用， 继承 Node, 
+
+其
+	nodeType == 11
+	nodeName == "#document-fragment"
+	nodeValue == null
+	parentNode == null
+	子节点可以是Element、ProcessingInstruction、Comment、Text、CDATASection或EntityReference
+
+
+与 createElement 相比
+
+createElement() 创建一个新的节点,可完全使用 innerHTML
+				只要创建不管添加没添加都属于文档树
+createDocumentFragment() 创建一个文档片段, innerHTML 只是一个属性
+						元素是一次性的，添加之后再就不能操作了
+
+可以用 Range.extractContents() 方法 或 Range.cloneContents() 方法
+获取包含现有文档的片段的 DocumentFragment 节点。
+
+
+文档片段相当于一个缓存,将需要添加到文档树中的节点,暂时放到这里面
+最后将添加的节点一次性全部从缓存放到树中
+
+ */
+
+
+var ce = document.createElement('div');
+var cdf = document.createDocumentFragment();
+console.log(ce);//=> <div></div>
+console.log(cdf);//=> #document-fragment
+
+// 接下来看个小例子
+</script>
+
+<div class="wrap"></div>
+
+<script>
+var warp = document.getElementsByClassName('wrap')[2];
+
+// 利用 createFragment 为 wrap 添加多个按钮
+// 1.创建 fragment
+var fragment = document.createDocumentFragment();
+
+// 2. 创建多个按钮
+['JavaScript','jQuery', 'Bootstrap', 'Vue', 'React', 'Deeplearn.js'].forEach( function(element) {
+	// 在片段中添加需要添加的节点
+	var button = document.createElement('button');
+	button.textContent = element;
+	// 将节点添加到片段中
+	fragment.append(button," ");// 为排版
+	// append() 还有种用法就是，从第二个参数后，只要是字符串，都能添加
+
+});
+
+// 3. 将片段中的内容一次性添加到树中
+warp.append(fragment);
+console.log(Object.keys(fragment)); // 自身没有任何属性方法
+console.log(Object.getPrototypeOf(fragment));//=> DocumentFragment
+// 操作 DocumentFragment 就是这样，接下来就看 jQuery 是如何处理 DocumentFragment
+// 首先 domManip()
+</script>

@@ -1,0 +1,161 @@
+<meta charset="UTF-8">
+<title> jQuery 的 html(), text() </title>
+
+<style>
+	.wrap{ padding: 10px; background: #f00; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div class="wrap">
+	<button id="btn1">Bootstrap</button>
+</div>
+
+
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+// innerHTML，outerHTML，innerText，outerText
+// 最多不过这四个属性
+// 但是 set 情况下(设置)的时候，outer 会把当前 elem 也给删掉，使用还是要谨慎
+// FF 不支持innerText ，但是可以用textContent作为替代方案
+
+var $wrap = $('.wrap');
+
+
+
+console.log($wrap[0].innerHTML);//=> <button id="btn1">Bootstrap</button>
+console.log($wrap[0].outerHTML);
+//=> 
+//<div class="wrap">
+//	<button id="btn1">Bootstrap</button>
+//</div>`
+
+console.log($wrap[0].innerText);//=> Bootstrap
+console.log($wrap[0].outerText);//=> Bootstrap
+
+console.log($wrap.html());//=> <button id="btn1">Bootstrap</button>
+
+</script>
+
+
+<script>
+// 源码 $.fn.html() $.fn.text()
+// access()
+
+// 也许此时会再一次发现, access() 这个方法还是陌生
+// 使用了许多次, 没关系,当这个说完, 看到了 css() 就明白该方法是什么用了
+// 先暂时放一下下
+</script>
+
+<script>
+var accessCopy = function( elems, fn, key, value, chainable, emptyGet, raw ) {
+	// console.info('$> access ->', arguments);
+	var i = 0,
+		len = elems.length,
+		// 记录 key 是否是 null
+		bulk = key == null;
+
+	// Sets many values
+	// 设置多个值
+	if ( jQuery.type( key ) === "object" ) {
+		chainable = true;
+		for ( i in key ) {
+			access( elems, fn, i, key[ i ], true, emptyGet, raw );
+		}
+
+	// Sets one value
+	// 设置一个值
+	} else if ( value !== undefined ) {
+		// console.log('value !== undefined')
+		chainable = true;
+
+		// 判断 value 不是一个函数
+		if ( !jQuery.isFunction( value ) ) {
+			// console.log('value not is function')
+			raw = true;
+		}
+
+		// 当 key 为 null 时, bulk = true
+		if ( bulk ) {
+
+			// Bulk operations run against the entire set
+			// value 不是一个函数
+			if ( raw ) {
+				// fn 一个参数被调用
+				// console.info('$> access fn(value)')
+				fn.call( elems, value );
+				fn = null;
+
+			// ...except when executing function values
+			} 
+			// value 是一个函数
+			else {
+				// console.info('$> access fn 被重新定义')
+				// 将原本传入的 fn 的引用得到
+				bulk = fn;
+				// 然后重新定义这个方法，接收三个参数
+				// fn 只会在 value 是一个函数时被重新定义
+				// 这里接收到的 value 就是 value() 返回的值
+				fn = function( elem, key, value ) {
+					// console.log('\t> access fn(elem, key, value)', elem, key, value)
+					// fn 一个参数被调用，这是间接调用 fn(value)
+					return bulk.call( jQuery( elem ), value );
+				};
+
+				// 其实这里就相当于有两个方法
+				// 一个是原本要执行的方法，另一个就是重新定义的那个方法
+			}
+		}
+
+		// 如果参数二，也就是 fn 存在，就循环执行它
+		// 还有就是前面判断的如果 value 也是一个函数，这是用 raw 控制
+		// 为 elems 的每一个元素都执行一次
+		if ( fn ) {
+			for ( ; i < len; i++ ) {
+				// console.info('$> access fn(elem, key, value)', fn);
+				// fn 三个参数被调用, 此时的 fn 就是被重新定义的 fn
+				fn(
+					elems[ i ], key, raw ?
+					value :
+					// 这里的 fn(elems[i], key) 也是调用的重新定义过的那个 fn
+					// 这个 fn(elems[i], key) 就是 fn(elems, key, value) 的返回值
+					// 返回的是 bulk.call( jQuery( elem ), value )
+					// 		也就是原始 fn(value) 返回的值
+					value.call( elems[ i ], i, fn( elems[ i ], key ) )
+				);
+			}
+		}
+	}
+
+	if ( chainable ) {
+		return elems;
+	}
+
+	// Gets
+	// 得到
+	if ( bulk ) {
+		// fn 空参被调用
+		// console.info('$> access fn() ')
+		return fn.call( elems );
+	}
+	// fn 二个参数被调用
+	return len ? fn( elems[ 0 ], key ) : emptyGet;
+};
+// access() 用于测试
+// value 不是函数时
+// access(jQuery('#top'), function(value){
+// 	console.log('传入的 value', value)
+// }, null, 'qlover', true, null, true); // bulk = true
+
+// value 是函数时
+// access(jQuery('#top'), function(value){
+// 	// 接收到的 value 就是 value() 返回的值
+// 	console.log('传入的 value -> ', value);
+// 	return 1000;
+// }, null, function(index, key){
+// 	console.log('value()', index, key);//=> 0 1000
+// 	return 9999;
+// }, true, null, null); // bulk = true
+</script>
+

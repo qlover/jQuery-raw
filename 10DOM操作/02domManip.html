@@ -1,0 +1,85 @@
+<meta charset="UTF-8">
+<title> jQuery 的 domManip() </title>
+
+<style>
+	.wrap{ padding: 10px; background: #f00; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div class="wrap">
+
+</div>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 先从 普通的 $.fn.append() ，$.fn.after() 这样的方法入手
+// 先看 dmoManiop()
+
+// 源码中提供了一个用于测试的 jQuery.dom
+// 用该方法在外部模拟内部调用的情况
+
+var $wrap = $('.wrap');
+// 模拟传入时是函数
+// $.fn.append(fn)
+
+// dom 方法中
+// 第一个参数是上下文
+// 第二个参数是传入 append() 的参数,切记是 arguments 数组
+// 		这里模拟不出来类数组，所以就直接给一个数组
+// 第三个参数是处理方法
+
+
+// 该方法就是用户传入给 $.fn.append() 的方法
+// index 表示当前 $wrap 的索引值
+// html 表示当前  $wrap 的 Html 值
+// 返回值是一个 HTML string, DOM element(s), text node(s), or jQuery
+$.dom($wrap, [function(index, html){
+	return `<button id="btn6">Bootstrap-${index}</button>`;
+}], function(elem){ // 接收一个 elem 
+	// 内部 domManip() 处理的回调
+	// 其实就是真正执行插入的地方，实现在 $.fn.append 中
+	
+	// 直接从源码借来
+	if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+		this.appendChild( elem );
+	}
+}, undefined); // 最后一个参数充当 ingorned
+// 结果就来了
+
+// $wrap.append(function(index){
+// 	return `<button id="btn6">Bootstrap-${index}</button>`;
+// })
+
+
+
+
+// 模拟不是传入时不是函数
+// $.fn.append(content ,[content])
+
+$.dom($wrap, [" ", `<button id="btn7">JavaScript</button>`], function(elem){
+	if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+		this.appendChild( elem );
+	}
+}, undefined);
+
+
+// $wrap.append(" ", `<button id="btn7">JavaScript</button>`)
+
+
+// 所以现在可以总结出 domManip() 的处理过程
+// 1. 如果传入的 arguments 中有函数
+// 	则将返回 HTML, Node 字符串的函数做处理,处理成 ["",""] 这样的情况
+// 2. 如果传入的 arguments 中没有函数
+// 	则直接走下面流程
+// 3. 将做为参数的 arguments 传入 buildFragment 得到 fragment 
+// 4. 取得片段中的所有需要添加的元素
+// 5. 循环执行该方法的回调处理每个元素
+// 6. 返回 this
+
+
+// domManip 主要的几个功能包括
+// 接受 HTML 字符串，并生成相对于的 dom，callback 回调函数，处理 dom
+// 而且回调函数中的 this 是指向当前操作的 dom 的。剩下的事情，就交给回调函数去处理
+</script>
