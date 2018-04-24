@@ -151,11 +151,12 @@ $('body').each(function(){
 // 	}, '普通');
 // });
 // 为 div 委托
-$('body').each(function(){
-	$.event.add( this, 'click', function (e){
-		console.log($.dp.get($('body')[0], 'events'))
-	}, '委托', 'div');
-});
+// $('body').each(function(){
+// 	$.event.add( this, 'click', function (e){
+// 		console.log($.dp.get($('body')[0], 'events'))
+// 		console.log(e.handleObj)
+// 	}, '委托', 'div');
+// });
 
 
 

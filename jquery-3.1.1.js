@@ -2984,6 +2984,7 @@ var rootjQuery,
 	rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]+))$/,
 
 	init = jQuery.fn.init = function( selector, context, root ) {
+		// console.info('$> $.fn.init')
 		var match, elem;
 
 		// HANDLE: $(""), $(null), $(undefined), $(false)
@@ -3078,7 +3079,7 @@ var rootjQuery,
 				// Execute immediately if ready is not present
 				selector( jQuery );
 		}
-
+		// console.info('$/> $.fn.init')
 		return jQuery.makeArray( selector, this );
 	};
 
@@ -4059,15 +4060,33 @@ if ( document.readyState === "complete" ||
 	window.addEventListener( "load", completed );
 }
 
+/**
+ * 对一个方法有 set/get 时,并且还有多种操作时,主要就是用于重载
+ * @param  {$}   elems     当前操作的 jQuery 数组对象
+ * @param  {Function} fn        用于处理得到的 key,value 做 get/set 操作
+ * @param  {object}   key     分三种情况, 字符串, 对象, null
+ * @param  {object}   value     传入的值,可以是字符串,可以是函数
+ *                              当是函数时, value(index, oldPropertyValue ) 获取当前对象索引为 index 的 key 的原来的值
+ * @param  {number}   chainable true 表示可以链式调用 fales 表示不能
+ * @param  {undefined}   emptyGet  目前未知
+ * @param  {boolean}   raw       判断 value 是否是一个函数 true 表示不是 fale 则是
+ * @return 用 chainable 判断,如果为 treu 返回元素自己,如果为 false 则不返回自己            
+ */
+// 其中有个未知的就是 key 为 null 时
+/*
+fn 回调用于 get/set 
+fn(elem, key) -> get
+fn(elem, key, value) -> set
 
-// 参数 value 就是 fn(value) 处理的 value
-// value 也可以是一个函数
-// raw    true 表示 value 不是函数
-// Multifunctional method to get and set values of a collection
-// The value/s can optionally be executed if it's a function
-// -> 获取和设置集合值的多功能方法如果是函数，则可以选择执行值
-// 返回四种情况
-var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
+key, value 分别是键和值,操作 fn 的 fn(elem, key, value) -> set
+如果只有 key 则操作 fn 的 get fn(elem, key) -> get
+key 是一个对象,则递归执行 access
+当 key, value 分别是键和函数时, value 为 value(index, oldPropertyValue)
+	执行时 oldPropertyValue 的值是 fn(elem, key) -> get 
+	其返回值就是 fn(elem, key, value) -> set 的 value 
+
+ */
+function access( elems, fn, key, value, chainable, emptyGet, raw ) {
 	console.info('$> access ->', arguments);
 	var i = 0,
 		len = elems.length,
@@ -4075,106 +4094,218 @@ var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 		bulk = key == null;
 
 	// Sets many values
-	// 设置多个值
+	// 设置多个值,也就是说 key 传进来是一个对象
 	if ( jQuery.type( key ) === "object" ) {
+		console.log('/t> set many values')
+		// 允许链式调用
 		chainable = true;
+		// 遍历 key 
+		// 因为 access() 该方法是一个一个处理参数,并不能直接处理多个,所以要递归
 		for ( i in key ) {
+			// 其实这里面还是走的是设置一个值
 			access( elems, fn, i, key[ i ], true, emptyGet, raw );
 		}
 
 	// Sets one value
 	// 设置一个值
 	} else if ( value !== undefined ) {
-		// console.log('value !== undefined')
+		console.log('\t> set one value');
+		// 允许链式调用
 		chainable = true;
 
-		// 判断 value 不是一个函数
+		// 判断 value ,就是传入的值是否是一个函数
 		if ( !jQuery.isFunction( value ) ) {
-			// console.log('value not is function')
+			console.log('\t> value not Function')
+			// 然后用 raw 记录
 			raw = true;
 		}
+		// 用于测试传入的 value 是否是函数
+		else{
+			console.log('\t> value is Function')
+		}
 
-		// 当 key 为 null 时, bulk = true
+		// 当 key 为 null 时, $.fn.html() $.fn.text() 时被调用
 		if ( bulk ) {
-
+			console.log('\t> bulk', bulk)
 			// Bulk operations run against the entire set
-			// value 不是一个函数
+			// -> 大容量操作对整个集合运行
+			// value 不是函数
 			if ( raw ) {
-				// fn 一个参数被调用
-				// console.info('$> access fn(value)')
+				console.log('\t\t> bulk value not Function');
+				// 操作 fn(value); 
 				fn.call( elems, value );
+				// 并且让该回调只执行一次
 				fn = null;
 
 			// ...except when executing function values
 			} 
 			// value 是一个函数
 			else {
-				// console.info('$> access fn 被重新定义')
-				// 将原本传入的 fn 的引用得到
+				console.log('\t\t> bulk value is Function');
 				bulk = fn;
-				// 然后重新定义这个方法，接收三个参数
-				// fn 只会在 value 是一个函数时被重新定义
-				// 这里接收到的 value 就是 value() 返回的值
 				fn = function( elem, key, value ) {
-					// console.log('\t> access fn(elem, key, value)', elem, key, value)
-					// fn 一个参数被调用，这是间接调用 fn(value)
 					return bulk.call( jQuery( elem ), value );
 				};
 
-				// 其实这里就相当于有两个方法
-				// 一个是原本要执行的方法，另一个就是重新定义的那个方法
 			}
 		}
 
-		// 如果参数二，也就是 fn 存在，就循环执行它
-		// 还有就是前面判断的如果 value 也是一个函数，这是用 raw 控制
-		// 为 elems 的每一个元素都执行一次
+		// 如果回调存在
 		if ( fn ) {
+			console.log('\t> have fn');
+			// 则循环执行 fn
+			// 将每一个 elem, key, name 都交给 fn 处理
 			for ( ; i < len; i++ ) {
-				// console.info('$> access fn(elem, key, value)', fn);
-				// fn 三个参数被调用, 此时的 fn 就是被重新定义的 fn
 				fn(
+					// fn(elem, name, value)
+					// elem = elems[i]
+					// name = key
 					elems[ i ], key, raw ?
+					// 用 raw 记录的 value 为 true 不是一个函数
+					// value = value
 					value :
-					// 这里的 fn(elems[i], key) 也是调用的重新定义过的那个 fn
-					// 这个 fn(elems[i], key) 就是 fn(elems, key, value) 的返回值
-					// 返回的是 bulk.call( jQuery( elem ), value )
-					// 		也就是原始 fn(value) 返回的值
+					// 是一个函数, raw 为 false
+					// 则调用 value ,this 为当前 元素
+					// 注意,这里的 value 的第二个参数是 fn(elem, key) get 操作,不在是 set
+					// 也就是说此时的回调的返回值就是做为 value 的参数二 
 					value.call( elems[ i ], i, fn( elems[ i ], key ) )
+					// 最后 value 的返回就当做 fn(elem, key, value) 的 value 值
 				);
 			}
 		}
 	}
 
+	// 如果需要返回当前 jQuery 对象
 	if ( chainable ) {
+		console.log('$/> access chainable', chainable)
+		// 则直接返回当前对象
 		return elems;
 	}
 
 	// Gets
-	// 得到
 	if ( bulk ) {
-		// fn 空参被调用
-		// console.info('$> access fn() ')
+		console.log('$/> access bulk', bulk)
 		return fn.call( elems );
 	}
-	// fn 二个参数被调用
+
+	// 如果 key 不是一个对象, 是字符串
+	// 则直接执行回调 fn
+	// 此时 fn 的返回值就是 该方法的最终返回值
+	console.log('$/> access');
+	// 如果当前 jQuery 数组对象中长度不为 0 
 	return len ? fn( elems[ 0 ], key ) : emptyGet;
 };
-// access() 用于测试
-// value 不是函数时
-// access(jQuery('#top'), function(value){
-// 	console.log('传入的 value', value)
-// }, null, 'qlover', true, null, true); // bulk = true
+// 用于在 jQuery 内部测试
+// =============================== 内部测试 access ====================================== //
+/*
+$.fn.prop() 方法为例
+/*
+$.fn.prop: function( name, value ) {
+	return access( this, jQuery.prop, name, value, arguments.length > 1 );
+}
+有这四种用法
+get
+	.prop( propertyName )
 
-// value 是函数时
-// access(jQuery('#top'), function(value){
-// 	// 接收到的 value 就是 value() 返回的值
-// 	console.log('传入的 value -> ', value);
-// 	return 1000;
-// }, null, function(index, key){
-// 	console.log('value()', index, key);//=> 0 1000
-// 	return 9999;
-// }, true, null, null); // bulk = true
+set
+	.prop( propertyName, value )
+	.prop( properties)
+	.prop( propertyName, function )
+
+	jQuery.prop(elem, name, value)
+	$.acc( elems, fn, key, value, chainable, emptyGet, raw )
+*/
+{
+
+var $ = jQuery;
+var b1 = $('#btn1');
+var b2 = $('#btn2');
+
+// 准备一个类 arguments 的数组
+var name, value;
+var $arguments;
+/*
+// .prop( attributeName ) 第一种情况
+console.log('第一种情况')
+name = 'id';
+$arguments = [name];
+console.log(
+	access(b1, function $prop(elem, name, value){
+		console.log('$> fn', arguments);
+		// 内部利用 hook 方法得到最后结果
+		return elem[name];
+	}, name, value, $arguments.length > 1)
+);//=> btn1
+
+
+// .prop( propertyName, value ) 第二种情况
+console.log('第二种情况')
+name = 'id';
+value = 'bootstrap';
+$arguments = [name, value];
+console.log(
+	access(b1, function $prop(elem, name, value){
+		console.log('$> fn', arguments);
+		// 内部利用设置 elem 的 id 值为 bootstrap
+		// 但是因为是设置,返回的值并不是 access 最终返回的值
+		// 而在 chainable 中返回
+		return ( elem[ name ] = value );
+	}, name, value, $arguments.length > 1)
+);//=> jQuery.fn.init [button#bootstrap]
+
+
+// .prop( properties) 第三种情况
+console.log('第三种情况')
+//  name 为一个对象
+name = {
+	'id': 'r-btn1'
+};
+$arguments = [name];
+console.log(
+	access(b1, function $prop(elem, name, value){
+		console.log('$> fn', arguments);
+		// 内部利用设值
+		return ( elem[ name ] = value );
+	}, name, value, $arguments.length > 1)
+);//=> jQuery.fn.init [button#r-btn1]
+
+
+// .prop( propertyName, function ) 第四种情况
+console.log('第四种情况')
+name = 'id'; // 有 name 
+// 并且 value 还是一个方法,这是主要是为了模拟外部调用,所以不写成匿名方法
+value = function(index, oldPropertyValue ){
+	console.log('$> value', arguments);
+	// 返回的值就是最后要 set 的值
+	return "superBtn"
+};
+$arguments = [name, value];
+console.log(
+	access(b2, function $prop(elem, name, value){
+		console.log('$> fn', arguments);
+		// 该回调会被调用两次,第一次 get ,第二次 set
+		if(!value){
+			return elem[name]
+		}else{
+			return ( elem[ name ] = value)
+		}
+	}, name, value, $arguments.length > 1)
+);//=> jQuery.fn.init [button#superBtn]
+
+// 测试 key == null 的情况, $.fn.html() $.fn.text()
+value = `<a href="?sub=php">PHP</a>`;
+$arguments = [value];
+console.log(
+	access(b2, function(value){
+		// 此时的 value 就是外部传入的那个 value 
+		// 然后 $.fn.html() 就在这里面处理 value 
+		console.log('$> value', value);//=> <a href="?sub=php">PHP</a>
+	}, null, value, $arguments.length)
+);
+
+//*/
+}
+// =============================== 内部测试 access ====================================== //
 
 
 
@@ -4194,7 +4325,7 @@ var acceptData = function( owner ) {
 
 // Data 构造器
 function Data() {
-	console.info('$> Data', arguments);
+	// console.info('$> Data', arguments);
 	// jQuery.expando 是 jQuery 的一个标识符
 	this.expando = jQuery.expando + Data.uid++;
 }
@@ -4944,15 +5075,17 @@ jQuery.fn.extend( {
 		} );
 	}
 } );
+
 var rcheckableType = ( /^(?:checkbox|radio)$/i );
-
+// 匹配标签名
 var rtagName = ( /<([a-z][^\/\0>\x20\t\r\n\f]+)/i );
-
+// 匹配脚本类型
 var rscriptType = ( /^$|\/(?:java|ecma)script/i );
 
 
 
 // We have to close these tags to support XHTML (#13200)
+// -> 我们必须关闭这些标记以支持XHTML
 var wrapMap = {
 
 	// Support: IE <=9 only
@@ -4975,7 +5108,12 @@ wrapMap.optgroup = wrapMap.option;
 wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
 wrapMap.th = wrapMap.td;
 
-
+/**
+ * 获取指定上下文中的所有节点或所有指定节点
+ * @param  {object} context 上下文
+ * @param  {tag} tag     指定的节点
+ * @return {array} ret   数组结果
+ */
 function getAll( context, tag ) {
 
 	// Support: IE <=9 - 11 only
@@ -4998,6 +5136,8 @@ function getAll( context, tag ) {
 
 	return ret;
 }
+// 用于测试 getAll()
+jQuery.getAll = getAll;
 
 
 // Mark scripts as having already been evaluated
@@ -5016,9 +5156,18 @@ function setGlobalEval( elems, refElements ) {
 
 
 var rhtml = /<|&#?\w+;/;
-
+/**
+ * 返回文档片段对象
+ * @param  {object} elems     被操作的元素集合
+ * @param  {object} context   上下文
+ * @param  {[type]} scripts   [description]
+ * @param  {[type]} selection [description]
+ * @param  {[type]} ignored   [description]
+ * @return {[type]}           [description]
+ */
 function buildFragment( elems, context, scripts, selection, ignored ) {
 	var elem, tmp, tag, wrap, contains, j,
+		// 上下文一般为 document 
 		fragment = context.createDocumentFragment(),
 		nodes = [],
 		i = 0,
@@ -5673,7 +5822,7 @@ jQuery.event = {
 				}
 			}
 		}
-		console.log('handlerQueue ->', handlerQueue)
+		// console.info('handlerQueue ->', handlerQueue)
 		// Add the remaining (directly-bound) handlers
 		cur = this;
 		if ( delegateCount < handlers.length ) {
@@ -5721,6 +5870,7 @@ jQuery.event = {
 	},
 
 	// 几个特殊的事件
+	// 这也是用来做模拟事件的
 	special: {
 		load: {
 
@@ -6043,6 +6193,7 @@ var
 	/* eslint-disable max-len */
 
 	// See https://github.com/eslint/eslint/issues/3229
+	// 匹配 XHTML 标签
 	rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([a-z][^\/\0>\x20\t\r\n\f]*)[^>]*)\/>/gi,
 
 	/* eslint-enable */
@@ -6053,25 +6204,34 @@ var
 	rnoInnerhtml = /<script|<style|<link/i,
 
 	// checked="checked" or checked
+	// 匹配 checked="checked" or checked 这种字符串
 	rchecked = /checked\s*(?:[^=]|=\s*.checked.)/i,
 	rscriptTypeMasked = /^true\/(.*)/,
 	rcleanScript = /^\s*<!(?:\[CDATA\[|--)|(?:\]\]|--)>\s*$/g;
 
 function manipulationTarget( elem, content ) {
+	// 判断 elem 的 nodeName 是否等于 table 
 	if ( jQuery.nodeName( elem, "table" ) &&
+		// 并且查看内容 content 是否不等于 文档片段(Documnet-Fragment)
+		// 如果不是则该 content 的第一个元素的 NodeName 是否是 tr 
 		jQuery.nodeName( content.nodeType !== 11 ? content : content.firstChild, "tr" ) ) {
 
+		// 如果都成立
+		// 则返回该元素的第一个 tobody 或是该元素本身
 		return elem.getElementsByTagName( "tbody" )[ 0 ] || elem;
 	}
 
+	// 否则直接返回该元素
 	return elem;
 }
 
 // Replace/restore the type attribute of script elements for safe DOM manipulation
+// -> 替换脚本元素的 type 属性，以便安全地进行DOM操作
 function disableScript( elem ) {
 	elem.type = ( elem.getAttribute( "type" ) !== null ) + "/" + elem.type;
 	return elem;
 }
+// -> 还原脚本元素的 type 属性，以便安全地进行DOM操作
 function restoreScript( elem ) {
 	var match = rscriptTypeMasked.exec( elem.type );
 
@@ -6132,54 +6292,113 @@ function fixInput( src, dest ) {
 	}
 }
 
+// 一些 $.fn 中操作 DOM 的核心方法
+// 该方法只出现于 parseHTML() 和 domManip()
+/**
+ * 操作 DOM 的核心方法
+ * @param  {$}   collection 当前的$对象
+ * @param  {object}   args       需要添加的任意形式的对象
+ * @param  {Function} callback   回调
+ * @param  {[type]}   ignored    [description]
+ * @return {$}              遵从 jQuery 最后返回自己
+ */
+// 主要用于 $.fn.append, $.fn.after, $.fn.before
 function domManip( collection, args, callback, ignored ) {
-
+	console.info('$> domManip', arguments)
 	// Flatten any nested arrays
+	// 就是将伪的 arguments 转换成 array，类 $.fn.append() 传入的参数的类数组
+	// 切记 args 是传入的 arguments 数组
 	args = concat.apply( [], args );
 
 	var fragment, first, scripts, hasScripts, node, doc,
 		i = 0,
-		l = collection.length,
-		iNoClone = l - 1,
-		value = args[ 0 ],
-		isFunction = jQuery.isFunction( value );
-
+		l = collection.length,  // 当前 $ 对象的长度
+		// 如果当前的jQuery对象是一个合集对象
+		// 那么意味着通过文档碎片构件出来的dom，只能是副本克隆到每一个合集对象中
+		// 如果该 $ 为集合
+		// 如果该 $ 不集合,则 iNoClone = 0
+		iNoClone = l - 1,  // 多个节点操作需要克隆
+		value = args[ 0 ], // 得到类 $.fn.append() 传入的第一个参数
+		// 也就是 $.fn.after() $.fn.append() 参数是函数的情况
+		// 记录第一个参数是否是函数，如果是函数则表示 $.fn.append(function(index, html){})
+		isFunction = jQuery.isFunction( value );  
 	// We can't cloneNode fragments that contain checked, in WebKit
+	// 先执行参数一是函数的情况
 	if ( isFunction ||
+			// 或者当前是有 jQuery 数组有对象
+			// 且外部调用时传入的参数是字符串
+			// 且是 checked=checked 或 checked 和情况
 			( l > 1 && typeof value === "string" &&
-				!support.checkClone && rchecked.test( value ) ) ) {
+				// rchecked = /checked\s*(?:[^=]|=\s*.checked.)/i
+				!support.checkClone && rchecked.test( value ) )
+	) {
+		console.log('\t> value is Function')
+		// 遍历每个 jQuery 对象
 		return collection.each( function( index ) {
+			// 用 $.fn.eq() 得到索引的元素
 			var self = collection.eq( index );
+			// 如果是处理函数
 			if ( isFunction ) {
+				// args[0] 返回外部传入的那个函数的返回值
 				args[ 0 ] = value.call( this, index, self.html() );
+				console.log('\t> args[0]', args[0])
 			}
+			// 递归处理多个 jQuery 对象的情况
+			// 到这里也就说明了第二次调用 domManip() 时
+			// 参数就不再是函数，而是外部回调返回的那个值
 			domManip( self, args, callback, ignored );
 		} );
 	}
 
+	// 执行插入
+	// 外部参数不再是一个函数
+	console.log('\t> no a Function')
+	// 如果当前 jQuery 对象数组有元素
 	if ( l ) {
+		console.log('\t> insert');
+		// 得到 fragment
+		// args -> 数组包括的 HTML,Node,jQuery,也就是将添加到 fragment 中的元素集合
+		// collection[ 0 ].ownerDocument -> 根的引用 #document
+		// false
+		// collection -> 遍历的当前对象
+		// ignored -> undefined
 		fragment = buildFragment( args, collection[ 0 ].ownerDocument, false, collection, ignored );
 		first = fragment.firstChild;
 
+		// fragment  => #document-fragment
+		// fragment.childNodes => NodeList   // fragment 片段中添加的需要添加的元素
+
+		// 如果片段中只有一个需要添加的元素
 		if ( fragment.childNodes.length === 1 ) {
+			// 则让片段就为该片段的第一个元素
 			fragment = first;
 		}
 
 		// Require either new content or an interest in ignored elements to invoke the callback
+		// 如果存在有添加的元素
 		if ( first || ignored ) {
+			// 得到片段中的所有 script 标签
+			// 将用 $.map 替换对应的 type 
 			scripts = jQuery.map( getAll( fragment, "script" ), disableScript );
+			// 记录是否有 script 标签
 			hasScripts = scripts.length;
 
 			// Use the original fragment for the last item
 			// instead of the first because it can end up
 			// being emptied incorrectly in certain situations (#8070).
+			// -> 对最后一项使用原始片段而不是第一个，因为它最终可能在某些情况下被错误地清空
 			for ( ; i < l; i++ ) {
 				node = fragment;
 
+				// 如果是当前的 $ 为集合
+				// 因为 i 从 0 开始
+				// 如果当前 $ 不是集合则 iNoClone 是为 0 
 				if ( i !== iNoClone ) {
+					// 则深度克隆一次当前的 node 
 					node = jQuery.clone( node, true, true );
 
 					// Keep references to cloned scripts for later restoration
+					// -> 保存对克隆脚本的引用，以便以后恢复。
 					if ( hasScripts ) {
 
 						// Support: Android <=4.0 only, PhantomJS 1 only
@@ -6187,10 +6406,13 @@ function domManip( collection, args, callback, ignored ) {
 						jQuery.merge( scripts, getAll( node, "script" ) );
 					}
 				}
-
+				// 真执行插入的操作,处理时，接收一个节点，和索引值 i 
+				// 回调，this 指向当前回调的 elem，这点很重要
+		        // 很重要,collection[ i ] == $(this)
 				callback.call( collection[ i ], node, i );
 			}
 
+			// 然后处理有 script 的情况
 			if ( hasScripts ) {
 				doc = scripts[ scripts.length - 1 ].ownerDocument;
 
@@ -6201,7 +6423,7 @@ function domManip( collection, args, callback, ignored ) {
 				for ( i = 0; i < hasScripts; i++ ) {
 					node = scripts[ i ];
 					if ( rscriptType.test( node.type || "" ) &&
-						!dataPriv.access( node, "globalEval" ) &&
+						!dataPriv.access( node, "globalEval" ) && // 再次出现 access()
 						jQuery.contains( doc, node ) ) {
 
 						if ( node.src ) {
@@ -6218,9 +6440,14 @@ function domManip( collection, args, callback, ignored ) {
 			}
 		}
 	}
-
+	console.info('$/> domManip')
 	return collection;
 }
+
+// 用于测试
+jQuery.dom = domManip;
+jQuery.mt = manipulationTarget;
+
 
 function remove( elem, selector, keepData ) {
 	var node,
@@ -6244,10 +6471,12 @@ function remove( elem, selector, keepData ) {
 }
 
 jQuery.extend( {
+	// 将 html 标签替换成 XHTML 标签格式
 	htmlPrefilter: function( html ) {
 		return html.replace( rxhtmlTag, "<$1></$2>" );
 	},
 
+	// $.clone 克隆元素
 	clone: function( elem, dataAndEvents, deepDataAndEvents ) {
 		var i, l, srcElements, destElements,
 			clone = elem.cloneNode( true ),
@@ -6334,21 +6563,30 @@ jQuery.fn.extend( {
 		return remove( this, selector );
 	},
 
+	// 设置与获取纯文本内容
 	text: function( value ) {
 		return access( this, function( value ) {
 			return value === undefined ?
+				// get
+				// jQuery.text == Sizzle.getText
 				jQuery.text( this ) :
+				// set
 				this.empty().each( function() {
 					if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+						// 用 textContent 设置文本值
+						// 主要是因为考虑到兼容
 						this.textContent = value;
 					}
 				} );
 		}, null, value, arguments.length );
 	},
 
+	// 向当前的元素添加元素
 	append: function() {
+		// 返回一个 domManip() 
 		return domManip( this, arguments, function( elem ) {
 			if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+				// 该方法主要用于兼容 tbody 在 IE 5- 中不存在的情况下得到元素
 				var target = manipulationTarget( this, elem );
 				target.appendChild( elem );
 			}
@@ -6407,20 +6645,28 @@ jQuery.fn.extend( {
 		} );
 	},
 
+	// 设置或获取 html 文本
 	html: function( value ) {
 		return access( this, function( value ) {
 			var elem = this[ 0 ] || {},
 				i = 0,
 				l = this.length;
-
+			// 如果 value 为空 并且当前元素是元素节点
 			if ( value === undefined && elem.nodeType === 1 ) {
+				// 则直接返回 innerHTML
 				return elem.innerHTML;
 			}
 
 			// See if we can take a shortcut and just use innerHTML
+			// -> 看看我们是否可以走捷径，只需使用innerHTML
+			
+			// 如果值等于字符串 且 不是script, link, style 这样的标签值
 			if ( typeof value === "string" && !rnoInnerhtml.test( value ) &&
+				// rtagName 匹配标签名,也就是说,如果标签名不是 option 或者 是 tr ,td 这样的标签
+				// wrapMap[option|thead|col|tr|td] 
 				!wrapMap[ ( rtagName.exec( value ) || [ "", "" ] )[ 1 ].toLowerCase() ] ) {
 
+				// 则将 value 变成 XHTML 标签格式
 				value = jQuery.htmlPrefilter( value );
 
 				try {
@@ -6428,8 +6674,10 @@ jQuery.fn.extend( {
 						elem = this[ i ] || {};
 
 						// Remove element nodes and prevent memory leaks
+						// 移除元素节点,并且预防内存泄漏
 						if ( elem.nodeType === 1 ) {
 							jQuery.cleanData( getAll( elem, false ) );
+							// 设置 innerHTML 
 							elem.innerHTML = value;
 						}
 					}
@@ -6437,10 +6685,12 @@ jQuery.fn.extend( {
 					elem = 0;
 
 				// If using innerHTML throws an exception, use the fallback method
+				// -> 如果使用innerHTML引发异常，请使用回退方法
 				} catch ( e ) {}
 			}
 
 			if ( elem ) {
+				// 清空,然后添加
 				this.empty().append( value );
 			}
 		}, null, value, arguments.length );
@@ -8621,27 +8871,61 @@ jQuery.each( [ "radio", "checkbox" ], function() {
 
 var rfocusMorph = /^(?:focusinfocus|focusoutblur)$/;
 
+// $.event 的扩展
 jQuery.extend( jQuery.event, {
 
+	// $.event.trigger
+	/**
+	 *  $.fn.trigger() 的源头
+	 * @param  {string|object} event        事件类型或者是
+	 * @param  {array} data         传递的数据
+	 * @param  {object} elem         DOM 元素
+	 * @param  {[type]} onlyHandlers 触发掩码，true 取消默认行为
+	 * @return {[type]}              [description]
+	 */
+	/**
+	 * 并且该方法主要用于完成这几个操作
+	 * 1. 命名空间过滤
+	 * 2. 模拟事件对象
+	 * 3. 返回事件数据合集
+	 * 4. $.event.special 
+	 * 5. 模拟冒泡
+	 * 		把当前 elem 存入数组；
+	 *		查找当前 elem 的父元素，如果符合，push 到数组中，重复第一步，否则下一步；
+	 *		遍历数组，从 data cache 中查看是否绑定 type 事件，然后依次执行
+	 * 6. 处理事件
+	 * 
+	 */
 	trigger: function( event, data, elem, onlyHandlers ) {
-
+		// console.log('$> $.event.trigger', arguments)
 		var i, cur, tmp, bubbleType, ontype, handle, special,
+			// 模拟的事件冒泡过程中的元素
 			eventPath = [ elem || document ],
+			// 得到事件类型
+			// 有两种情况
+			// 1. event 是 Object 时取得该 object 的 type 
+			// 2. event 就是一个事件名时
 			type = hasOwn.call( event, "type" ) ? event.type : event,
+			// 取命名空间
 			namespaces = hasOwn.call( event, "namespace" ) ? event.namespace.split( "." ) : [];
 
 		cur = tmp = elem = elem || document;
 
 		// Don't do events on text and comment nodes
+		// 如果元素为文本或注释
 		if ( elem.nodeType === 3 || elem.nodeType === 8 ) {
 			return;
 		}
 
 		// focus/blur morphs to focusin/out; ensure we're not firing them right now
+		// 仅对focus/blur事件变种成focusin/out进行处理
+        // 如果浏览器原生支持focusin/out，则确保当前不触发他们
 		if ( rfocusMorph.test( type + jQuery.event.triggered ) ) {
 			return;
 		}
 
+		// 1. 命名空间处理
+		// 处理后的事件名还有点
 		if ( type.indexOf( "." ) > -1 ) {
 
 			// Namespaced trigger; create a regexp to match event type in handle()
@@ -8652,11 +8936,16 @@ jQuery.extend( jQuery.event, {
 		ontype = type.indexOf( ":" ) < 0 && "on" + type;
 
 		// Caller can pass in a jQuery.Event object, Object, or just an event type string
+		// 2. 模拟事件对象
 		event = event[ jQuery.expando ] ?
 			event :
 			new jQuery.Event( type, typeof event === "object" && event );
 
 		// Trigger bitmask: & 1 for native handlers; & 2 for jQuery (always true)
+		// -> 触发器位掩码：1用于本机处理程序；2用于jQuery(始终为true)
+		// 对象 event 预处理
+		
+		// 表示已经用 trigger 触发
 		event.isTrigger = onlyHandlers ? 2 : 3;
 		event.namespace = namespaces.join( "." );
 		event.rnamespace = event.namespace ?
@@ -8664,17 +8953,23 @@ jQuery.extend( jQuery.event, {
 			null;
 
 		// Clean up the event in case it is being reused
+		// 清除事件返回数据，以重新使用
 		event.result = undefined;
+		// 如果该事件没有 target 
 		if ( !event.target ) {
+			// 转交 target 
 			event.target = elem;
 		}
 
 		// Clone any incoming data and prepend the event, creating the handler arg list
+		// 3. 返回的事件数据
+		// 如果 data 为空，则传入处理函数的是event，否则由data和event组成
 		data = data == null ?
 			[ event ] :
 			jQuery.makeArray( data, [ event ] );
 
 		// Allow special events to draw outside the lines
+		// 尝试通过特殊事件进行处理，必要时候退出函数
 		special = jQuery.event.special[ type ] || {};
 		if ( !onlyHandlers && special.trigger && special.trigger.apply( elem, data ) === false ) {
 			return;
@@ -8682,85 +8977,129 @@ jQuery.extend( jQuery.event, {
 
 		// Determine event propagation path in advance, per W3C events spec (#9951)
 		// Bubble up to document, then to window; watch for a global ownerDocument var (#9724)
+		// 5. 模拟事件的冒泡
+		// 如果需要冒泡，特殊事件不需要阻止冒泡，且elem不是window对象
+        // onlyHandlers为true 表示不冒泡
 		if ( !onlyHandlers && !special.noBubble && !jQuery.isWindow( elem ) ) {
 
+			// 冒泡时是否需要转成别的事件(用于事件模拟)
 			bubbleType = special.delegateType || type;
+			// 如果不是变形来的foucusin/out事件
 			if ( !rfocusMorph.test( bubbleType + type ) ) {
+                // 则定义当前元素父节点
 				cur = cur.parentNode;
 			}
+			// 遍历自身及所有父节点
 			for ( ; cur; cur = cur.parentNode ) {
+				// 推入需要触发事件的所有元素队列
 				eventPath.push( cur );
+				// 存入下一个 cur 
 				tmp = cur;
 			}
 
 			// Only add window if we got to document (e.g., not plain obj or detached DOM)
+			// 如果循环中最后一个 cur 是 document，那么事件是需要最后触发到window对象上的
+            // 将window对象推入元素队列
 			if ( tmp === ( elem.ownerDocument || document ) ) {
+				// defaultView 是 document 的属性，获取 document 的父亲，就是 window 
+				// 		使用 defaultView 只有一种情况就是 FF 访问子框架内的样式 iframe 时使用
+				// parentWindow 目前不清楚
 				eventPath.push( tmp.defaultView || tmp.parentWindow || window );
 			}
 		}
+		console.log('\t>eventPath', eventPath);
 
 		// Fire handlers on the event path
+		// 6. 事件处理
+		// 触发所有该事件对应元素的事件处理器
 		i = 0;
+		// 遍历所有元素，并确保事件不需要阻止冒泡
+		// isPropagationStopped() == returnFalse()
 		while ( ( cur = eventPath[ i++ ] ) && !event.isPropagationStopped() ) {
 
+			// 看事件是委托还是普通绑定
 			event.type = i > 1 ?
-				bubbleType :
-				special.bindType || type;
+				bubbleType :  // 委托 
+				special.bindType || type;  // 特殊事件的普通绑定或者是一般的普通绑定
 
 			// jQuery handler
+			// 从 dataPriv 缓存中得到该元素的 events 对象下的处理函数
 			handle = ( dataPriv.get( cur, "events" ) || {} )[ event.type ] &&
 				dataPriv.get( cur, "handle" );
+			// 如果有
 			if ( handle ) {
+				// 则执行
 				handle.apply( cur, data );
 			}
 
 			// Native handler
+			// 取原生事件处理函数，相当于 elem.onload 这样绑定的方法
 			handle = ontype && cur[ ontype ];
+			// 判断该处理是否存在，并判断该元素的类型，元素节点或根节点
 			if ( handle && handle.apply && acceptData( cur ) ) {
+				// 则将得到事件的返回值
 				event.result = handle.apply( cur, data );
+				// 如果该事件返回是 false 
 				if ( event.result === false ) {
+					// 则阻止默认行为
 					event.preventDefault();
 				}
 			}
 		}
+		// 将上一个事件类型保存
 		event.type = type;
 
 		// If nobody prevented the default action, do it now
+		// 如果不阻止默认行为，则立即执行
 		if ( !onlyHandlers && !event.isDefaultPrevented() ) {
-
+			// 尝试通过特殊事件触发默认动作
 			if ( ( !special._default ||
 				special._default.apply( eventPath.pop(), data ) === false ) &&
 				acceptData( elem ) ) {
 
 				// Call a native DOM method on the target with the same name as the event.
+				// -> 调用具有与事件同名的目标上的本机DOM方法。
 				// Don't do default actions on window, that's where global variables be (#6170)
+				// -> 不要在窗口上做默认操作，这是全局变量存在的地方(#6170)
+				
+				// 调用一个原生的DOM方法具有相同名称的名称作为事件的目标。
+                // 例如对于事件click，elem.click()是触发该事件
+                // 并确保不对window对象阻止默认事件
+                
+                // 该元素的 elem[type] 是个函数
+                // 并且 elem 不是 window 
 				if ( ontype && jQuery.isFunction( elem[ type ] ) && !jQuery.isWindow( elem ) ) {
 
 					// Don't re-trigger an onFOO event when we call its FOO() method
+					// 防止我们触发FOO()来触发其默认动作时，onFOO事件又触发了
 					tmp = elem[ ontype ];
 
 					if ( tmp ) {
+						// 清楚掉这个原生的 ontype 
 						elem[ ontype ] = null;
 					}
 
 					// Prevent re-triggering of the same event, since we already bubbled it above
+					// 当我们已经将事件向上起泡时，防止相同事件再次触发
 					jQuery.event.triggered = type;
+					// 触发事件
 					elem[ type ]();
+					// 完成清楚标记
 					jQuery.event.triggered = undefined;
-
+					// 事件触发完了，可以把监听重新绑定回去
 					if ( tmp ) {
 						elem[ ontype ] = tmp;
 					}
 				}
 			}
 		}
-
 		return event.result;
 	},
 
 	// Piggyback on a donor event to simulate a different one
 	// Used only for `focus(in | out)` events
 	simulate: function( type, elem, event ) {
+		// 重写事件
 		var e = jQuery.extend(
 			new jQuery.Event(),
 			event,
@@ -8769,16 +9108,26 @@ jQuery.extend( jQuery.event, {
 				isSimulated: true
 			}
 		);
-
+		// 用 $.event.trigger 触发
 		jQuery.event.trigger( e, null, elem );
 	}
 
 } );
 
+// 触发事件方法
 jQuery.fn.extend( {
-
+	// 事件触发器
+	// type 	事件类型
+	// data 	事件传递的参数
 	trigger: function( type, data ) {
+		// 为当前的每一个 jQuery 元素都执行
 		return this.each( function() {
+			// 到头会发现，该方法的处理是交给 $.event.trigger 
+			// 所以还要用上 $.event
+			// 给 $.event.trigger(event, data, elem, onlyHandlers) 三个参数
+			// 1. 事件的 type
+			// 2. 传递的数据
+			// 3. 当前的自己
 			jQuery.event.trigger( type, data, this );
 		} );
 	},
@@ -8790,20 +9139,24 @@ jQuery.fn.extend( {
 	}
 } );
 
-
+// 原型上的事件
 jQuery.each( ( "blur focus focusin focusout resize scroll click dblclick " +
 	"mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " +
 	"change select submit keydown keypress keyup contextmenu" ).split( " " ),
 	function( i, name ) {
 
 	// Handle event binding
+	// 绑定处理方法
 	jQuery.fn[ name ] = function( data, fn ) {
 		return arguments.length > 0 ?
+			// 如果参数大于两个，则用 on 也就是用 disptach() 触发
 			this.on( name, null, data, fn ) :
+			// 否则用 trigger 触发
 			this.trigger( name );
 	};
 } );
 
+// 专们扩展的 hover 
 jQuery.fn.extend( {
 	hover: function( fnOver, fnOut ) {
 		return this.mouseenter( fnOver ).mouseleave( fnOut || fnOver );
@@ -8815,6 +9168,7 @@ jQuery.fn.extend( {
 
 support.focusin = "onfocusin" in window;
 
+// jQuery 对 FF 不支持 focusin 和 focusout 事件的处理
 
 // Support: Firefox <=44
 // Firefox doesn't have focus(in | out) events
@@ -8825,6 +9179,7 @@ support.focusin = "onfocusin" in window;
 // which is spec violation - http://www.w3.org/TR/DOM-Level-3-Events/#events-focusevent-event-order
 // Related ticket - https://bugs.chromium.org/p/chromium/issues/detail?id=449857
 if ( !support.focusin ) {
+	// 这里会发现用的在内部用的是 focus 和 blur 事件绑定
 	jQuery.each( { focus: "focusin", blur: "focusout" }, function( orig, fix ) {
 
 		// Attach a single capturing handler on the document while someone wants focusin/focusout
@@ -8833,6 +9188,7 @@ if ( !support.focusin ) {
 		};
 
 		jQuery.event.special[ fix ] = {
+			// 该方法主要用于 FF 中模拟 focusion 和 focusout 事件的绑定
 			setup: function() {
 				var doc = this.ownerDocument || this,
 					attaches = dataPriv.access( doc, fix );
@@ -8842,6 +9198,7 @@ if ( !support.focusin ) {
 				}
 				dataPriv.access( doc, fix, ( attaches || 0 ) + 1 );
 			},
+			// 移除事件
 			teardown: function() {
 				var doc = this.ownerDocument || this,
 					attaches = dataPriv.access( doc, fix ) - 1;
@@ -10761,4 +11118,4 @@ if ( !noGlobal ) {
 
 return jQuery;
 } );
-console.log('\n');
+console.log('=-=-=-=-=-=-=-=-=-=-=-=-');
