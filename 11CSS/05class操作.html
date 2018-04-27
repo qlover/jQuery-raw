@@ -1,0 +1,150 @@
+<meta charset="UTF-8">
+<title> class 操作 </title>
+<style>
+	.wrap{ padding: 10px; background: #00f; margin: 10px 0;}
+	.padding20{ padding: 20px; }
+	.fs18{ font-size: 18px; }
+	.fs30{ font-size: 30px; }
+	.bred{ background: #f00; }
+	.cred{ color: #f00; }
+	.green{ background: #0f0; }
+	div:before{
+		content: "div1";
+	}
+	#btn2:before{
+		content: attr(data-click);
+	}
+</style>
+
+<div class="wrap">
+	<button id="btn1" >Bootstrap</button>
+	<button id="btn2" >PHP</button>
+	<button id="btn3" >jQuery</button>
+	<button id="btn4" >Tween</button>
+</div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+/*
+会涉及到的几个方法
+	jQuery.cssHooks
+	.addClass()
+		.addClass(className)
+		.addClass(function(index, currentClassName))
+			这个函数返回一个或更多用空格隔开的要增加的样式名
+			currentClassName 当前的类名
+	.hasClass()
+	.removeClass()
+		.removeClass() 移除所有 class 
+		.removeClass( [className ] ) 
+		.removeClass( function(index, class) )
+			index 所有匹配元素的集合中的索引
+			class 原有的那个 class 名
+	.toggleClass()
+		.toggleClass( className )
+		.toggleClass( className, state )
+		.toggleClass( function(index, className, state ) [, state ] )
+			与其它的一样用函数返回需要切换的类名
+			className 原先的那个类名
+			state 	做什么操作
+		.toggleClass( [state ] )  ！！！ 这种用法在 3.0 已经标记过时
+*/
+// class 操作也是样式操作的一部分
+// 它是改变元素的 class 属性的值去改变所应用的样式
+// 这个样式不是行内，可以来自内联，也可以来片外部
+
+var b = $('button');
+
+// js 有一个非常大的缺陷，就是无法控制伪元素的样式
+// 比如 after 和 before，这样子会失去很多乐趣（同样也带来了很多乐趣）
+// js 对伪类的解决
+
+// 方式一：变换相应的
+// $('div').on('click', function(event) {
+// 	$(this).toggleClass('click');
+// });
+
+// 方式二：
+
+// 方式三：
+// var str = 'click2-';
+// $('button').on('click', function() {
+// 	$(this).attr('data-click', str);
+// });
+
+
+// 下面看看 toggleClass() 和 removeClass() 两个方法
+// 为每个添加或删除一个或多个样式
+// 取决于这个样式是否存在或 state 参数
+
+// 为该按钮添加 fs30 类样式
+b.eq(0).toggleClass('fs30');
+// 当第二次调用时，如果存在则删除，如果没有则删除
+b.eq(0).toggleClass('fs30'); // 又将 .fs30 移除
+
+
+// $.fn.addClass(className)
+// 向元素添加一个或多个类样式
+b.eq(0).addClass('fs18 cred')
+
+// $.fn.addClass(function(index, currentClassName))
+// 为每个按钮添加当前索引值的 item- 前缀的类名
+b.addClass(function(index, currentClassName){
+	return "item-" + (++index);
+}).addClass('padding20'); // 并且还是支持链式的
+
+
+// $.fn.removeClass()
+// 移除所有类样式
+b.eq(0).removeClass();
+
+// $.fn.removeClass(function(index, class))
+// 移除原生类名的第一个类名
+b.eq(1).removeClass(function(_, className){
+	return className.split(" ")[0];
+});
+
+
+b.removeClass(); // 移除所有的 class 
+// $.fn.toggleClass(className)
+// 让第一个按钮切换 .fs18 padding20
+b.eq(0).on('click', function() {
+	$(this).toggleClass('fs18 padding20');
+});
+
+
+// $.fn.toggleClass(className, state)
+// state 用于是否添加(true)或删除(false)
+b.eq(1).on('click', function() {
+	$(this).toggleClass('padding20', true);
+});// 只对该元素添加  padding20 而不做删除
+// 其实 state 的取值就相当于 addClass() 和 removeClass()
+// 在内部也是如此
+
+// $.fn.toggleClass(function(index, className, state), state)
+b.eq(2).on('click', function() {
+	$(this).toggleClass(function(index, className, state){
+		// 再原有的类名中添加一个 bred 
+		return className + ' bred';// 虽然好像和 addClass() 做了一样的事
+	});
+});
+
+b.eq(3).addClass('fs20 cred')
+// 最后演示那种过时的情况
+b.eq(3).on('click', function() {
+	$(this).toggleClass(true);
+	console.log($(this)[0]['__className__'])
+});
+
+</script>
+
+<script>
+
+// 源码
+
+
+
+
+// stripAndCollapse()
+// 	将 class 属性的所有类名组合成一个空格分隔
+</script>

@@ -1,0 +1,81 @@
+<meta charset="UTF-8">
+<title> $.fn.css </title>
+<style>
+	.wrap{ padding: 10px; background: #00f; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div class="wrap">
+	<button id="btn1" data-app="front">Bootstrap</button>
+	<button id="btn2" data-app="back">PHP</button>
+</div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 源码
+// $.css 用于取值 --> set
+// $.style 用于设值  --> gert
+
+var w = $('.wrap');
+var b = $('button');
+
+console.log(Object.keys($.cssHooks));
+
+// 用 $.css 取值
+
+// 普通值
+console.log($.css(w[0], 'background'));
+//=> rgb(0, 0, 255) none repeat scroll 0% 0% / auto padding-box border-box
+
+// 钩子值
+console.log($.css(w[0], 'width'));//=> 1330px
+
+// 取一个多词的属性
+console.log($.css(w[0], 'background-color'));//=> rgb(0, 0, 255)
+// 会发现都会调这么一个方法 curCSS()
+
+
+// 用 $.style 设置值
+console.log('$.style --------')
+console.log($.style(b[0], 'text-decoration', 'underline'));
+console.log($.style(b[0], 'fontSize', '24px'));
+// 钩子设值
+console.log($.style(b[0], 'width', '200px'));
+
+// 用 $.style 设置背景时
+console.log($.style(b[0], 'background-color', '#aaa'));
+
+// 用 $.style 取值
+console.log($.style(b[0], 'width'));//=> 200px
+console.log($.style(b[0], 'background'));//=> ""
+console.log($.style(b[0], 'background-color'));//=> rgb(170, 170, 170)
+
+
+// $.css 和 $.style 都可以达到取值的效果
+// 而设置只有 $.style 才行
+
+// 但是取值时，主要还是用 curCSS 来获取
+// 因为 $.style 是从 style 对象上获取，如果没有该属性，则会 ""
+// 而 curCSS 是计算后的样式
+// 	在该方法内部完全不用担有无计算后的样式，内部会自己重构该样式
+// 如果在用 $.fn.css 时，如果传入 $.css 的第一个参数是一个数组
+// 	则会得到得到一次计算后的样式对象
+
+// 取值时，会从 style 属性或 计算后的样式中取
+// 设置则是只为 style 属性设置
+
+
+// curCSS()
+console.log($.cs(b[0], 'background-color'));//=> rgb(170, 170, 170)
+
+console.log($.cs(b[0], 'background', $.gStyle(b[0])));
+//=> rgb(170, 170, 170) none repeat scroll 0% 0% / auto padding-box border-box
+// curCSS 直接从 计算后的样式中取
+
+
+// adjustCSS()
+// support.pixelMarginRight()
+// vendorPropName()
+// $.contains()
+</script>

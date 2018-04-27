@@ -1,0 +1,92 @@
+<meta charset="UTF-8">
+<title>Hooks</title>
+
+
+<div id="top" data-id="#top">TOP</div>
+<div id="mid" data-id="null">MID</div>
+<div id="btn" data-id="#btn">BTN</div>
+<div id="over">OVER</div>
+<div id="father">
+	<div id="son">SON</div>
+	<div class="son2">SON2</div>
+	<p>javascript</p>
+</div>
+
+<hr />
+
+<script src="../jquery-1.4.2.js"></script>
+<script>
+
+</script>
+
+
+<script src="../jquery-2.0.3.js"></script>
+<script>
+
+</script>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+
+// hooks 在英语中的意思表示钩子或挂钩，在 jQuery 中也有 hooks 这么一个概念
+// 它的功能在考虑到一些兼容性和其它特殊情况的条件下，优先考虑这些特殊情况
+// 而后才去用普通的方法处理，这种说法还是比较形象的。
+/*
+
+hooks 的使用非常用技术含量，可以支撑在原来的基础上扩展，而对于接口则无需改变
+举个例子，像 fn.css() 这个函数我们都是非常熟悉的了，拿来就用，而不需要考虑浏览器的兼容性
+这里的兼容性包括 border-radius 兼容，使用的时候不需要在前面加上 -webkit- 浏览器标识
+而 css 函数的内部则是借助 $.cssHooks()来实现这种“钩子”的效果的
+扩展的时候，也是在这个对象上进行扩展。
+
+ */
+
+
+// fn.attr()
+// 	将属性放于 html 中，elem.attributes
+// fn.prop()
+// 	将属性放于 DOM 对象上. Element.prop | Element[prop]
+// 	因为 JS 中获取对象的属性可以点也可以 [] 
+
+var bd = $('body');
+bd.attr('data-name', '#body');
+console.log(bd.data('name'));//=> #body
+
+// attr 和 prop 分别在静态和实例上都存在
+// 而其中主要的关系就是
+// 实例中的 attr/prop 返回的是 access()
+// access() 中的 fn 又分别是 $.attr/$.prop
+// 所以接下看 $.attr 和 $.prop
+// 先看 $.prop
+</script>
+
+
+<script>
+var over = document.getElementById('over');
+
+// $.prop
+$.prop(over, 'age', '200');
+console.log(over['age']);//=> 200
+console.log(over.age);//=> 200
+console.log(over.attributes['age']);//=> undefined
+// 这也说明了 $.prop 是在 DOM 对象上添加的
+// 先不说取值，因为要先说了 Hooks 才说取值
+// 接下来看 $.attr
+
+$.attr(over, 'sex', 'man');
+console.log(over.sex); //=> undefined
+console.log(over.attributes['sex']); //=> sex="man"
+
+
+
+// jQuery.propFix
+// jQuery.propHooks
+
+
+// jQuery.attrHooks
+// jQuery.propHooks
+</script>
+
+

@@ -1,0 +1,104 @@
+<meta charset="UTF-8">
+<title>Hooks 和 val hooks</title>
+
+
+<div id="top" data-id="#top">TOP</div>
+<div id="mid" data-id="null">MID</div>
+<div id="btn" data-id="#btn">BTN</div>
+<div id="over">OVER</div>
+<div id="father">
+	<div id="son">SON</div>
+	<div class="son2">SON2</div>
+	<p>javascript</p>
+</div>
+
+<hr />
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// jQuery 的 钩子机制功能非常强大
+// 而且不可以扩展，不仅可以内部扩展还可以外部扩展
+
+
+// 内部扩展就是
+// jQuery.propHooks.selected
+// 如果浏览器的 <option> 不支持 selected 这个属性就添加这个钩子，加上 getter/setter
+// 主要看源码吧
+
+
+// 这里主要说外部扩展
+// 就比如要添加固有的属性但又不影响原有的属性时可以在外部扩展一个钩子
+
+$.attrHooks.class = {
+	set : function(elem, value){
+		return $(elem).attr('class-ps', value);
+	},
+	get : function(elem){
+		return $(elem).attr('class-ps');
+	}
+}
+
+
+
+
+var son = $('.son2');
+son.attr('class', 'bigson');
+console.log(son.attr('class'));//=> bigson
+
+
+
+
+</script>
+
+<select name="" id="sub">
+	<option class="sb" value="php">php</option>
+	<option class="sb" value="java">java</option>
+	<option class="sb" value="js">javascript</option>
+</select>
+
+<script>
+// 说了两个 hooks 还有两个一个是 val() , 另一个就是 css()
+// css() 是一个大类，之后慢慢说
+// 这里就说说 val()
+
+
+
+// val()
+// 该方法用于返回或设置被选元素的 value 属性
+
+// 当用于返回值时：
+// 该方法返回第一个匹配元素的 value 属性的值。
+// 
+// 当用于设置值时：
+// 该方法设置所有匹配元素的 value 属性的值。
+// 
+// 当值是函数时
+// function(index, currentvalue)
+// index 返回集合中元素的位置
+// currentvalue 返回被先当前元素的 value 
+
+var $sub = $('#sub');
+var $sb = $sub.find('.sb');
+console.log($sb.val());//=> php
+
+console.log('---')
+
+$sub.val(function(i, v){
+	console.log(i, v);
+	// 最后返回值就是
+	return [1,2,3];
+});
+// 走最后判断，但没有执行最后的内容
+// 在源码中，最后 hs 返回的是 val,所以不是undefined
+
+
+// $sb.val(function(i, v){
+// 	console.log(i, v);
+// 	// 最后返回值就是
+// 	return [1,2,3];
+// });
+//=> php java js
+// 走了最后的判断,并且也执行了最后的内容
+
+// 到此，val() 也看完了
+// 并且在其内部也为 Radios and checkboxes 钩子做了扩展
+</script>

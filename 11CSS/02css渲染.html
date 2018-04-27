@@ -1,0 +1,60 @@
+<meta charset="UTF-8">
+<title> CSS 渲染 </title>
+<style>
+	.wrap{ padding: 10px; background: #00f; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0;}
+</style>
+
+<div class="wrap">
+	<button id="btn1" data-app="front">Bootstrap</button>
+	<button id="btn2" data-app="back">PHP</button>
+</div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// HTML 样式定义了 3 种方式
+// <link> ,<style></style>, style 属性中
+var btn1 = document.getElementById('btn1');
+console.log(btn1.style.width = '200px');//=> 200px 
+
+/*
+1.单一的设置太麻烦，而且每次style一次就等于浏览器要绘制一次,也就是要重新渲染一次
+	当然高级的浏览器是可能会合并style的次数的
+2 style只能针对行类样式，对于link引入的样式，无法获取
+3 样式属性名的兼容问题，比如驼峰，保留字
+ */
+
+
+ /*
+ 
+ style 这个属性就是 js 中的一个对象，其实也是一个实例
+内部都是用驼峰形式的命名
+其中一个是比较特殊的就是 float,  保留字嘛所以就换成 cssFloat,  IE : styleFloat
+然后对于width,hight这些处理都最好要有一个量度单位
+
+  */
+
+/*
+和innerHTML一样，cssText很快捷且所有浏览器都支持
+此外当批量操作样式时，cssText只需一次reflow，提高了页面渲染性能
+当然如果是在创建的时候，我们还可以利用文档碎片
+缺点自然就是样式被整体覆盖了，所以在处理的时候应该要先获取需要保留的样式然后再拼接起来
+ */
+
+// 样式访问
+// style 只能获取行内样式
+// DOM2 增加了 document.defauleView.getComputedStyle()
+// 方法方法返回类似 style 属性的 css 的对象
+// 但 style 是可读可写，而该方法只能读
+
+
+/*
+也就是 jQuery 解决了以下的问题
+jQuery需要的处理问题就显而易见了
+1 参数传递
+2 命名规范
+3 访问规则
+4 性能优化
+ */
+</script>

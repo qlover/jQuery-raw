@@ -1,0 +1,142 @@
+<meta charset="UTF-8">
+<title> 模拟事件 | 自定义事件 </title>
+
+<style>
+	#wrap{ padding: 10px; background: #f00; }
+	button{ padding: 10px 20px; font-size: 20px;}
+</style>
+
+<div id="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+	<button id="btn4">Java</button>
+	<button id="btn5" data-sub="py">Python</button>
+	<input id="ipt" type="text">
+</div>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 自定义事件
+// 先看 $.fn.trigger()
+
+$('#btn').on('click', function(e) {
+	console.log(e.type);
+});
+
+// 不用用户点击，直接触发
+$('#btn').trigger('click');
+
+// 更多参数以及自定义的事件名
+$('#btn3').on('qlover.click', function(e, d1, d2) {
+	console.log(e.type, d1, d2);
+});
+
+// 触发
+$('#btn3').trigger('qlover.click', ['hello', 100]);//=> qlover hello 100
+
+// 还是同样的，看源码前先看看该方法怎么用
+
+// trigger(evetType, extraParameters)
+// 	evetType 	一个事件名
+// trigger(evet, extraParameters)
+// 	event 		一个 $.Event 对象
+// 参数二都是传递给 event 的数据
+
+/*
+// 自己触发
+// 并传递参数
+$('#btn3').on('click', function(e, data1, data2) {
+	console.log('btn3 click', data1, data2);
+	console.log('click event data ->', e.name);
+}).trigger('click', ['hello', 'jQuery']);//=> btn1 click hello jQuery
+
+// 为 click 事件对象传递数据
+// 得到一个 click 的 $.Event 事件对象
+var evt = $.Event('click');
+evt.name = "HaHa, jQuery";
+$('#btn3').trigger(evt, ['hello', 'jQuery']);
+//=> btn3 click hello jQuery
+//=> click event data -> HaHa, jQuery
+*/
+
+// 还有一种用法就是 执行默认行为
+// triger()方法触发事件后，会执行浏览器默认操作
+$('input').on('focus', function(event) {
+	console.log('input focus');
+});
+$('input').triggerHandler("focus");
+// 会发现 input 并没有得到焦点
+</script>
+
+
+<script>
+	console.log('\n')
+// 源码
+// 在源码中会发现 $.event.trigger() 没有，那是因为 该方法是为 $.event 扩展的
+// 见 $.event 扩展
+
+
+
+// 模拟冒泡
+// 在Internet Explorer 8和更低，一些事件change 和 
+// submit 本身不冒泡，但jQuery修改这些冒泡，创建一致的跨浏览器的行为。
+// 
+// 模拟一次 a 标签的 mybubble 事件的冒泡过程
+$(document).on('mybubble', function(event) {
+	console.log('document bubble');
+});
+$('html').on('mybubble', function(event) {
+	console.log('html bubble');
+});
+$('body').on('mybubble', function(event) {
+	console.log('body bubble');
+});
+$('div').on('mybubble', function(event) {
+	console.log('div bubble');
+});
+$('button').on('mybubble', function(event) {
+	console.log('button bubble');
+});
+$('a').on('mybubble', function(event) {
+	console.log('a bubble');
+	event.preventDefault();
+});
+
+$('a').trigger('mybubble');
+
+
+</script>
+
+<script>
+
+// 模拟事件
+// 前面的源码也看了，模拟事件主要是靠 $.event.special 这个方法
+// 这个方法在event.add,event.dispatch等几个事件的处理地方都会被调用到
+// 换句话说就是某些事件不是大众化的的事件，不能一概处理
+// 比如 load 事件拥有特殊的 noBubble 属性，可以防止该事件的冒泡而引发一些错误
+// 所以需要单独针对处理，但是如果都写成判断的形式，显然代码结构就不合理了，而且不方便提供给用户自定义扩展
+
+console.log($.event.special);
+//=>
+// beforeunload: {postDispatch: ƒ}
+// blur: {trigger: ƒ, delegateType: "focusout"}
+// click: {trigger: ƒ, _default: ƒ}
+// focus: {trigger: ƒ, delegateType: "focusin"}
+// focusin: {setup: ƒ, teardown: ƒ}
+// focusout: {setup: ƒ, teardown: ƒ}
+// load: {noBubble: true}
+// mouseenter: {delegateType: "mouseover", bindType: "mouseover", handle: ƒ}
+// mouseleave: {delegateType: "mouseout", bindType: "mouseout", handle: ƒ}
+// pointerenter: {delegateType: "pointerover", bindType: "pointerover", handle: ƒ}
+// pointerleave: {delegateType: "pointerout", bindType: "pointerout", handle: ƒ}
+
+// focusin,focusout 为 DOM3 级事件
+// 该事件兼容见 https://images0.cnblogs.com/blog/329084/201312/18221237-072cad16f06144c5b2ae786cce4e31c2.png
+
+// 也就是在 jQuery 内部对事件的模拟其实就是只有 focusin,focusout 这两个 FF 不支持的事件 
+
+</script>

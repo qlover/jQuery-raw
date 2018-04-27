@@ -1,0 +1,40 @@
+<meta charset="UTF-8">
+<title> jQuery 原型上的事件 </title>
+
+<style>
+	#wrap{ padding: 10px; background: #f00; }
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div id="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+	<button id="btn4">Java</button>
+	<button id="btn5" data-sub="py">Python</button>
+	<input id="ipt" type="text">
+</div>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 其实就是一些剩下的事件内部，主要就是实现的 $().click() $().hover() 这样的事件
+// 为事件提供了快捷的调用方法
+
+$('#btn').click(function(event) {
+	console.log(event.target.firstChild.nodeValue);
+});
+
+$('#btn').click();
+
+
+// 主要实现了 hover
+$('div').hover(function(e){
+	$('div').addClass('add');
+}, function(e){
+	$('div').removeClass('add');
+})
+</script>

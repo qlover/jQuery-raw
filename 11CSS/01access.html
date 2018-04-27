@@ -1,0 +1,58 @@
+<meta charset="UTF-8">
+<title> jQuery 工具之 access() </title>
+<style>
+	.wrap{ padding: 10px; background: #00f; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div class="wrap">
+	<button id="btn1" data-app="front">Bootstrap</button>
+	<button id="btn2" data-app="back">PHP</button>
+</div>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// $.fn.prop() 方法为例
+/*
+$.fn.prop: function( name, value ) {
+	return access( this, jQuery.prop, name, value, arguments.length > 1 );
+}
+有这四种用法
+get
+	.prop( propertyName )
+
+set
+	.prop( propertyName, value )
+	.prop( properties)
+	.prop( propertyName, function )
+
+	jQuery.prop(elem, name, value)
+	$.acc( elems, fn, key, value, chainable, emptyGet, raw )
+ */
+// 因为 access 的原故, 所以调用方法则是直接的调用了 access()
+// 过程看源码 内部测试 access
+
+var b1 = $('#btn1');
+var b2 = $('#btn2');
+
+
+console.log(b1.prop('id'))
+
+
+// $('#btn2').html(`<a href="?sub=php">PHP</a>`);
+
+// 该方法在内部起一个校正 键 值 对这样数据的做用  
+// 只要是与键值对相关的值都可以用 access() 方法来校正
+// 
+// function access( elems, fn, key, value, chainable, emptyGet, raw )
+// elems 		需要处理的元素
+// fn 			回调
+// key 			键值对的键
+// value 		值
+// chainable 	链式调用
+// emptyGet		一个默认值
+// raw 			表示判断 value 是否是一个函数  
+</script>

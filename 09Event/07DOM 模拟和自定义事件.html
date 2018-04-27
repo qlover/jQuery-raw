@@ -1,0 +1,133 @@
+<meta charset="UTF-8">
+<title> 模拟事件 | 自定义事件 </title>
+
+<style>
+	#wrap{ padding: 10px; background: #f00; }
+	button{ padding: 10px 20px; font-size: 20px;}
+</style>
+
+<div id="wrap">
+	<button id="btn" class="js">JavaScript</button>
+	<button id="btn2" class="jq">
+		<a href="?sub=jQuery">jQuery</a>
+	</button>
+	<button id="btn3" class="php">PHP</button>
+</div>
+
+<script>
+
+// trigger 中文意思是引发，板机的意思
+// 也就说通常的事件发生在浏览器系统的某个行为，然后执行某个行为，事件的处理程序
+// 而 trigger 就是模拟自己触发
+// 在 DOM 原生中，有这样一个概念，就是事件可以不是由浏览器系统触发和生成
+// 用户自己也可以自己定义事件和让事件触发
+// 这就是模拟事件和自定义事件
+// 在 jQuery 中则也有完成这个功能的
+// 但是在看 jQuery 源码之前要来说说这个自定义事件
+
+
+/*
+
+类似DOM的行为：你在DOM节点（包括document对象）监听并触发自定义事件
+			这些事件既可以冒泡，也可以被拦截。这正是Prototype、jQuery和MooTools所做的
+			如果事件不能扩散，就必须在触发事件的对象上进行监听。
+命名空间：一些框架需要你为你的事件指定命名空间
+		通常使用一个点号前缀来把你的事件和原生事件区分开。
+自定义额外数据：JavaScript框架允许你在触发自定义事件时，向事件处理器传送额外的数据
+		jQuery可以向事件处理器传递任意数量的额外参数。
+通用事件API：只用Dojo保留了操作原生DOM事件的正常API
+			而操作自定义事件需要特殊的发布/订阅API
+			这也意味着Dojo中的自定义事件不具有DOM事件的一些行为（比如冒泡）。 
+声明：我们往往需要在预定义的事件中加入一些特殊的变化例如，需要Alt键按下才能触发的单击事件）
+	MooTools运行你定义此类自定义事件此类事件需要预先声明
+	即便你只是声明他们的名字。任何未声明的自定义事件不会被触发。
+
+
+ */
+
+// 模拟事件
+
+// 模拟上面 btn 按钮的操作
+var btn = document.querySelector('#btn');
+
+// 1. 创建 event
+// document.createEvent(type)
+// DOM3 级 type 可以取值有
+// 	UIEvents
+// 	MouseEvents
+// 	MutationEvents
+// 	HTMLEvents
+// 	具体 https://developer.mozilla.org/zh-CN/docs/Web/API/Document/createEvent#Notes
+
+// 创建一个 MouseEvents 事件的事件对象
+var event = document.createEvent('MouseEvents');
+
+
+// 2. 初始化 event
+// 用对应的 documentCreate(type) 中的 type 对应的处理方法
+// 具体 https://developer.mozilla.org/zh-CN/docs/Web/API/Document/createEvent#Notes
+
+
+// initMouseEvent() 接收 16 个参数，没错就是 16 个参数
+// 因为模拟所以要将一些参数都模拟出来
+// 见 https://developer.mozilla.org/zh-CN/docs/Web/API/MouseEvent/initMouseEvent
+
+// 这里初始化为一个事件名 click
+event.initMouseEvent('click');
+
+
+// 3. 触发事件
+// 使用dispatch()方法，此方法接收一个参数，即要触发事件的event对象
+
+// 但是触发之前还要记得添加监听事件，也就是要执行的处理程序
+// 为 click 事件添加监听
+btn.addEventListener('click', function(e){
+	console.log(e.target.id, e.type, '执行了')
+}, false);
+
+// 触发
+btn.dispatchEvent(event);
+
+// 当然上面的这个过程没有点问题，只是 MDN 说这样的方法过时了
+// 可以用下面这个方法
+
+// MouseEvent(typeArg, mouseEventInit) 这个构造器
+
+// 模拟事件
+
+// 创建 event
+// 参数只要是 DOMString 都行
+event = new MouseEvent('qlover.click');
+// 监听
+btn.addEventListener('qlover.click', function(e){
+	console.log(e.target.id, e.type, '2 执行了')
+}, false);
+// 触发
+btn.dispatchEvent(event);//=> btn qlover.click 执行了
+
+// 这也能达到模拟的过程
+// 其它的类似事件同样的道理
+
+
+
+// 而自定义事件则是
+// DOM3级还定义了自定义事件。自定义事件不是由DOM原生触发的，目的是让开发人员创建自己的事件
+// 创建自定义事件，可以使用createEvent(“CustomEvent”)方法
+// 返回的对象有一个名为initCustomEvent()的方法，接收如下4个参数：
+// type（字符串）：事件类型；
+// bubbles（布尔值）：事件是否应该冒泡；
+// cancelable（布尔值）：表示事件是否可以取消；
+// detail（对象）：任意值，保存在event对象的detail属性中
+
+var btn2 = document.querySelector('#btn2');
+var evt = document.createEvent("CustomEvent");
+evt.initCustomEvent('qlover.custom', true, false, "hello custom event");
+btn2.addEventListener('qlover.custom', function(e){
+	console.log(e.type)
+});
+btn2.dispatchEvent(evt);
+
+
+// 这里没有解释的很情况，大概就是在原生的 DOM 中是有自定义事件这个的，而且也被应用着
+// 下面就来看看 jQuery 的自定义事件
+</script>

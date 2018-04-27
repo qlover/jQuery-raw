@@ -1,0 +1,178 @@
+<meta charset="UTF-8">
+<title>Hooks</title>
+
+
+<div id="top" data-id="#top">TOP</div>
+<div id="mid" data-id="null">MID</div>
+<div id="btn" data-id="#btn">BTN</div>
+<div id="over">OVER</div>
+<div id="father">
+	<div id="son">SON</div>
+	<div class="son2">SON2</div>
+	<p>javascript</p>
+</div>
+
+<hr />
+
+<script>
+// $.attr 和 $.prop 效果相同
+// 只是一个处理的是 DOM 属性，一个处理的 HTML 属性
+// 但是不懂 Hook 源码，可能有很多疑问
+// 
+// 先判断 dom 类型
+// 然后根据一些特殊情况，复制 hooks 参数
+// 		这里的特殊条件为 (nType !== 1 || !jQuery.isXMLDoc(elem))
+// 接着对于 set 和 get 方法判断，通过 value 值是否为 underfined
+// 		如果 hooks 中有，用 hooks 中提供的方法，没有，就走正常流程
+
+// 钩子机制
+// 一些核心 jQuery 函数都有自己的“插件API”称为“钩子”
+
+
+/*
+钩子机制也叫hook机制，或者你可以把它理解成一种匹配机制
+就是我们在代码中设置一些钩子，然后程序执行时自动去匹配这些钩子
+这样做的好处就是提高了程序的执行效率，减少了if else 的使用同事优化代码结构
+由于js是单线程的编程语言，所以程序的运行效率在前端开发是比较重要的
+在开发中我们秉承如果能用switch case 的地方就不要用if else 可以用hook实现的尽量使用hook机制去实现。
+ */
+
+// 接下来看一个小例子
+
+// 比如中有这样许多错误代码
+// 0x0001
+// 0x0002
+// 0x0003
+// 0x0004
+// 0x0005
+// ......
+// 用错误代码分别提示用户不同的信息
+
+
+// 传统写法
+
+
+// 错误代码提供处
+var errorCode = [
+	'0x0001',
+	'0x0002',
+	'0x0003',
+	'0x0004',
+];
+// 随机出一个错误代码
+var ecode = errorCode[Math.round(Math.random()*((errorCode.length-1) - 0) + 0)];
+
+
+if( ecode == '0x0001'){
+	console.log('登录失败')
+}else if ( ecode == '0x0002') {
+	console.log('密码错误')	
+}else if ( ecode == '0x0003') {
+	console.log('用户不存在')
+}else if ( ecode == '0x0004') {
+	console.log('登录成功')
+}
+
+// 如果错误代码很多很多
+// 也就是说在我们知道很哪些错误代码时，做该错误代码要做事时
+// 还要一个一个判断，如果错误代码一旦多，那么每次都会判断这么次
+
+
+// 钩子则是另一种解决方法
+
+// 定义一个钩子
+var codeHook = {
+	'0x0001':'登录失败',
+	'0x0002':'密码错误',
+	'0x0003':'用户不存在',
+	'0x0004':'登录成功',
+}
+// 现在要做的事就只是判断错误代码在定义好的钩子中没有
+// if ( codeHook.hasOwnProperty(ecode)) {
+// 	console.log(codeHook[ecode]);
+// }
+// jQuery 式的判断，无需要 hasOwnProperty
+if( codeHook[ecode] ){
+	console.log(codeHook[ecode]);
+}
+
+// 你会发现即使有在多的错误代码
+// 一旦错误代码被匹配，就会找钩子，然后执行相对应的操作
+
+
+// 而在 jQuery 中有很多地方都用上了钩子机制
+// 就再来个比如 jQuery.type() 
+
+// 这里的 class2type 不用 3.1.1 的做法，而用个老的做法
+var class2type = {
+	"[object Boolean]": "boolean",
+	"[object Number]": "number",
+	"[object String]": "string",
+	"[object Function]": "function",
+	"[object Array]": "array",
+	"[object Date]": "date",
+	"[object RegExp]": "regexp",
+	"[object Object]": "object",
+	"[object Error]": "error",
+	"[object Symbol]": "symbol"
+};
+var toString = class2type.toString;
+function type(obj) {
+	if (obj == null) {
+		return obj + "";
+	}
+	return typeof obj === "object" ||
+		typeof obj === "function" ?
+			class2type[toString.call(obj)] || "object":
+		typeof obj;
+}
+
+console.log(type([])); //=> array
+console.log(type({}));
+console.log(type(null));
+console.log(type(undefined));
+console.log(type(new Error()));//=> error
+console.log(type(new Function())); //=> function
+
+// 看吧，这也是一个 jQuery 的钩子机制
+
+</script>
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 这样理解了钩子机制是什么，理解 $.attr 和 $.prop 就更简单了
+
+/**
+ * prop 方式
+ */
+
+// jQuery.propFix
+// 	这里相当于错误上面的代码集合，存放的就是一些兼容差的属性名
+// 	但只有一个需要执行钩子中的操作就是 tabIndex
+// jQuery.propHooks
+// 	这里就是 prop 的钩子
+
+var over = document.getElementById('over');
+
+// 这两个只是被修正了的保留字
+$.prop(over, 'class', 1);
+$.prop(over, 'for', 2);
+// 这个才被 prop 钩子所执行
+$.prop(over,'tabIndex', 10);
+// 这也就证明了上面说的，只对 tabIndex 做了操作
+console.log($.prop(over,'tabIndex')); //=> 10
+
+
+/**
+ * attr 方式
+ */
+// attr 没有需要处理保留字的情况，所以只有一个钩子，那就简单多了
+// jQuery.attrHooks
+
+// 在 attr 钩子判断后处理了另一个东西就是 HTML 属性是布尔值的 HTML 属性
+var re = new RegExp( "^(?:checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped)$", "i" );
+
+
+
+</script>

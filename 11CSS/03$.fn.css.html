@@ -1,0 +1,87 @@
+<meta charset="UTF-8">
+<title> $.fn.css </title>
+<style>
+	.wrap{ padding: 10px; background: #00f; margin: 10px 0;}
+	button{ padding: 10px 20px; font-size: 20px;}
+	.add{background: #0f0 !important;}
+</style>
+
+<div class="wrap">
+	<button id="btn1" data-app="front">Bootstrap</button>
+	<button id="btn2" data-app="back">PHP</button>
+</div>
+
+<script>
+// 用原生 JS 获取 wrap 的背景颜色
+// var wrap = document.querySelectorAll('.wrap');
+// var button = document.querySelectorAll('button');
+
+// console.log(wrap[0].style);//=> ""
+// console.log(getComputedStyle(button[0])['backgroundColor']);//=> rgb(221,221,221)
+// console.log(getComputedStyle(button[0])['backgroundColor']);//=> rgb(221,221,221)
+
+// document.defaulteView.getComputedStyle 是 DOM2 级的一个规范 
+
+</script>
+
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+console.group();
+// 说了 access 方法后, $.fn.css 这个方法就简单了
+// 接下来就看看 $.fn.css 方法
+
+// $.fn.css() 有五种使用方法
+// get 获取匹配元素集合中的第一个元素的样式属性的计算值 
+//   .css( propertyName )
+//   .css( propertyNames )
+// set 设置每个匹配元素的一个或多个CSS属性
+// 	  .css( propertyName, value )
+// 	  .css( propertyName, function(index, value) )
+// 	  .css( properties )
+var w = $('.wrap')
+var b = $('button');
+
+// 用法一 
+// console.log(w.css('background-color'));//=> rgb(0, 0, 255)
+// console.log(w.css('backgroundColor'));//=> rgb(0, 0, 255)
+
+// 用法二
+console.log(w.css(['width', 'color', 'background-color']));
+//=> {width: "1330px", color: "rgb(0, 0, 0)", background-color: "rgb(0, 0, 255)"}
+
+
+// 用法三，设置
+console.log(w.css('background-color', '#f00').css('background-color'));//=> rgb(255, 0, 0);
+
+// 用法四，对象设置
+var style_ = {
+	'margin': '20px',
+	'padding': '20px',
+}
+w.css(style_);// 同时设置了外边距和内边距
+
+// 每调用一次都调用了一个 access() 那个内部方法
+// 所以，自然也会想到，另一种用法
+
+// 将每个 button 的宽度变成自身的宽度的 2 倍
+b.css('width', function(_, v){// 因为 css 返回的是字符串，并且后面还有 px 单位
+	return parseFloat(v) * 2
+})
+
+console.groupEnd();
+</script>
+
+
+
+<script>
+// 接下来就看看 $.fn.css 源码 
+// $.fn.css(elem, name, extra, styles)
+// getStyle()
+// $.css()
+// 	$.camelCase()
+// $.style()
+// $.cssProps
+// curCSS()
+</script>

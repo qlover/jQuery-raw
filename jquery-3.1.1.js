@@ -361,7 +361,7 @@ jQuery.extend( {
 		DOMEval( code );
 	},
 
-	// 用于生成
+	// 用于生成驼峰的命名
 	// Convert dashed to camelCase; used by the css and data modules
 	// -> 将冲向CamelCase；使用CSS和数据模块
 	// Support: IE <=9 - 11, Edge 12 - 13
@@ -1576,6 +1576,8 @@ Sizzle.matchesSelector = function( elem, expr ) {
 	return Sizzle( expr, document, null, [ elem ] ).length > 0;
 };
 
+// 检查是否一种元素是另一个dom元素的后代
+// 如果第二个参数是文本或注释节点，将返回false。
 Sizzle.contains = function( context, elem ) {
 	// Set document vars if needed
 	if ( ( context.ownerDocument || context ) !== document ) {
@@ -3254,6 +3256,7 @@ jQuery.each( {
 		return this.pushStack( matched );
 	};
 } );
+// 匹配不是空白部分
 var rnothtmlwhite = ( /[^\x20\t\r\n\f]+/g );
 
 
@@ -4096,7 +4099,7 @@ function access( elems, fn, key, value, chainable, emptyGet, raw ) {
 	// Sets many values
 	// 设置多个值,也就是说 key 传进来是一个对象
 	if ( jQuery.type( key ) === "object" ) {
-		console.log('/t> set many values')
+		// console.log('/t> set many values')
 		// 允许链式调用
 		chainable = true;
 		// 遍历 key 
@@ -4109,29 +4112,29 @@ function access( elems, fn, key, value, chainable, emptyGet, raw ) {
 	// Sets one value
 	// 设置一个值
 	} else if ( value !== undefined ) {
-		console.log('\t> set one value');
+		// console.log('\t> set one value');
 		// 允许链式调用
 		chainable = true;
 
 		// 判断 value ,就是传入的值是否是一个函数
 		if ( !jQuery.isFunction( value ) ) {
-			console.log('\t> value not Function')
+			// console.log('\t> value not Function')
 			// 然后用 raw 记录
 			raw = true;
 		}
 		// 用于测试传入的 value 是否是函数
 		else{
-			console.log('\t> value is Function')
+			// console.log('\t> value is Function')
 		}
 
 		// 当 key 为 null 时, $.fn.html() $.fn.text() 时被调用
 		if ( bulk ) {
-			console.log('\t> bulk', bulk)
+			// console.log('\t> bulk', bulk)
 			// Bulk operations run against the entire set
 			// -> 大容量操作对整个集合运行
 			// value 不是函数
 			if ( raw ) {
-				console.log('\t\t> bulk value not Function');
+				// console.log('\t\t> bulk value not Function');
 				// 操作 fn(value); 
 				fn.call( elems, value );
 				// 并且让该回调只执行一次
@@ -4141,7 +4144,7 @@ function access( elems, fn, key, value, chainable, emptyGet, raw ) {
 			} 
 			// value 是一个函数
 			else {
-				console.log('\t\t> bulk value is Function');
+				// console.log('\t\t> bulk value is Function');
 				bulk = fn;
 				fn = function( elem, key, value ) {
 					return bulk.call( jQuery( elem ), value );
@@ -4152,7 +4155,7 @@ function access( elems, fn, key, value, chainable, emptyGet, raw ) {
 
 		// 如果回调存在
 		if ( fn ) {
-			console.log('\t> have fn');
+			// console.log('\t> have fn');
 			// 则循环执行 fn
 			// 将每一个 elem, key, name 都交给 fn 处理
 			for ( ; i < len; i++ ) {
@@ -4177,21 +4180,21 @@ function access( elems, fn, key, value, chainable, emptyGet, raw ) {
 
 	// 如果需要返回当前 jQuery 对象
 	if ( chainable ) {
-		console.log('$/> access chainable', chainable)
+		// console.log('$/> access chainable', chainable)
 		// 则直接返回当前对象
 		return elems;
 	}
 
 	// Gets
 	if ( bulk ) {
-		console.log('$/> access bulk', bulk)
+		// console.log('$/> access bulk', bulk)
 		return fn.call( elems );
 	}
 
-	// 如果 key 不是一个对象, 是字符串
+	// 如果 key 不是一个 object, 是字符串, 数组也是一样，直接返回
 	// 则直接执行回调 fn
 	// 此时 fn 的返回值就是 该方法的最终返回值
-	console.log('$/> access');
+	// console.log('$/> access');
 	// 如果当前 jQuery 数组对象中长度不为 0 
 	return len ? fn( elems[ 0 ], key ) : emptyGet;
 };
@@ -4536,7 +4539,7 @@ var rbrace = /^(?:\{[\w\W]*\}|\[[\w\W]*\])$/,
 // 将数组，对象字符串转换成对应的数组，对象的对象
 // 其它则返回本身 
 function getData( data ) {
-	console.iinfo('$> getData', arguments);
+	console.info('$> getData', arguments);
 	if ( data === "true" ) {
 		return true;
 	}
@@ -4869,6 +4872,8 @@ jQuery.fn.extend( {
 		return defer.promise( obj );
 	}
 } );
+// RegExp.source 返回匹配可用的文本
+// 应该是匹配一个浮点数
 var pnum = ( /[+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|)/ ).source;
 
 var rcssNum = new RegExp( "^(?:([+-])=|)(" + pnum + ")([a-z%]*)$", "i" );
@@ -6743,13 +6748,18 @@ jQuery.each( {
 } );
 var rmargin = ( /^margin/ );
 
+// /^([+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|))(?!px)[a-z%]+$/i
+// 应该是匹配一个非像素的字符串单位，而是百分比或者其它
 var rnumnonpx = new RegExp( "^(" + pnum + ")(?!px)[a-z%]+$", "i" );
 
+// 获取元素 CSSStyleDeclaration 对象
+// 也就是计算后的所有样式, getComputedStyle() 获取
 var getStyles = function( elem ) {
-
+	console.log('$> getStyles')
 		// Support: IE <=11 only, Firefox <=30 (#15098, #14150)
 		// IE throws on elements created in popups
 		// FF meanwhile throws on frame elements through "defaultView.getComputedStyle"
+		// 兼容的获得 getComputedStyle 的父对象
 		var view = elem.ownerDocument.defaultView;
 
 		if ( !view || !view.opener ) {
@@ -6758,16 +6768,19 @@ var getStyles = function( elem ) {
 
 		return view.getComputedStyle( elem );
 	};
-
-
+// 用于测试 getStyles
+jQuery.gStyle = getStyles;
 
 ( function() {
-
+	// 应该是用于兼容
+	
 	// Executing both pixelPosition & boxSizingReliable tests require only one layout
+	// -> 同时执行像素位置和盒位置的可靠性测试只需要一个布局
 	// so they're executed at the same time to save the second computation.
 	function computeStyleTests() {
 
 		// This is a singleton, we need to execute it only once
+		// -> 这是单例，我们只需要执行一次
 		if ( !div ) {
 			return;
 		}
@@ -6838,19 +6851,38 @@ var getStyles = function( elem ) {
 	} );
 } )();
 
-
+/**
+ * 从计算后的样式中获取一个元素的属性名的值, 
+ * @param  {object} elem     DOM 元素
+ * @param  {string} name     属性名
+ * @param  {objecct} computed 计算后的样式对象
+ * @return {[type]}          [description]
+ */
 function curCSS( elem, name, computed ) {
-	var width, minWidth, maxWidth, ret,
+	console.info('$> curCSS', arguments)
+	var width, minWidth, maxWidth,
+		ret,  // 存放计算后的样式的值
+		// style 元素对象实例
 		style = elem.style;
 
+	// 当有传入计算后的样式的对象时，则用该对象，否则重新获取，
 	computed = computed || getStyles( elem );
 
-	// Support: IE <=9 only
+	// console.log('\t> style computed', style == computed)//=> false 
+
+	// Support: IE <=9 only -> 支持 IE <= 9
 	// getPropertyValue is only needed for .css('filter') (#12537)
+	// 如果计算后的样式存在
 	if ( computed ) {
+		// getpRopertyValue() 只用于获取 filter 属性
+		// 如果不是 filter 属性则直接  computed[name] 获取
 		ret = computed.getPropertyValue( name ) || computed[ name ];
 
+		// $.contains = Sizzle.contains 判断后一个元素是否是前一个元素的后代
+		// 		如果第二个参数是文本或注释节点，$。包含()将返回false。
+		// 如果为空 并且 elem 不是 document 的后代
 		if ( ret === "" && !jQuery.contains( elem.ownerDocument, elem ) ) {
+			// 则用 $.style 获取
 			ret = jQuery.style( elem, name );
 		}
 
@@ -6858,15 +6890,23 @@ function curCSS( elem, name, computed ) {
 		// Android Browser returns percentage for some values,
 		// but width seems to be reliably pixels.
 		// This is against the CSSOM draft spec:
+		// -> 这违反了 CSSOM 的草案
 		// https://drafts.csswg.org/cssom/#resolved-values
-		if ( !support.pixelMarginRight() && rnumnonpx.test( ret ) && rmargin.test( name ) ) {
+		if ( !support.pixelMarginRight() &&
+			// 如果匹配出来不是一个像素单位
+			rnumnonpx.test( ret ) && 
+			// 匹配出来 是 margin 开头的字符串单位
+			rmargin.test( name ) )
+		{
 
 			// Remember the original values
+			// 记住原始的值
 			width = style.width;
 			minWidth = style.minWidth;
 			maxWidth = style.maxWidth;
 
 			// Put in the new values to get a computed value out
+			// -> 输入新值以求出新值
 			style.minWidth = style.maxWidth = style.width = ret;
 			ret = computed.width;
 
@@ -6881,10 +6921,12 @@ function curCSS( elem, name, computed ) {
 
 		// Support: IE <=9 - 11 only
 		// IE returns zIndex value as an integer.
+		// IE 返回 zIndex 的值是一个整数，这里为了统一将它变成字符串
 		ret + "" :
 		ret;
 }
-
+// 用于测试 curCSS
+jQuery.cs = curCSS;
 
 function addGetHookIf( conditionFn, hookFn ) {
 
@@ -6913,23 +6955,28 @@ var
 	// See here for display values: https://developer.mozilla.org/en-US/docs/CSS/display
 	rdisplayswap = /^(none|table(?!-c[ea]).+)/,
 	cssShow = { position: "absolute", visibility: "hidden", display: "block" },
+	// 转换 normal 的值
 	cssNormalTransform = {
 		letterSpacing: "0",
 		fontWeight: "400"
 	},
-
+	// 各供应商的前缀
 	cssPrefixes = [ "Webkit", "Moz", "ms" ],
+	// 准备一个空的 style 样式元素
 	emptyStyle = document.createElement( "div" ).style;
 
 // Return a css property mapped to a potentially vendor prefixed property
+// -> 返回映射到潜在供应商前缀属性的CSS属性
 function vendorPropName( name ) {
 
 	// Shortcut for names that are not vendor prefixed
+	// 如果不是供应商的名称，直接返回
 	if ( name in emptyStyle ) {
 		return name;
 	}
 
 	// Check for vendor prefixed names
+	// 则检查供应商的名称
 	var capName = name[ 0 ].toUpperCase() + name.slice( 1 ),
 		i = cssPrefixes.length;
 
@@ -7058,9 +7105,11 @@ jQuery.extend( {
 	cssHooks: {
 		opacity: {
 			get: function( elem, computed ) {
+				console.log('$> $.cssHooks.opacity.get', arguments)
 				if ( computed ) {
 
 					// We should always get a number back from opacity
+					// -> 我们应该总是从不透明中得到一个数字。
 					var ret = curCSS( elem, "opacity" );
 					return ret === "" ? "1" : ret;
 				}
@@ -7069,6 +7118,7 @@ jQuery.extend( {
 	},
 
 	// Don't automatically add "px" to these possibly-unitless properties
+	// -> 不要自动将“px”添加到这些可能没有单位的属性中。
 	cssNumber: {
 		"animationIterationCount": true,
 		"columnCount": true,
@@ -7092,29 +7142,39 @@ jQuery.extend( {
 	},
 
 	// Get and set the style property on a DOM Node
+	// $.style 设置与取值
 	style: function( elem, name, value, extra ) {
 
 		// Don't set styles on text and comment nodes
+		// 如果元素不存在，或者是文档节点，注释节点，或者没有行内样式
 		if ( !elem || elem.nodeType === 3 || elem.nodeType === 8 || !elem.style ) {
 			return;
 		}
 
 		// Make sure that we're working with the right name
+		// 确保名字
 		var ret, type, hooks,
 			origName = jQuery.camelCase( name ),
+			// 该元素的 style 行内样式对象
 			style = elem.style;
 
 		name = jQuery.cssProps[ origName ] ||
 			( jQuery.cssProps[ origName ] = vendorPropName( origName ) || origName );
 
 		// Gets hook for the prefixed version, then unprefixed version
+		// 看是否有钩子
 		hooks = jQuery.cssHooks[ name ] || jQuery.cssHooks[ origName ];
 
 		// Check if we're setting a value
+		// 检查设置的值是否是存在
+		// 设置属性值
 		if ( value !== undefined ) {
+			console.log('\t> $.style set')
+			// 记录传入的是什么类型
 			type = typeof value;
 
 			// Convert "+=" or "-=" to relative numbers (#7345)
+			// 传入字符串，并且是 += 或 -= 的字符串的数字
 			if ( type === "string" && ( ret = rcssNum.exec( value ) ) && ret[ 1 ] ) {
 				value = adjustCSS( elem, name, ret );
 
@@ -7123,72 +7183,109 @@ jQuery.extend( {
 			}
 
 			// Make sure that null and NaN values aren't set (#7116)
+			// -> 确保不设置 null 和 NaN
 			if ( value == null || value !== value ) {
 				return;
 			}
 
 			// If a number was passed in, add the unit (except for certain CSS properties)
+			// 传入数字
 			if ( type === "number" ) {
+				// $.cssNumber 匹配属性后面加 px 的属性值，否则加上 px 后缀
 				value += ret && ret[ 3 ] || ( jQuery.cssNumber[ origName ] ? "" : "px" );
 			}
 
 			// background-* props affect original clone's values
+			// 如果不支持 backgroundClip 并且 值为 "" ，并且属性中有 background 时
 			if ( !support.clearCloneStyle && value === "" && name.indexOf( "background" ) === 0 ) {
+				// console.log('\t> has background')
+				// 将 style 属性的该属性变成 inherit
 				style[ name ] = "inherit";
 			}
 
 			// If a hook was provided, use that value, otherwise just set the specified value
+			// 有钩子用钩子
 			if ( !hooks || !( "set" in hooks ) ||
 				( value = hooks.set( elem, value, extra ) ) !== undefined ) {
-
+				// 如果利用钩子将值设置成功
+				
+				// 再用普通的方法将该 style 对象中设置
 				style[ name ] = value;
 			}
 
-		} else {
-
+		}
+		// 获取属性值
+		else {
+			console.log('\t> $.style get')
 			// If a hook was provided get the non-computed value from there
+			// 有钩子则用钩子设置
 			if ( hooks && "get" in hooks &&
 				( ret = hooks.get( elem, false, extra ) ) !== undefined ) {
-
 				return ret;
 			}
 
 			// Otherwise just get the value from the style object
+			// 否则直接用普通方法直接设置
 			return style[ name ];
 		}
 	},
 
+	// $.css()  取值
+	/**
+	 * 取值，因为只有 style 才可以设置
+	 * @param  {object} elem   当前元素
+	 * @param  {string} name   属性字符串
+	 * @param  {boolean|""} extra  限定符，暂时不知道做什么,取值可以是空串，true, false
+	 * @param  {object} styles 计算后的样式对象
+	 * @return {string}        最后返回的该属性的值
+	 */
+	/* css 也利用了和 attr, prop 一样的机制 Hook 机制 */
 	css: function( elem, name, extra, styles ) {
+		// console.info('$> $.css', arguments)
 		var val, num, hooks,
+			// 驼峰命名
 			origName = jQuery.camelCase( name );
 
 		// Make sure that we're working with the right name
+		// 确保属性名是对的
 		name = jQuery.cssProps[ origName ] ||
+			// 添加供应商的前缀，如果不需要则直接是过滤后的原生属性名
 			( jQuery.cssProps[ origName ] = vendorPropName( origName ) || origName );
 
 		// Try prefixed name followed by the unprefixed name
+		// -> 尝试前缀名称，后面跟着无前缀名称
+		// 就是检查当前的这个属性名名字和或者是原生属性名的名字是否有钩子
 		hooks = jQuery.cssHooks[ name ] || jQuery.cssHooks[ origName ];
 
 		// If a hook was provided get the computed value from there
+		// 如果有钩子
 		if ( hooks && "get" in hooks ) {
+			// 钩子取值 --> get 
 			val = hooks.get( elem, true, extra );
 		}
 
-		// Otherwise, if a way to get the computed value exists, use that
+		// Otherwise, if a way to get the computed value exists, use that、
+		// 如果没有钩子
 		if ( val === undefined ) {
+			// 则从 curCSS() 取值
 			val = curCSS( elem, name, styles );
 		}
+		// 其实不管是普通和钩子，都会从 curCSS() 去获取
+		// 也就是说 curCSS() 才是真正获取属性值的地方
 
 		// Convert "normal" to computed value
+		// 将 normal 转换成计算的值
 		if ( val === "normal" && name in cssNormalTransform ) {
 			val = cssNormalTransform[ name ];
 		}
 
 		// Make numeric if forced or a qualifier was provided and val looks numeric
+		// -> 如果强制或提供了限定符，则使用数值表示，Val看起来是数字的。
 		if ( extra === "" || extra ) {
 			num = parseFloat( val );
 			return extra === true || isFinite( num ) ? num || 0 : val;
 		}
+		// console.log('$/> $.css')
 		return val;
 	}
 } );
@@ -7196,6 +7293,7 @@ jQuery.extend( {
 jQuery.each( [ "height", "width" ], function( i, name ) {
 	jQuery.cssHooks[ name ] = {
 		get: function( elem, computed, extra ) {
+			console.log('$> $.cssHooks[height/width]', arguments)
 			if ( computed ) {
 
 				// Certain elements can have dimension info if we invisibly show them
@@ -7282,25 +7380,37 @@ jQuery.each( {
 } );
 
 jQuery.fn.extend( {
+	// $.fn.css 
+	// 主要还是用 access 函数进行参数的整合，结果同样在回调中处理
 	css: function( name, value ) {
 		return access( this, function( elem, name, value ) {
+			// access 的 css 回调
 			var styles, len,
-				map = {},
+				map = {}, // 返回的多个属性的值的对象
 				i = 0;
 
+			// 处理 name 传入的 key 是数组时
 			if ( jQuery.isArray( name ) ) {
+				// 得到当前元素的所有计算后的样式
 				styles = getStyles( elem );
 				len = name.length;
 
 				for ( ; i < len; i++ ) {
+					// 向 map 依次添加对应的属性
+					// name[ i ] 就是数组中的每一个属性名
+					// 把属性名将给 $.css, 返回最终处理后的结果
 					map[ name[ i ] ] = jQuery.css( elem, name[ i ], false, styles );
 				}
 
 				return map;
 			}
 
+			// 同样的，如果 name 不是一个数组
+			// 然后对 value 判断
 			return value !== undefined ?
+				// 如果 value 有值，则表示设置 --> get 
 				jQuery.style( elem, name, value ) :
+				// 如果 value 没值，则表示获取 --> set
 				jQuery.css( elem, name );
 		}, name, value, arguments.length > 1 );
 	}
@@ -8455,90 +8565,122 @@ jQuery.each( [
 
 	// Strip and collapse whitespace according to HTML spec
 	// https://html.spec.whatwg.org/multipage/infrastructure.html#strip-and-collapse-whitespace
+	// 将多个类名组合成多个类名之间一个空格的字符串
 	function stripAndCollapse( value ) {
+		// 匹配出不是空白部分的数组
 		var tokens = value.match( rnothtmlwhite ) || [];
+		// 然后用 join 将数组以空格分开
 		return tokens.join( " " );
 	}
 
-
+// 返回元素的 class 属性的值
 function getClass( elem ) {
+	// 如果该元素有 getAttribute 属性，则返回该元素的 class 属性，否则空串
 	return elem.getAttribute && elem.getAttribute( "class" ) || "";
 }
 
+// 为原型扩展的 class 操作
 jQuery.fn.extend( {
+	// 添加 class 
 	addClass: function( value ) {
 		var classes, elem, cur, curValue, clazz, j, finalValue,
 			i = 0;
-
+		// 先处理传入函数的情况
 		if ( jQuery.isFunction( value ) ) {
 			return this.each( function( j ) {
 				jQuery( this ).addClass( value.call( this, j, getClass( this ) ) );
 			} );
 		}
 
+		// 其次处理字符串的情况
 		if ( typeof value === "string" && value ) {
+			// 匹配以空格分开的所有类名数组
 			classes = value.match( rnothtmlwhite ) || [];
 
+			// 遍历每一个元素
 			while ( ( elem = this[ i++ ] ) ) {
+				// 得到当前元素原先的所有 class 类名
 				curValue = getClass( elem );
+				// 如果是元素节点，然后将元素类样式名字组合成一个空格分开
 				cur = elem.nodeType === 1 && ( " " + stripAndCollapse( curValue ) + " " );
 
+				// 如果都满足以上两个条件
 				if ( cur ) {
 					j = 0;
+					// 遍历每一个需要添加的类名
 					while ( ( clazz = classes[ j++ ] ) ) {
+						// 如果遍历添加的类名不再原先类名中
 						if ( cur.indexOf( " " + clazz + " " ) < 0 ) {
+							// 则在原先的基础上添加这个需要添加的类名
 							cur += clazz + " ";
 						}
 					}
 
 					// Only assign if different to avoid unneeded rendering.
+					// 得到最后需要添加的类名字符串
+					// 同样是用 stripAndCollapse() 用一个空格分开
 					finalValue = stripAndCollapse( cur );
+					// 如果最后处理的类名串和原先的类名串不相等
 					if ( curValue !== finalValue ) {
+						// 则调用原生 API 添加
 						elem.setAttribute( "class", finalValue );
 					}
 				}
 			}
 		}
-
 		return this;
 	},
-
+	// 移除 class
 	removeClass: function( value ) {
 		var classes, elem, cur, curValue, clazz, j, finalValue,
 			i = 0;
-
+		// 同样先处理函数的情况
 		if ( jQuery.isFunction( value ) ) {
 			return this.each( function( j ) {
 				jQuery( this ).removeClass( value.call( this, j, getClass( this ) ) );
 			} );
 		}
 
+		// 如果没有参数
 		if ( !arguments.length ) {
+			// 直接调用 $.fn.attr() 将该元素的 class 清空
 			return this.attr( "class", "" );
 		}
 
+		// 如果有类名串
 		if ( typeof value === "string" && value ) {
+			// 同样的得到以空格分开的类名字符串数组
 			classes = value.match( rnothtmlwhite ) || [];
 
+			// 遍历每一个元素
 			while ( ( elem = this[ i++ ] ) ) {
+				// 得到原先的所有 class 类名串
 				curValue = getClass( elem );
 
 				// This expression is here for better compressibility (see addClass)
+				// 同样的操作
+				// 	前后都加上空格，主要是为了移除方便
 				cur = elem.nodeType === 1 && ( " " + stripAndCollapse( curValue ) + " " );
 
+				// 都满足以上两个条件
 				if ( cur ) {
 					j = 0;
+					// 遍历每一个类名
 					while ( ( clazz = classes[ j++ ] ) ) {
 
 						// Remove *all* instances
+						// 如果类名存在
 						while ( cur.indexOf( " " + clazz + " " ) > -1 ) {
+							// 则将这个类名替换成空串
 							cur = cur.replace( " " + clazz + " ", " " );
 						}
 					}
 
 					// Only assign if different to avoid unneeded rendering.
+					// 最后将所有的类名中以一个空格分开
 					finalValue = stripAndCollapse( cur );
 					if ( curValue !== finalValue ) {
+						// 重新设置回去
 						elem.setAttribute( "class", finalValue );
 					}
 				}
@@ -8548,13 +8690,25 @@ jQuery.fn.extend( {
 		return this;
 	},
 
+	/**
+	 * 切换 class 
+	 * @param  {string} value    class name
+	 * @param  {boolean} stateVal true 添加 class, false 则移除 class
+	 * @return {[type]}          [description]
+	 */
 	toggleClass: function( value, stateVal ) {
+		console.info('$> toggleClass')
+		// 判断 value 是什么类型
 		var type = typeof value;
 
+		// 先处理 $.fn.toggleClass(className, state) 情况
 		if ( typeof stateVal === "boolean" && type === "string" ) {
+			// 如果为 true 添加
+			// false 则删除
 			return stateVal ? this.addClass( value ) : this.removeClass( value );
 		}
 
+		// 再处理函数情况
 		if ( jQuery.isFunction( value ) ) {
 			return this.each( function( i ) {
 				jQuery( this ).toggleClass(
@@ -8564,6 +8718,7 @@ jQuery.fn.extend( {
 			} );
 		}
 
+		// 最后其它情况
 		return this.each( function() {
 			var className, i, self, classNames;
 
@@ -8571,50 +8726,81 @@ jQuery.fn.extend( {
 
 				// Toggle individual class names
 				i = 0;
+				// 取当前 jQuery 对象
 				self = jQuery( this );
+				// 得到以空格分开的类名数组
 				classNames = value.match( rnothtmlwhite ) || [];
 
+				// 遍历每一个类名
 				while ( ( className = classNames[ i++ ] ) ) {
 
 					// Check each className given, space separated list
+					// 用 $.fn.hasClass() 
+					
+					// 如果存在
 					if ( self.hasClass( className ) ) {
+						// 移除
 						self.removeClass( className );
 					} else {
+						// 不存在就添加
 						self.addClass( className );
 					}
 				}
 
+			}
 			// Toggle whole class name
-			} else if ( value === undefined || type === "boolean" ) {
+			// 处理 $.fn.toggleClass(state) 这种情况，虽然已经过时
+			else if ( value === undefined || type === "boolean" ) {
+				console.log('\t> state', value)
+				// 得到原先的类名串
 				className = getClass( this );
 				if ( className ) {
 
 					// Store className if set
+					// 如果有，则用 __className__ 属性将这个放入该元素的缓存
 					dataPriv.set( this, "__className__", className );
+
+					console.log('$.dp', dataPriv.get(this, "__className__"));
 				}
 
 				// If the element has a class name or if we're passed `false`,
 				// then remove the whole classname (if there was one, the above saved it).
 				// Otherwise bring back whatever was previously saved (if anything),
 				// falling back to the empty string if nothing was stored.
+				// -> 如果元素有一个类名，或者如果我们被传递为“false”，
+				// -> 然后删除整个类名(如果有一个类名，则上面所保存的类名)。
+				// -> 否则就把以前保存的东西拿回来(如果有的话)，
+				// -> 如果没有存储任何内容，则返回到空字符串。
+				// 重新设置
 				if ( this.setAttribute ) {
 					this.setAttribute( "class",
 						className || value === false ?
+						// 传入的为 false 则返回空串
 						"" :
-						dataPriv.get( this, "__className__" ) || ""
+						// 否则返回缓存中的那一个原先的类名串
+						dataPriv.get( this, "__className__" ) || "" // 如果没有则还是返回空
 					);
 				}
 			}
 		} );
 	},
 
+	/**
+	 * 判断是否有某个 class 
+	 * @param  {string}  selector class name
+	 * @return {Boolean}          
+	 */
 	hasClass: function( selector ) {
 		var className, elem,
 			i = 0;
 
 		className = " " + selector + " ";
+		// 遍历当前 jQuery 对象集合
 		while ( ( elem = this[ i++ ] ) ) {
+			// 如果是元素节点
 			if ( elem.nodeType === 1 &&
+				// stripAndCollapse() 将元素类样式名字组合成一个空格分开
+				// 并且该类名在组合后的字符串中则表示有
 				( " " + stripAndCollapse( getClass( elem ) ) + " " ).indexOf( className ) > -1 ) {
 					return true;
 			}
@@ -11036,7 +11222,7 @@ jQuery.each( { Height: "height", Width: "width" }, function( name, type ) {
 	} );
 } );
 
-
+// $.fn.bind 这些的绑定方法没有完全的从源码中移除
 jQuery.fn.extend( {
 
 	bind: function( types, data, fn ) {
@@ -11118,4 +11304,4 @@ if ( !noGlobal ) {
 
 return jQuery;
 } );
-console.log('=-=-=-=-=-=-=-=-=-=-=-=-');
+console.log('=-=-=-=-=-= Outer -=-=-=-=-=-=-');
