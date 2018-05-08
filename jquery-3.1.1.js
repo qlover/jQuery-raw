@@ -3282,16 +3282,19 @@ function createOptions( options ) {
  * Possible options:
  *
  *	once:			will ensure the callback list can only be fired once (like a Deferred)
+ *            整个回调队列只能被一次 fire()
  *
  *	memory:			will keep track of previous values and will call any callback added
  *					after the list has been fired right away with the latest "memorized"
  *					values (like a Deferred)
+ *            当前 fire() 会记录上一次 fire() 的参数
  *
  *	unique:			will ensure a callback can only be added once (no duplicate in the list)
  *					-> 将确保只能添加一次回调(列表中没有重复)。
+ *            不能添加相同的回调函数
  *
  *	stopOnFalse:	interrupt callings when a callback returns false
- *
+ *             回调中有返回 false 则整个队列后面不再执行
  */
 jQuery.Callbacks = function( options ) {
 
@@ -3412,18 +3415,18 @@ jQuery.Callbacks = function( options ) {
 		// Actual Callbacks object
 		// Callbacks() 返回的对象，就是它
 		self = {
-
 			// 并且该对象的这几个add, remove, empty, disable, lock, firewith, fire 将返回 this
 
 			// Add a callback or a collection of callbacks to the list
 			// 将回调或回调集合添加到列表中
 			add: function() {
+                // console.log('$> Callback.self.add', arguments)
 				// 如果回调列表不是 "" 或是 [] 就添加
 				if ( list ) {
 
 					// If we have memory from a past run, we should fire after adding
 					// -> 如果我们有过去运行的内存，我们应该在添加
-					// 也就是如果有运行过的回调，并且当前没有在运行
+					// 也就是如果有运行过的回调，并且当前没有在运行的回调，并且当前没有在运行
 					if ( memory && !firing ) {
 						// 重置回调索引
 						firingIndex = list.length - 1;
@@ -3542,6 +3545,7 @@ jQuery.Callbacks = function( options ) {
 			// Call all callbacks with the given context and arguments
 			// 调用到 Callbcaks 的 fire ，传入的 上下文和参数, 在该内部拼成一个待执行回调
 			fireWith: function( context, args ) {
+                // console.log('$> Callback.self.fireWith')
 				if ( !locked ) {
 					args = args || [];
 					args = [ context, args.slice ? args.slice() : args ];
@@ -3558,6 +3562,7 @@ jQuery.Callbacks = function( options ) {
 			// 该方法是 Callbacks 返回的对象所执行的 fire
 			// 传入参数调用 fireWith()
 			fire: function() {
+                // console.log('$> Callback.self.fire')
 				self.fireWith( this, arguments );
 				return this;
 			},
@@ -3567,7 +3572,18 @@ jQuery.Callbacks = function( options ) {
 			fired: function() {
 				// 返回是否已经触发的布尔值
 				return !!fired;
-			}
+			},
+
+            // 用于测试
+            _firing: firing,
+            _memory: memory,
+            _fired: fired,
+            _locked: locked,
+            _queue: queue,
+            _list : list,
+            _getList : function(){
+                return list;
+            },
 		};
 	return self;
 };
@@ -3612,34 +3628,60 @@ function adoptValue( value, resolve, reject ) {
 	}
 }
 
+// jQuery Defrred 对象
 jQuery.extend( {
 
+	// Deferred() 构造器
 	Deferred: function( func ) {
+        console.info('$> $.Deferred')
+		// 创建三个 $.Callbacks 对象
+		// 分别表示处理中(progress)，完成(done)和失败(fail)三个状态
+        // 同样也对应三种回调
+        //  resolve -> doneCallbacks
+        //  reject  -> failCallbacks
+        //  notify  -> progressCallbacks
+        // 并且都是只执行一次的回调队列
+        //  memory : 执行当前 fire(上一个参数), 从队列头到尾执行 fire(当前参数)
+        //  once + memory: 所有 fire(第一个参数) 都执行一次
+         
+        // tuples 表示的就是数据的集合，一个元素就代表一种 deferred 回调队列对象
+        // 第一个元素为处理中队列 ProgressList
+        // 第二个元素为完成队列 DoneList
+        // 第三个元素为失败队列 FailList
 		var tuples = [
 
 				// action, add listener, callbacks,
 				// ... .then handlers, argument index, [final state]
-				[ "notify", "progress", jQuery.Callbacks( "memory" ),
-					jQuery.Callbacks( "memory" ), 2 ],
-				[ "resolve", "done", jQuery.Callbacks( "once memory" ),
-					jQuery.Callbacks( "once memory" ), 0, "resolved" ],
-				[ "reject", "fail", jQuery.Callbacks( "once memory" ),
-					jQuery.Callbacks( "once memory" ), 1, "rejected" ]
+                ["notify", "progress", jQuery.Callbacks("memory"),
+                    jQuery.Callbacks("memory"), 2
+                ], 
+                ["resolve", "done", jQuery.Callbacks("once memory"),
+                    jQuery.Callbacks("once memory"), 0, "resolved"
+                ], 
+                ["reject", "fail", jQuery.Callbacks("once memory"),
+                    jQuery.Callbacks("once memory"), 1, "rejected"
+                ]
 			],
+            // 初始化状态
 			state = "pending",
+            // 可以理解成内部类，也是附加在最终 deferred 上的 promise 
 			promise = {
+                // 返回状态
 				state: function() {
 					return state;
 				},
+                // 不管 resolve 和 reject 都交给 done() 和 fail() 执行
 				always: function() {
 					deferred.done( arguments ).fail( arguments );
 					return this;
 				},
+                // 添加在拒绝延迟对象时调用的处理程序
 				"catch": function( fn ) {
 					return promise.then( null, fn );
 				},
 
 				// Keep pipe for back-compat
+                // -> 保持管道为后部
 				pipe: function( /* fnDone, fnFail, fnProgress */ ) {
 					var fns = arguments;
 
@@ -3670,11 +3712,34 @@ jQuery.extend( {
 						fns = null;
 					} ).promise();
 				},
+                /**
+                 * 添加三种不同的 List 回调
+                 * @param  {Function} onFulfilled DoneList 回调
+                 * @param  {Function} onRejected  FailList 回调
+                 * @param  {Functio} onProgress  ProgressList 回调
+                 * @return {[type]}             [description]
+                 */
 				then: function( onFulfilled, onRejected, onProgress ) {
-					var maxDepth = 0;
-					function resolve( depth, deferred, handler, special ) {
-						return function() {
-							var that = this,
+                    // 在该方法内部只做了这两件事
+                    console.log('$> Deferred.promise.then', arguments);
+                    var maxDepth = 0;
+                    // console.log('$> promise.then this', this)
+                    // 这里的 this 表示当前 deferred 对象
+                    
+                    // 第一件事声明一个内部函数
+                    // 该方法返回一个函数，这个函数做为回调传入到对应 List 的第三个位置的 Callbacks 对象的回调
+                    /**
+                     * 内部生成回调函数的方法
+                     * @param  {Number} depth    [description]
+                     * @param  {object} deferred 一个新的 Deferred 对象,并不污染 then() 当前的 this 
+                     * @param  {handler} handler  到头就是 then() 传进来再在后面 $.each() 判断后存在的那三个回调之一
+                     * @param  {object} special  主要用于判断是否传入的 progressCallbacks 方法
+                     * @return {[type]}          [description]
+                     */
+                    function resolve( depth, deferred, handler, special ) {
+                        return function () {
+							var that = this, 
+                                // 得到 最外部 传入的回调函数
 								args = arguments,
 								mightThrow = function() {
 									var returned, then;
@@ -3685,11 +3750,12 @@ jQuery.extend( {
 									if ( depth < maxDepth ) {
 										return;
 									}
-
+                                    // 得到最外部的三个回调之一的返回值
 									returned = handler.apply( that, args );
 
 									// Support: Promises/A+ section 2.3.1
 									// https://promisesaplus.com/#point-48
+                                    // 如果返回值是 promise 对象
 									if ( returned === deferred.promise() ) {
 										throw new TypeError( "Thenable self-resolution" );
 									}
@@ -3750,9 +3816,14 @@ jQuery.extend( {
 								},
 
 								// Only normal processors (resolve) catch and reject exceptions
+                                // -> 只有普通处理器(解析)捕获和拒绝异常
+                                //  如果传入的有 progressCallbacks 回调
+                                //      则为 mightThrow 
+                                //      否则重新定义一个
 								process = special ?
 									mightThrow :
 									function() {
+                                        // 执行,如果有异常
 										try {
 											mightThrow();
 										} catch ( e ) {
@@ -3797,8 +3868,12 @@ jQuery.extend( {
 						};
 					}
 
+                    // 第二件下，返回一个新的 Promise 对象
+                    // 这也是为什么，3.1.1 的 then() 返回的不再是最开始的 this
 					return jQuery.Deferred( function( newDefer ) {
-
+                        // 分别向三个不同的 List 中的第二个，第二个
+                        // 是第二个 Callbacks 对象添加回调队列
+                        
 						// progress_handlers.add( ... )
 						tuples[ 0 ][ 3 ].add(
 							resolve(
@@ -3832,55 +3907,84 @@ jQuery.extend( {
 									Thrower
 							)
 						);
-					} ).promise();
+					} ).promise(); // 最后返回的是一个新的 promise 对象
 				},
 
 				// Get a promise for this deferred
 				// If obj is provided, the promise aspect is added to the object
+                // 1. 组合 promise 
+                // 2. 直接返回该 promise
 				promise: function( obj ) {
 					return obj != null ? jQuery.extend( obj, promise ) : promise;
 				}
 			},
-			deferred = {};
+            // 最终返回的 deferred 对象
+			deferred = {
+                // 用于测试
+                _tuples : tuples,
+            };
 
 		// Add list-specific methods
+        // -> 添加特定于列表的方法
+        // 其实就是遍历 tuples ，为每种状态的队列动态生成以下方法
+        //  progress() done() fail() 三种回调的执行
+        //  notifyWith() resolveWith() rejectWith() 
+        //  notify() resolve() reject() 这些方法
 		jQuery.each( tuples, function( i, tuple ) {
-			var list = tuple[ 2 ],
-				stateString = tuple[ 5 ];
+			var
+                // 将回调函数列表取得
+                list = tuple[ 2 ], 
+                // 再将最后的状态得到
+				stateString = tuple[ 5 ]; 
 
+            // progress() done() fail() 方法在这里被添加
 			// promise.progress = list.add
 			// promise.done = list.add
 			// promise.fail = list.add
-			promise[ tuple[ 1 ] ] = list.add;
+			// progress() done() fail() 三个方法其实就是一个 Callbacks.add()
+            promise[ tuple[ 1 ] ] = list.add;
 
 			// Handle state
+            // 操作状态字符串
 			if ( stateString ) {
+                // 则向该 list 添加三个回调到回调队列
 				list.add(
-					function() {
+                    // 第一个回调
+					function __state() {
 
 						// state = "resolved" (i.e., fulfilled)
 						// state = "rejected"
+                        // 更改当前状态
 						state = stateString;
 					},
 
 					// rejected_callbacks.disable
 					// fulfilled_callbacks.disable
+                    // [3-i] 从后向前取回调列表的 disable() 方法
+                    // 第二个回调，就是该 list 的 disable() 
 					tuples[ 3 - i ][ 2 ].disable,
 
 					// progress_callbacks.lock
+                    // 直接取 progress_callbacks.lock()
 					tuples[ 0 ][ 2 ].lock
 				);
-			}
-
+                
+            }
 			// progress_handlers.fire
 			// fulfilled_handlers.fire
 			// rejected_handlers.fire
+            // 不管是那种回调队列，最后一个元素始终会是 fire()
 			list.add( tuple[ 3 ].fire );
 
+            // console.log('\t> list', list._getList());
+
+            // 这也说明了调用每种状态的方法其实就是调用对应的 xxxWith() 然后最后返回 this
 			// deferred.notify = function() { deferred.notifyWith(...) }
 			// deferred.resolve = function() { deferred.resolveWith(...) }
 			// deferred.reject = function() { deferred.rejectWith(...) }
+            // 与上面样，组装 xxxWith() 方法，而具体的函数体则是该回调对象的 fireWith()
 			deferred[ tuple[ 0 ] ] = function() {
+                // console.log(`\t> ${deferred[ tuple[ 0 ] + With ]}()`)
 				deferred[ tuple[ 0 ] + "With" ]( this === deferred ? undefined : this, arguments );
 				return this;
 			};
@@ -3888,14 +3992,22 @@ jQuery.extend( {
 			// deferred.notifyWith = list.fireWith
 			// deferred.resolveWith = list.fireWith
 			// deferred.rejectWith = list.fireWith
+            // 得到 xxxWith() 方法体
 			deferred[ tuple[ 0 ] + "With" ] = list.fireWith;
 		} );
+        // 三种 deferred 回调队列的回调 执行对应 deferred 回调队列的 fire()
+        // 三种 notify(), resolve(), reject() 分别调用 xxxWith() 方法
+        // 而三种 xxxWith() 方法对应三种 deferred 回调队列的 fireWith()
 
 		// Make the deferred a promise
+        // 调用内部的 promise.promise() 将 promise 附加到 deferred 对象中
 		promise.promise( deferred );
 
 		// Call given func if any
+        // 如果 $.Deferred() 传入的函数
 		if ( func ) {
+            // 则先调用该函数，早于返回值的调用
+            // 并且该函数接收一个参数，就是准备返回的这个 deferred 
 			func.call( deferred, deferred );
 		}
 
@@ -4090,7 +4202,7 @@ key 是一个对象,则递归执行 access
 
  */
 function access( elems, fn, key, value, chainable, emptyGet, raw ) {
-	console.info('$> access ->', arguments);
+	// console.info('$> access ->', arguments);
 	var i = 0,
 		len = elems.length,
 		// 记录 key 是否是 null
@@ -9193,7 +9305,7 @@ jQuery.extend( jQuery.event, {
 				eventPath.push( tmp.defaultView || tmp.parentWindow || window );
 			}
 		}
-		console.log('\t>eventPath', eventPath);
+		// console.log('\t>eventPath', eventPath);
 
 		// Fire handlers on the event path
 		// 6. 事件处理
@@ -9431,27 +9543,43 @@ jQuery.parseXML = function( data ) {
 
 
 var
+	// 匹配 [] 结尾的串
 	rbracket = /\[\]$/,
 	rCRLF = /\r?\n/g,
 	rsubmitterTypes = /^(?:submit|button|image|reset|file)$/i,
 	rsubmittable = /^(?:input|select|textarea|keygen)/i;
-
+/**
+ * 传统序列化方法，也就是单个序列一个对象的情况
+ * @param  {object} prefix      遍历的键
+ * @param  {object} obj         值
+ * @param  {boolean} traditional 
+ * @param  {Function} add         处理函数
+ * @return {[type]}             [description]
+ */
 function buildParams( prefix, obj, traditional, add ) {
 	var name;
 
+	// 如果是一个普通数组
 	if ( jQuery.isArray( obj ) ) {
 
 		// Serialize array item.
+		// 序列化这个值是数组的情况
 		jQuery.each( obj, function( i, v ) {
+			// traditional 为真
 			if ( traditional || rbracket.test( prefix ) ) {
 
 				// Treat each array item as a scalar.
+				// -> 将每个阵列项目视为标量
+				// 则直接将 prefix 当前 key , 遍历的 v 当作 value 
 				add( prefix, v );
 
 			} else {
 
 				// Item is non-scalar (array or object), encode its numeric index.
+				// -> 项是非标量(数组或对象)，对其数字索引进行编码。
 				buildParams(
+					// 如果 v 不是一个标题，并且不为 null
+					// 则递归序列
 					prefix + "[" + ( typeof v === "object" && v != null ? i : "" ) + "]",
 					v,
 					traditional,
@@ -9460,14 +9588,18 @@ function buildParams( prefix, obj, traditional, add ) {
 			}
 		} );
 
-	} else if ( !traditional && jQuery.type( obj ) === "object" ) {
+	}
+	// traditional 为假并且 obj 是一个普通对象
+	else if ( !traditional && jQuery.type( obj ) === "object" ) {
 
 		// Serialize object item.
 		for ( name in obj ) {
 			buildParams( prefix + "[" + name + "]", obj[ name ], traditional, add );
 		}
 
-	} else {
+	}
+	// 否则直接用 add 序列化
+	else {
 
 		// Serialize scalar item.
 		add( prefix, obj );
@@ -9476,24 +9608,34 @@ function buildParams( prefix, obj, traditional, add ) {
 
 // Serialize an array of form elements or a set of
 // key/values into a query string
+// -> 将表单元素数组或一组键值序列化为查询字符串， 就是用 & 连接起来的一个字符串
+// 创建一个数组、一个纯文本对象或 jquery 对象的序列化表示
+// 该对象适合于 url 查询字符串或 ajax 请求中使用
+// 如果传入 jquery 对象，则它应该包含具有 name/value 属性的输入元素。
 jQuery.param = function( a, traditional ) {
 	var prefix,
 		s = [],
+		// 内部的一个闭包, 用于将有 key 有 value 的元素变成  key = value 字符串
+		// 添加到上层作用域中的 s 数组中
 		add = function( key, valueOrFunction ) {
 
 			// If value is a function, invoke it and use its return value
+			// -> 如果值是函数，则调用它并使用其返回
 			var value = jQuery.isFunction( valueOrFunction ) ?
 				valueOrFunction() :
 				valueOrFunction;
-
+			// encodeURIComponent() 函数可把字符串作为 URI 组件进行编码
 			s[ s.length ] = encodeURIComponent( key ) + "=" +
 				encodeURIComponent( value == null ? "" : value );
 		};
 
 	// If an array was passed in, assume that it is an array of form elements.
+	// 如果是数组
+	// 或者是一个 jQuery 对象并且不是一个纯粹的对象, 且这个对象是有 name 和 value 属性的
 	if ( jQuery.isArray( a ) || ( a.jquery && !jQuery.isPlainObject( a ) ) ) {
 
 		// Serialize the form elements
+		// 遍历这个元素集合
 		jQuery.each( a, function() {
 			add( this.name, this.value );
 		} );
@@ -9502,12 +9644,16 @@ jQuery.param = function( a, traditional ) {
 
 		// If traditional, encode the "old" way (the way 1.3.2 or older
 		// did it), otherwise encode params recursively.
+		// -> 如果是传统的，则用“旧”方式(1.3.2或更高版本)进行编码。)，否则将递归编码params。
 		for ( prefix in a ) {
+			// 这个方法同样是序列化的一个方法
+			// 单个序列一个 key 的情况
 			buildParams( prefix, a[ prefix ], traditional, add );
 		}
 	}
 
 	// Return the resulting serialization
+	// 最后返回这个 s 
 	return s.join( "&" );
 };
 
@@ -9572,7 +9718,7 @@ var
 	prefilters = {},
 
 	/* Transports bindings
-	 * 1) key is the dataType
+	 * 1) key is the dataType  -> 键是 dataType
 	 * 2) the catchall symbol "*" can be used
 	 * 3) selection will start with transport dataType and THEN go to "*" if needed
 	 */
@@ -9585,66 +9731,140 @@ var
 	originAnchor = document.createElement( "a" );
 	originAnchor.href = location.href;
 
+// 用于测试
+jQuery.oga = originAnchor;
+jQuery.pfs = prefilters;
+jQuery.tps = transports;
+
 // Base "constructor" for jQuery.ajaxPrefilter and jQuery.ajaxTransport
+// jQuery.ajaxPrefilter and jQuery.ajaxTransport 的基本 "构造器"
 function addToPrefiltersOrTransports( structure ) {
-
+	// console.info('$> addToPrefiltersOrTransports', structure)
+	// 返回的函数，接收两个参数
+	// dataTypeExpression 
+	// func 
 	// dataTypeExpression is optional and defaults to "*"
-	return function( dataTypeExpression, func ) {
-
+	return function _pot( dataTypeExpression, func ) {
+		console.info('$> _pot', arguments)
+		// 如果只传入一个参数时 func 则重组参数
 		if ( typeof dataTypeExpression !== "string" ) {
 			func = dataTypeExpression;
+			// 将 dataTypeExpression 参数默认置于 "*"
 			dataTypeExpression = "*";
 		}
 
 		var dataType,
 			i = 0,
+			// 将传入的 dataTypeExpression 以空格转换成数组
 			dataTypes = dataTypeExpression.toLowerCase().match( rnothtmlwhite ) || [];
 
+		// 如果 Func 是一个函数
 		if ( jQuery.isFunction( func ) ) {
 
 			// For each dataType in the dataTypeExpression
+			// 遍历 dataTypeExpression
+			// 只有传入多个 dataTypeExpression 过滤条件时，才会执行多次添加，否则就是一次添加
 			while ( ( dataType = dataTypes[ i++ ] ) ) {
-
+				// console.log('\t> _pot while i', (i-1))
+				// console.log('\t> addToPrefiltersOrTransports -> dataType', dataType)
 				// Prepend if requested
+				// 如果第一个字符为 + 
 				if ( dataType[ 0 ] === "+" ) {
-					dataType = dataType.slice( 1 ) || "*";
+					// console.log('\t> _pot has +')
+					// 则从第一个字符向后取完
+					dataType = dataType.slice( 1 ) || "*"; // 否则默认就是 * 
+					// 则在起始位置添加一个
 					( structure[ dataType ] = structure[ dataType ] || [] ).unshift( func );
 
 				// Otherwise append
+				// -> 否则追加
 				} else {
+					// 用于测试替换
+					// 这里就是看 dataType 这个符号属性是否是一个数组，不是则默认赋值一个数组
+					// var res = ( structure[ dataType ] = structure[ dataType ] || [] );
+					// console.log('\t> _pot no +', res);
+					// 最后则在该符号属性属性中添加一个该方法
+					// res.push( func );
+					// 则在末尾添加
+					// console.log('structure[ dataType ]', dataType);
 					( structure[ dataType ] = structure[ dataType ] || [] ).push( func );
 				}
 			}
 		}
 	};
+	// 注意，reutrn 返回的这个 _pot 是一个方法，方法，是在 addToPrefiltersOrTransports 中返回的方法
+	// 就是用 curry 返回的方法，也就是说在这个 _pot 中是在 addToPrefiltersOrTransports 中传入的那个对象中添加方法
 }
 
-// Base inspection function for prefilters and transports
-function inspectPrefiltersOrTransports( structure, options, originalOptions, jqXHR ) {
+// 用于测试
+jQuery.att = addToPrefiltersOrTransports;
 
-	var inspected = {},
+// Base inspection function for prefilters and transports
+/**
+ * prefilters and transports 的检查
+ * @param  {[type]} structure       prefilters 或 transports
+ * @param  {object} options         处理后的请求参数
+ * @param  {object} originalOptions 原生的参数
+ * @param  {object} jqXHR           jqXHR 对象
+ * @return {[type]}                 [description]
+ */
+function inspectPrefiltersOrTransports( structure, options, originalOptions, jqXHR ) {
+	console.info('$> ipfot', arguments);
+	var
+		// 准备一个空的对象，用于暂时存放与之对应的 dateType 为 true 
+		inspected = {},
+		// 记录是否是一个请求分发器
 		seekingTransport = ( structure === transports );
 
+	// 用于内部调用每种 过滤器 或 分发器 的 dataType 类型的处理函数的返回值
+	// 如果是一个分发器, 则直接返回 类型处理函数的 相反值
+	// 如果是一个过滤器, 则最终返回的是 false 
+	// 什么都不是则直接返回
 	function inspect( dataType ) {
+		console.info('\t$> ipfot inspect', dataType)
 		var selected;
+		// 设置该类型为 true 在 inspected 对象中
 		inspected[ dataType ] = true;
-		jQuery.each( structure[ dataType ] || [], function( _, prefilterOrFactory ) {
-			var dataTypeOrTransport = prefilterOrFactory( options, originalOptions, jqXHR );
-			if ( typeof dataTypeOrTransport === "string" &&
-				!seekingTransport && !inspected[ dataTypeOrTransport ] ) {
+		
+		jQuery.each(
 
-				options.dataTypes.unshift( dataTypeOrTransport );
-				inspect( dataTypeOrTransport );
-				return false;
-			} else if ( seekingTransport ) {
-				return !( selected = dataTypeOrTransport );
+			// 遍历 prefilters 或 transports 中的 dataType 类型的值
+			structure[ dataType ] || [], // 如果没值则是空,
+			// 当然,如果没 dataType 这种 type 则 也不会有 prefilterOrFactory 这个处理函数
+			function _inner_insect( _, prefilterOrFactory ) {
+				console.log('\t\t> _inner_insect')
+				// 前置过滤器 或 请求分发器的 类型处理函数源头
+				
+				// 得到这个方法的返回值 dataTypeOrTransport
+				var dataTypeOrTransport = prefilterOrFactory( options, originalOptions, jqXHR );
+				// 如果返回的是字符串, 在 jQuery 内部只有 json jsonp 这种类型情况才会执行
+				// 也就是说这里是专门针对 jsonp 的,因为下面源码中只有 json jsonp 时处理函数返回了值
+				// 见 ajaxPrefilter('json jsonp')
+				if ( typeof dataTypeOrTransport === "string" &&
+					// 并且如果不是一个请求分发器
+					// 且 类型处理函数返回的值不在临时存放 dataType 的对象中
+					!seekingTransport && !inspected[ dataTypeOrTransport ] ) {
+
+					// 则当前的请求参数的 datatypes 在头添加类型处理返回后的类型字符串 
+					options.dataTypes.unshift( dataTypeOrTransport );
+					inspect( dataTypeOrTransport );
+					return false;
+				}
+				// 否则就是请求分发器
+				else if ( seekingTransport ) {
+					// 则直接返回 类型处理函数返回的值的 取反值
+					return !( selected = dataTypeOrTransport );
+				}
 			}
-		} );
+		);
+		// 否则直接返回
 		return selected;
 	}
 
-	return inspect( options.dataTypes[ 0 ] ) || !inspected[ "*" ] && inspect( "*" );
-}
+	// options.dataTypes[ 0 ] 当前请求的 dataTypes 中的第一个类型
+	return inspect( options.dataTypes[ 0 ] ) ||
+		 !inspected[ "*" ] && inspect( "*" );
+}// 该方法并不是很重要, 主要还是为了给过滤器或分发器绑定一系列的处理函数做处理
 
 // A special extend for ajax options
 // that takes "flat" options (not to be deep extended)
@@ -9725,14 +9945,27 @@ function ajaxHandleResponses( s, jqXHR, responses ) {
 }
 
 /* Chain conversions given the request and the original response
+ * -> 给定请求和原始响应的链转换
  * Also sets the responseXXX fields on the jqXHR instance
+ * -> 还在 JQXHR 实例上设置 responseXX 字段
+ */
+/**
+ * 类型转换器
+ * @param  {object}  s         处理后的参数
+ * @param  {object}  response  请求的响应
+ * @param  {jqXHR}  jqXHR     请求对象
+ * @param  {Boolean} isSuccess 判断是否成功
+ * @return {[type]}            [description]
  */
 function ajaxConvert( s, response, jqXHR, isSuccess ) {
 	var conv2, current, conv, tmp, prev,
 		converters = {},
 
 		// Work with a copy of dataTypes in case we need to modify it for conversion
+		// -> 使用数据类型的副本进行工作，以防我们需要修改它来转换
 		dataTypes = s.dataTypes.slice();
+	// dataTypes 可以是 text, xml, json, jsonp, script, html
+
 
 	// Create converters map with lowercased keys
 	if ( dataTypes[ 1 ] ) {
@@ -9741,11 +9974,12 @@ function ajaxConvert( s, response, jqXHR, isSuccess ) {
 		}
 	}
 
+	// 得到第一个元素
 	current = dataTypes.shift();
 
 	// Convert to each sequential dataType
 	while ( current ) {
-
+		// responseFields 是
 		if ( s.responseFields[ current ] ) {
 			jqXHR[ s.responseFields[ current ] ] = response;
 		}
@@ -9823,15 +10057,19 @@ function ajaxConvert( s, response, jqXHR, isSuccess ) {
 	return { state: "success", data: response };
 }
 
+// $.ajax 的扩展
 jQuery.extend( {
 
 	// Counter for holding the number of active queries
 	active: 0,
 
 	// Last-Modified header cache for next request
+    // 两个用于记录请求改变时,是否忽略头信息
 	lastModified: {},
 	etag: {},
 
+	// ajax 调用的内部参数列表
+	// 可在 $.ajax() 内部用外部的覆盖
 	ajaxSettings: {
 		url: location.href,
 		type: "GET",
@@ -9861,12 +10099,14 @@ jQuery.extend( {
 			json: "application/json, text/javascript"
 		},
 
+		// 用于 prefilters[*](s) -> s.contents 的正则匹配
 		contents: {
 			xml: /\bxml\b/,
 			html: /\bhtml/,
 			json: /\bjson\b/
 		},
 
+		// 用于转换器 ajaxConvert
 		responseFields: {
 			xml: "responseXML",
 			text: "responseText",
@@ -9903,6 +10143,7 @@ jQuery.extend( {
 	// Creates a full fledged settings object into target
 	// with both ajaxSettings and settings fields.
 	// If target is omitted, writes into ajaxSettings.
+	// 全局参数设置
 	ajaxSetup: function( target, settings ) {
 		return settings ?
 
@@ -9913,40 +10154,54 @@ jQuery.extend( {
 			ajaxExtend( jQuery.ajaxSettings, target );
 	},
 
+	// 前置过滤器
 	ajaxPrefilter: addToPrefiltersOrTransports( prefilters ),
+	// 请求分发
 	ajaxTransport: addToPrefiltersOrTransports( transports ),
 
 	// Main method
+    // ajax 请求主方法
 	ajax: function( url, options ) {
-
+/*----------校正参数-----------*/
+        // console.info('$> $.ajax')
 		// If url is an object, simulate pre-1.5 signature
+        // 如果只传入一个对象，则强制构建一个完整的形参列表
 		if ( typeof url === "object" ) {
 			options = url;
 			url = undefined;
 		}
 
 		// Force options to be an object
+        // 这也是一种强制型的将 options 变成一个对象
 		options = options || {};
 
-		var transport,
+        // 内部声明一大堆的变量
+		var 
+            transport,
 
 			// URL without anti-cache param
+            // 不带 # 后面信息的 URL 
 			cacheURL,
 
 			// Response headers
+            // 响应的头
 			responseHeadersString,
 			responseHeaders,
 
 			// timeout handle
+            // 超时处理回调
 			timeoutTimer,
 
-			// Url cleanup var
+			// Url cleanup var 
+            // 内部的 URL 锚，其实就是一个 a 标签
 			urlAnchor,
 
 			// Request state (becomes false upon send and true upon completion)
+            // -> 请求状态(发送时为 false，完成时为 true)
 			completed,
 
 			// To know if global events are to be dispatched
+            // 否是分派全局事件
 			fireGlobals,
 
 			// Loop variable
@@ -9956,204 +10211,294 @@ jQuery.extend( {
 			uncached,
 
 			// Create the final options object
+            // 内部用的 options 参数
 			s = jQuery.ajaxSetup( {}, options ),
 
 			// Callbacks context
-			callbackContext = s.context || s,
+            // 回调中的上下文
+			callbackContext = s.context || s, // 如果参数有则参数中的上下文，没有则参数这个 options 对象
 
 			// Context for global events is callbackContext if it is a DOM node or jQuery collection
+            // 指定一个全局的上下文
 			globalEventContext = s.context &&
+                // 如果回调上下文是一个 DOM 元素或者 是 jQuery 对象
 				( callbackContext.nodeType || callbackContext.jquery ) ?
+                    // 则包装该对象做上下文
 					jQuery( callbackContext ) :
+                    // 是 jQuery.event 作上下文
 					jQuery.event,
 
 			// Deferreds
-			deferred = jQuery.Deferred(),
-			completeDeferred = jQuery.Callbacks( "once memory" ),
+            // 内部的两个回调队列
+			deferred = jQuery.Deferred(),  // 延迟队列
+			// 不管成功失败 都执行的回调队列
+			completeDeferred = jQuery.Callbacks( "once memory" ), // 回调队列，并且记忆只执行一次回调队列
 
 			// Status-dependent callbacks
+            // 状态码
 			statusCode = s.statusCode || {},
 
 			// Headers (they are sent all at once)
+            // 请求头，他们所有只发送一次
 			requestHeaders = {},
 			requestHeadersNames = {},
 
 			// Default abort message
+            // 设置默认中止信息
 			strAbort = "canceled",
 
 			// Fake xhr
-			jqXHR = {
-				readyState: 0,
+		jqXHR = {
+			readyState: 0,
 
-				// Builds headers hashtable if needed
-				getResponseHeader: function( key ) {
-					var match;
-					if ( completed ) {
-						if ( !responseHeaders ) {
-							responseHeaders = {};
-							while ( ( match = rheaders.exec( responseHeadersString ) ) ) {
-								responseHeaders[ match[ 1 ].toLowerCase() ] = match[ 2 ];
-							}
-						}
-						match = responseHeaders[ key.toLowerCase() ];
-					}
-					return match == null ? null : match;
-				},
-
-				// Raw string
-				getAllResponseHeaders: function() {
-					return completed ? responseHeadersString : null;
-				},
-
-				// Caches the header
-				setRequestHeader: function( name, value ) {
-					if ( completed == null ) {
-						name = requestHeadersNames[ name.toLowerCase() ] =
-							requestHeadersNames[ name.toLowerCase() ] || name;
-						requestHeaders[ name ] = value;
-					}
-					return this;
-				},
-
-				// Overrides response content-type header
-				overrideMimeType: function( type ) {
-					if ( completed == null ) {
-						s.mimeType = type;
-					}
-					return this;
-				},
-
-				// Status-dependent callbacks
-				statusCode: function( map ) {
-					var code;
-					if ( map ) {
-						if ( completed ) {
-
-							// Execute the appropriate callbacks
-							jqXHR.always( map[ jqXHR.status ] );
-						} else {
-
-							// Lazy-add the new callbacks in a way that preserves old ones
-							for ( code in map ) {
-								statusCode[ code ] = [ statusCode[ code ], map[ code ] ];
-							}
+			// Builds headers hashtable if needed
+            // 获取请求头的信息
+			getResponseHeader: function( key ) {
+				var match;
+                // 请求完成时
+				if ( completed ) {
+					if ( !responseHeaders ) {
+						responseHeaders = {};
+						while ( ( match = rheaders.exec( responseHeadersString ) ) ) {
+							responseHeaders[ match[ 1 ].toLowerCase() ] = match[ 2 ];
 						}
 					}
-					return this;
-				},
-
-				// Cancel the request
-				abort: function( statusText ) {
-					var finalText = statusText || strAbort;
-					if ( transport ) {
-						transport.abort( finalText );
-					}
-					done( 0, finalText );
-					return this;
+					match = responseHeaders[ key.toLowerCase() ];
 				}
-			};
+				return match == null ? null : match;
+			},
+
+			// Raw string
+            // 获取所有的请求头信息
+			getAllResponseHeaders: function() {
+                // 前提是请求成功
+				return completed ? responseHeadersString : null;
+			},
+
+			// Caches the header
+            // 缓存这个头
+			setRequestHeader: function( name, value ) {
+                // 当如果没有请求时，
+				if ( completed == null ) {
+					name = requestHeadersNames[ name.toLowerCase() ] =
+						requestHeadersNames[ name.toLowerCase() ] || name;
+					requestHeaders[ name ] = value;
+				}
+				return this;
+			},
+
+			// Overrides response content-type header
+			overrideMimeType: function( type ) {
+				if ( completed == null ) {
+					s.mimeType = type;
+				}
+				return this;
+			},
+
+			// Status-dependent callbacks
+            // 状态码
+            // 变里有点类似 Hook 的写法
+            // map 是一个 Hook 的对象写法，每一个键就是一个返回的状态码，而对的值则是一个处理函数
+            // map = { 404: function(){}}
+			statusCode: function( map ) {
+				var code;
+                // 如果存在这个对象
+				if ( map ) {
+                    // 并且请求完成
+					if ( completed ) {
+
+						// Execute the appropriate callbacks
+                        // 则执行这个适当的回调
+						jqXHR.always( map[ jqXHR.status ] );
+					} else {
+
+						// Lazy-add the new callbacks in a way that preserves old ones
+						for ( code in map ) {
+							statusCode[ code ] = [ statusCode[ code ], map[ code ] ];
+						}
+					}
+				}
+				return this;
+			},
+
+			// Cancel the request
+            // 清除这次请求
+			abort: function( statusText ) {
+				var finalText = statusText || strAbort;
+				if ( transport ) {
+					transport.abort( finalText );
+				}
+				done( 0, finalText );
+				return this;
+			}
+		};
 
 		// Attach deferreds
+        // 将 promise 附加到 jqXHR 上
 		deferred.promise( jqXHR );
 
 		// Add protocol if not provided (prefilters might expect it)
+        // -> 如果示提供协议，则添加协议
 		// Handle falsy url in the settings object (#10093: consistency with old signature)
 		// We also use the url parameter if available
+        // 得到 url ，并添加协议
 		s.url = ( ( url || s.url || location.href ) + "" )
+            // rprotocol 匹配 //
 			.replace( rprotocol, location.protocol + "//" );
 
 		// Alias method option to type as per ticket #12004
+        // 得到请求类型, 如果有别名，则从别名得到
 		s.type = options.method || options.type || s.method || s.type;
 
 		// Extract dataTypes list
+        // 提取 dataTypes 列表
+        // dataType -> 期望返回的数据类型
 		s.dataTypes = ( s.dataType || "*" ).toLowerCase().match( rnothtmlwhite ) || [ "" ];
 
 		// A cross-domain request is in order when the origin doesn't match the current origin.
+        // 如果没设置跨域请求
 		if ( s.crossDomain == null ) {
+            // 内部的一个 url 锚
 			urlAnchor = document.createElement( "a" );
 
 			// Support: IE <=8 - 11, Edge 12 - 13
 			// IE throws exception on accessing the href property if url is malformed,
 			// e.g. http://example.com:80x/
 			try {
+                // 内部的一个锚，其实就是一个 a 标签
+                // 将这个 a  标签的 href 设置为传入后并添加了协议的 url
 				urlAnchor.href = s.url;
 
 				// Support: IE <=8 - 11 only
 				// Anchor's host property isn't correctly set when s.url is relative
 				urlAnchor.href = urlAnchor.href;
+                // originAnchor 是一个外部的 a 锚
+                // protocol 用于获取链接的协议
+                // host 用于获取链接的主机
+                // 这里最后返回一个 Boolean,用于最后判断是否要跨域请求
 				s.crossDomain = originAnchor.protocol + "//" + originAnchor.host !==
 					urlAnchor.protocol + "//" + urlAnchor.host;
 			} catch ( e ) {
 
 				// If there is an error parsing the URL, assume it is crossDomain,
 				// it can be rejected by the transport if it is invalid
+                // 如果出现异常，则直接设为跨域请求
 				s.crossDomain = true;
 			}
 		}
 
 		// Convert data if not already a string
+        // 如果请求的数据已经是一个字符串
+        // 如果请求的数据存在
+        // 并且 data 是一个对象 -> processData 为 true
+        // 并且 data 不是一个字符串
 		if ( s.data && s.processData && typeof s.data !== "string" ) {
+            // 将数据序列化
+            // 如果参数的 traditional 为 true 则同传统的方式序列化
 			s.data = jQuery.param( s.data, s.traditional );
 		}
 
+		// console.log('\t> 预处理之前', s.cache);//=> undefined
+/*---------------- 预处理 ----------------------*/
 		// Apply prefilters
-		inspectPrefiltersOrTransports( prefilters, s, options, jqXHR );
+        // 应用前置过滤器
+		var ripot = inspectPrefiltersOrTransports( prefilters, s, options, jqXHR );
+		// console.log('ripot', ripot)
+/*---------------- /预处理 ----------------------*/
 
+/*---------- 过滤后校正参数-----------*/
 		// If request was aborted inside a prefilter, stop there
+        // -> 如果请求在预筛选器中被中止，请在此停止
 		if ( completed ) {
 			return jqXHR;
 		}
 
 		// We can fire global events as of now if asked to
 		// Don't fire events if jQuery.event is undefined in an AMD-usage scenario (#15118)
+        // 如果要触发全局事件，则分派全局事件
 		fireGlobals = jQuery.event && s.global;
 
 		// Watch for a new set of requests
+        // -> 等待一组新的请求
 		if ( fireGlobals && jQuery.active++ === 0 ) {
 			jQuery.event.trigger( "ajaxStart" );
 		}
 
 		// Uppercase the type
+        // 将请求类型转换为大写
 		s.type = s.type.toUpperCase();
 
 		// Determine if request has content
+        // rnoContext  = /^(?:GET|HEAD)$/  匹配是不是 GET 或 HEAD 请求
+        // 匹配除 GET 和 HEAD 请求
 		s.hasContent = !rnoContent.test( s.type );
 
 		// Save the URL in case we're toying with the If-Modified-Since
 		// and/or If-None-Match header later on
 		// Remove hash to simplify url manipulation
+        // 缓存去掉 # 后面链接的 URL
 		cacheURL = s.url.replace( rhash, "" );
-
+        // console.log('cacheURL', cacheURL)
 		// More options handling for requests with no content
+        // GET 和 HEAD 请求
+        // 这里做了一是将原来地址中的 _= 的参数替换成或加上一个时间戳
 		if ( !s.hasContent ) {
 
 			// Remember the hash so we can put it back
+            // 获取到 # 后面链接的部分
 			uncached = s.url.slice( cacheURL.length );
-
+            // console.log('uncached', uncached)
 			// If data is available, append data to url
+            // 如果有数据，则将之前序列化的数据加到 url 后面
 			if ( s.data ) {
+                // ！！！ 这里是在缓存的 url 中操作，并没有在原 url 上操作
+                // rquery 匹配 ? 
+                // 这里则是如果地址上已经有 ? 则用 & 连接，否则用 ? 连接
 				cacheURL += ( rquery.test( cacheURL ) ? "&" : "?" ) + s.data;
 
 				// #9682: remove data so that it's not used in an eventual retry
+                // -> 删除数据，以便在最终重试中不使用它
 				delete s.data;
 			}
 
 			// Add or update anti-cache param if needed
-			if ( s.cache === false ) {
+            // 如果需要则添加或更新 # 后面的信息
+            // 这里面是 GET 或 HEAD 请求，这两个请求不会受 cache 参数的影响
+            // 且这个参数的最后一次校正在预处理器中
+			if ( s.cache === false ) { // 并且该参数也说明了，如果是 script 和 json 则默认是 false 
+				// 这里的 cache 则是从预处理器被重置后的值，预处理会将 cache 重置为 false
+				// 在请求的 URL 后面加上一个时间戳，以确保每次请求浏览器下载的脚本被重新请求
+
+                // rantiCache  /([?&])_=[^&]*/
+                // 匹配 ?_= 或 &_=
+                // 也就是将缓存的地址中的以 _= xxx 的参数全部替换成开头的 ? 或 & 
 				cacheURL = cacheURL.replace( rantiCache, "$1" );
-				uncached = ( rquery.test( cacheURL ) ? "&" : "?" ) + "_=" + ( nonce++ ) + uncached;
+                // console.log('cacheURL', cacheURL)
+                
+                // 如果缓存的 URL 后面有 ? 则用 & 连接，否则有 ? 连接
+                // 然后加上 _= Date.now() 
+                // 最后再加上之前缓存了的 #后面的参数
+                uncached = ( rquery.test( cacheURL ) ? "&" : "?" ) + "_=" + ( nonce++ ) + uncached;
+                // console.log('uncached', uncached)
 			}
 
 			// Put hash and anti-cache on the URL that will be requested (gh-1732)
 			s.url = cacheURL + uncached;
+            // console.log('s.url', s.url)
 
 		// Change '%20' to '+' if this is encoded form body content (gh-2658)
+        // -> 如果这个是编码内容则将 %20 变成 +
+        // 如果有数据
+        // 并且数组是一个对象
 		} else if ( s.data && s.processData &&
+            // 并且内容类型头开头是 application/x-www-form-urlencoded
 			( s.contentType || "" ).indexOf( "application/x-www-form-urlencoded" ) === 0 ) {
+            // 则将 %20 替换成 +
 			s.data = s.data.replace( r20, "+" );
 		}
 
 		// Set the If-Modified-Since and/or If-None-Match header, if in ifModified mode.
+        // 是否忽略 HTTP 头信息
 		if ( s.ifModified ) {
 			if ( jQuery.lastModified[ cacheURL ] ) {
 				jqXHR.setRequestHeader( "If-Modified-Since", jQuery.lastModified[ cacheURL ] );
@@ -10164,11 +10509,17 @@ jQuery.extend( {
 		}
 
 		// Set the correct header, if data is being sent
+        // -> 如果正在发送数据，则设置正确的标头
+        // 如果数据存在 
+        // 并且不是 GET 或 HEAD 请求
+        // 并且有内容头或原始参数中有内容头
 		if ( s.data && s.hasContent && s.contentType !== false || options.contentType ) {
+            // 则设置此次的请求头
 			jqXHR.setRequestHeader( "Content-Type", s.contentType );
 		}
 
 		// Set the Accepts header for the server, depending on the dataType
+        // 根据 dataType 设置服务器的接受 header
 		jqXHR.setRequestHeader(
 			"Accept",
 			s.dataTypes[ 0 ] && s.accepts[ s.dataTypes[ 0 ] ] ?
@@ -10178,46 +10529,80 @@ jQuery.extend( {
 		);
 
 		// Check for headers option
+        // 是否有额外的头信息
 		for ( i in s.headers ) {
+            // 有则添加到请求上
 			jqXHR.setRequestHeader( i, s.headers[ i ] );
 		}
 
 		// Allow custom headers/mimetypes and early abort
+        // 如果参数中有 beforeSend() 事件
 		if ( s.beforeSend &&
-			( s.beforeSend.call( callbackContext, jqXHR, s ) === false || completed ) ) {
+            // 且 如果该事件返回 false 
+            // beforeSend(jqXHR, s)
+			( s.beforeSend.call( callbackContext, jqXHR, s ) === false ||
+            // 或者是已经完成 
+            completed ) )
+        {
 
 			// Abort if not done already and return
+            // 者阻止当前的请求
 			return jqXHR.abort();
 		}
 
 		// Aborting is no longer a cancellation
+		// 中止不再是取消
 		strAbort = "abort";
 
-		// Install callbacks on deferreds
-		completeDeferred.add( s.complete );
-		jqXHR.done( s.success );
-		jqXHR.fail( s.error );
+/*---------- /过滤后校正参数结束-----------*/
 
+/*----------/校正参数-----------*/
+
+/*----添加回调队列---*/
+		
+		// Install callbacks on deferreds
+		// 添加回调到给个对象上
+		completeDeferred.add( s.complete ); // progressCallbacks 队列, 外面的 complete()
+		jqXHR.done( s.success ); // doneCallbacks 队列, 外面的 success()
+		jqXHR.fail( s.error ); // failCallbacks 队列,外面的 error()
+
+/*----/添加回调队列结束---*/
+
+
+/*-------------------执行请求----------------------*/
+
+/*-----------------得到请求分发器----------------*/
 		// Get transport
+		// 得到请求分发器
 		transport = inspectPrefiltersOrTransports( transports, s, options, jqXHR );
+/*-----------------得到请求分发器----------------*/
 
 		// If no transport, we auto-abort
+		// 如果没有请求分发器
 		if ( !transport ) {
 			done( -1, "No Transport" );
-		} else {
+		}
+		// 如果有请求分发器
+		else {
+			// 首先将请求状态设置为准备中
 			jqXHR.readyState = 1;
 
 			// Send global event
+			// 发送全局的事件
 			if ( fireGlobals ) {
+				// 触发全局下的 ajaxSend() 事件
+				// ajaxSend(jqXHR, options)
 				globalEventContext.trigger( "ajaxSend", [ jqXHR, s ] );
 			}
 
 			// If request was aborted inside ajaxSend, stop there
+			// 如果请求已经完成,则直接返回 jqXHR
 			if ( completed ) {
 				return jqXHR;
 			}
 
 			// Timeout
+			// 异步并且有超时
 			if ( s.async && s.timeout > 0 ) {
 				timeoutTimer = window.setTimeout( function() {
 					jqXHR.abort( "timeout" );
@@ -10225,21 +10610,31 @@ jQuery.extend( {
 			}
 
 			try {
+				// 设置请求为发送时 => false ; true 为 完成 
 				completed = false;
+				// 发送请求 !!! 这里请求的源头,请求从这里发送出去
 				transport.send( requestHeaders, done );
-			} catch ( e ) {
+			}
+			// 捕获可能会出现的异常
+			catch ( e ) {
 
 				// Rethrow post-completion exceptions
+				// 如果已经完成,则重新抛出完成后的异步
 				if ( completed ) {
 					throw e;
 				}
 
 				// Propagate others as results
+				// 传播他人为结果
 				done( -1, e );
 			}
 		}
 
+
+/*-------------------/执行请求----------------------*/
+
 		// Callback for when everything is done
+		// -> 当一切都完成时回调
 		function done( status, nativeStatusText, responses, headers ) {
 			var isSuccess, success, error, response, modified,
 				statusText = nativeStatusText;
@@ -10352,6 +10747,8 @@ jQuery.extend( {
 			}
 		}
 
+
+        // console.info('$/> $.ajax', jqXHR);
 		return jqXHR;
 	},
 
@@ -10477,56 +10874,101 @@ jQuery.expr.pseudos.visible = function( elem ) {
 
 
 
-
+// 为全局 ajax 请求设置一个 xhr
+// 这个属性就是返回一个新的 XMLHttpRequest 对象
 jQuery.ajaxSettings.xhr = function() {
 	try {
 		return new window.XMLHttpRequest();
-	} catch ( e ) {}
+	} catch ( e ) {
+		// 如果支持该对象，则什么都不做
+	}
 };
 
+// 全局请求成功信息对象
 var xhrSuccessStatus = {
 
 		// File protocol always yields status code 0, assume 200
+		// -> 文件协议总是产生状态代码0，假设200
 		0: 200,
 
 		// Support: IE <=9 only
 		// #1450: sometimes IE returns 1223 when it should be 204
+		// -> 有时IE应该是204时返回1223。
 		1223: 204
 	},
+	// 用于记录是否支持原生  XHR 对象
 	xhrSupported = jQuery.ajaxSettings.xhr();
 
+// 是否支持跨域请求，这里用的是最标准的解决的 CORS 方式跨域
+// 双感叹号强制转换成布尔值
+// withCredentials 是原生 XHR 的一个属性
+// 	该属性用于 它指示了是否该使用类似 
+// 		cookies,authorization headers(头部授权) 或者 
+// 		TLS 客户端证书这一类资格证书
+// 		来创建一个跨站点访问控制（cross-site Access-Control）请求
 support.cors = !!xhrSupported && ( "withCredentials" in xhrSupported );
+// 是否支持 ajax 
 support.ajax = xhrSupported = !!xhrSupported;
 
-jQuery.ajaxTransport( function( options ) {
-	var callback, errorCallback;
+
+// 普通分发器, 第一个分发器类型
+// $.tps['*'] 的默认第一个方法，其参数为一个请求参数对象
+// 相当于 addToPrefiltersOrTransports(transports)( func ) 形式
+// 参数一没有，则默认是 * 
+jQuery.ajaxTransport( function _star( options ) {
+	var 
+		// 内部三种回调的管理者
+		callback,
+		// 失败时的回调
+		errorCallback;
 
 	// Cross domain only allowed if supported through XMLHttpRequest
+	// -> 只有通过 XMLHttpRequest 支持才允许跨域。
+	// 是否支持跨域
+	// 或者是 xhrSupported 是支持的 并且 用户请求时 crossDomain 属性为 false, 就是不跨域请求
 	if ( support.cors || xhrSupported && !options.crossDomain ) {
+		// 则返回一个对象
+		// 该对象有两个方法
 		return {
+			// 这里则是最底层的发送请求的 send() 方法
+			// 不跨域的 send() 方法
+			/**
+			 * 普通情况的源头 send() 方法
+			 * @param  {object} headers  请求头信息
+			 * @param  {function} complete 完成时的回调
+			 * @return {[type]}          [description]
+			 */
 			send: function( headers, complete ) {
 				var i,
 					xhr = options.xhr();
 
+				// open() 方法最多可以接收 5 个参数
+				// 第四个参数则是：用于身份验证目的的可选用户名；默认情况下，这是空值。
+				// 第五个参数则是：用于身份验证的可选密码；默认情况下，这是空值。
 				xhr.open(
 					options.type,
 					options.url,
 					options.async,
 					options.username,
 					options.password
-				);
+				);// 所以 jQuery 中把这个都考虑到了
 
 				// Apply custom fields if provided
+				// 是否存在外部定义的原生 XHR 属性
+				// xhrFields 也是请求参数的一个属性，用于设置原生的 XHR 对象
 				if ( options.xhrFields ) {
+					// 有则应用
 					for ( i in options.xhrFields ) {
 						xhr[ i ] = options.xhrFields[ i ];
 					}
 				}
 
 				// Override mime type if needed
+				// 如果需要则覆盖 mime 类型
 				if ( options.mimeType && xhr.overrideMimeType ) {
 					xhr.overrideMimeType( options.mimeType );
 				}
+				// 看到这先暂停，因为需要看其它的一些内容，看完了预处理和发分器再回来看下面的源码
 
 				// X-Requested-With header
 				// For cross-domain requests, seeing as conditions for a preflight are
@@ -10537,28 +10979,44 @@ jQuery.ajaxTransport( function( options ) {
 					headers[ "X-Requested-With" ] = "XMLHttpRequest";
 				}
 
-				// Set headers
+				// Set Headers
+				// 设置头信息
 				for ( i in headers ) {
 					xhr.setRequestHeader( i, headers[ i ] );
 				}
 
 				// Callback
+				// 内部定义一个回调,接收一个类型名称,用于调用不同的回调
+				// 可接收三种情况
+				// 1. abort 中止
+				// 2. erro 失败
+				// 3. 完成 
 				callback = function( type ) {
+					// 返回一个函数, 就是不同类型传入执行的不现的函数在此绑定
 					return function() {
+						// 如果回调存在
 						if ( callback ) {
+							// 将所有的 xhr 事件全部清空
 							callback = errorCallback = xhr.onload =
 								xhr.onerror = xhr.onabort = xhr.onreadystatechange = null;
-
+							// 中止
 							if ( type === "abort" ) {
+								// 直接调用原生 abort()
 								xhr.abort();
-							} else if ( type === "error" ) {
+							}
+							// 失败
+							else if ( type === "error" ) {
 
 								// Support: IE <=9 only
 								// On a manual native abort, IE9 throws
 								// errors on any property access that is not readyState
 								if ( typeof xhr.status !== "number" ) {
+									// 给完成回调两个参数
 									complete( 0, "error" );
 								} else {
+									// 给完成回调两个参数
+									// 1. 请求状态码
+									// 2. 请求状态信息
 									complete(
 
 										// File: protocol always yields status 0; see #8605, #14207
@@ -10566,18 +11024,26 @@ jQuery.ajaxTransport( function( options ) {
 										xhr.statusText
 									);
 								}
-							} else {
+							}
+							// 不是失败也不是中止, 直接完成
+							else {
+								// 为完成回调四个参数
 								complete(
+									// 全局请求成功信息对象的xhr请求的状态码 或者是 xhr请求的状态码
 									xhrSuccessStatus[ xhr.status ] || xhr.status,
+									// 请求状态信息
 									xhr.statusText,
 
 									// Support: IE <=9 only
 									// IE9 has no XHR2 but throws on binary (trac-11426)
 									// For XHR2 non-text, let the caller handle it (gh-2498)
+									// 请求的 text 内容
 									( xhr.responseType || "text" ) !== "text"  ||
 									typeof xhr.responseText !== "string" ?
 										{ binary: xhr.response } :
 										{ text: xhr.responseText },
+									// 原生方法 getAllResponseHeaders()
+									// 返回所有响应头信息(响应头名和值), 如果响应头还没接受,则返回null
 									xhr.getAllResponseHeaders()
 								);
 							}
@@ -10586,24 +11052,35 @@ jQuery.ajaxTransport( function( options ) {
 				};
 
 				// Listen to events
+				// 完成时的 onload 事件
 				xhr.onload = callback();
+				// 失败时的事件
 				errorCallback = xhr.onerror = callback( "error" );
 
 				// Support: IE 9 only
 				// Use onreadystatechange to replace onabort
 				// to handle uncaught aborts
+				// 如果请求已经被中止
 				if ( xhr.onabort !== undefined ) {
 					xhr.onabort = errorCallback;
-				} else {
+				}
+				// 否则请求没被中止
+				else {
+					// 将用 readystatechange 事件
 					xhr.onreadystatechange = function() {
 
 						// Check readyState before timeout as it changes
+						// 超时前检查就绪状态
 						if ( xhr.readyState === 4 ) {
 
 							// Allow onerror to be called first,
+							// -> 允许先调用onError
 							// but that will not handle a native abort
+							// -> 但这不能处理本机中止
 							// Also, save errorCallback to a variable
+							// -> 另外，将错误调用保存到变量中
 							// as xhr.onerror cannot be accessed
+							// -> 由于xhr.onError无法访问
 							window.setTimeout( function() {
 								if ( callback ) {
 									errorCallback();
@@ -10614,11 +11091,13 @@ jQuery.ajaxTransport( function( options ) {
 				}
 
 				// Create the abort callback
+				// 创建中止回调
 				callback = callback( "abort" );
-
+				// 到该 send() 方法最后, callback 也就变成了 abort() 方法了
 				try {
 
 					// Do send the request (this may raise an exception)
+					// 请求发送的源头，这时可能会出现异步
 					xhr.send( options.hasContent && options.data || null );
 				} catch ( e ) {
 
@@ -10642,18 +11121,42 @@ jQuery.ajaxTransport( function( options ) {
 
 
 // Prevent auto-execution of scripts when no explicit dataType was provided (See gh-2432)
-jQuery.ajaxPrefilter( function( s ) {
+// -> 当未提供显式数据类型时，防止脚本的自动执行
+// $.pfs['*'] 的默认第一个方法
+// 这里就是相当于 addToPrefiltersOrTransports(prefilters)( func ) 形式
+// 参数一没有，则默认是 *, * 类型方式的处理函数
+// _star() 参数一接收一个 options 对象
+jQuery.ajaxPrefilter( function _star( s ) {
+	console.info('$> prefilter["*"]', arguments);//=> 这里有三个参数
+	// 接收的这三个参数在
+	// 	inspectPrefiltersOrTransports() 
+	// 	-> inspcet() 
+	// 	-> _inner_inspcet(_, prefilterOrFactory) 
+	// 	-> 内部的 prefilterOrFactory() 这个地方指定的
+	// 如果请求为跨域
 	if ( s.crossDomain ) {
-		s.contents.script = false;
+		// 则将
+		// s.contents.script = false;
+		// 用于测试
+		// contents 在 ajaxSettings 中，用于内部 $.ajax() 的参数
+		var sc = s.contents;
+		console.log('\t> sc->', sc)
+		// 其 sc.script 也是一个正则，就是下面的全局设置中被设置
+		sc.script = false;
+		// 如果是跨域，则将 匹配 script 重置为 false
+		// 跨域就是：
 	}
-} );
+} );// 当然具体参数的传递和怎么被执行的还要看 inspectPrefiltersOrTransports() 这个方法
 
 // Install script dataType
+// -> 安装脚本数据类型
+// 在外部设置一个全局的 ajax 请求参数
 jQuery.ajaxSetup( {
 	accepts: {
 		script: "text/javascript, application/javascript, " +
 			"application/ecmascript, application/x-ecmascript"
 	},
+	// 扩展全局的 ajaxSettings.contens 
 	contents: {
 		script: /\b(?:java|ecma)script\b/
 	},
@@ -10666,38 +11169,57 @@ jQuery.ajaxSetup( {
 } );
 
 // Handle cache's special case and crossDomain
+// -> 处理缓存的特殊情况和交叉域
+// 为 script 类型预处理
+// 如果 dataType 为 script ，则
 jQuery.ajaxPrefilter( "script", function( s ) {
+	console.info('$> 预处理器处理 script 类型')
 	if ( s.cache === undefined ) {
+		// 则将缓存重置为 false 
 		s.cache = false;
 	}
 	if ( s.crossDomain ) {
+		// 类型重置为 GET 
+		// 因为 在远程请求时(不在同一个域下)，所有 POST 请求都将转为 GET 请求
 		s.type = "GET";
 	}
 } );
 
+// 跨域分发器,第二个分发器类型
 // Bind script tag hack transport
 jQuery.ajaxTransport( "script", function( s ) {
 
 	// This transport only deals with cross domain requests
+	// -> 此传输仅处理跨域请求
 	if ( s.crossDomain ) {
 		var script, callback;
+		// 与不跨域的情况差不多
 		return {
+			// 跨域的 send() 方法
 			send: function( _, complete ) {
+
+				// 得到一个 script 标记,设置其属性
 				script = jQuery( "<script>" ).prop( {
 					charset: s.scriptCharset,
 					src: s.url
-				} ).on(
+				} )
+				// 并绑定事件
+				.on(
 					"load error",
 					callback = function( evt ) {
+						// 一旦完成或失败就移除这个标记
 						script.remove();
+						// 清空回调
 						callback = null;
 						if ( evt ) {
+							// 完成回调
 							complete( evt.type === "error" ? 404 : 200, evt.type );
 						}
 					}
 				);
 
 				// Use native DOM manipulation to avoid our domManip AJAX trickery
+				// 将这个 script 动态添加到面面中
 				document.head.appendChild( script[ 0 ] );
 			},
 			abort: function() {
@@ -10712,12 +11234,16 @@ jQuery.ajaxTransport( "script", function( s ) {
 
 
 
-var oldCallbacks = [],
+var 
+	// 用于记录上一个 jsonp 的请求回调函数
+	oldCallbacks = [],
 	rjsonp = /(=)\?(?=&|$)|\?\?/;
 
 // Default jsonp settings
+// 全局的 ajax 请求参数设置
 jQuery.ajaxSetup( {
 	jsonp: "callback",
+	// 产生一个用 expando 产生的 jsonpCallback 回调函数名
 	jsonpCallback: function() {
 		var callback = oldCallbacks.pop() || ( jQuery.expando + "_" + ( nonce++ ) );
 		this[ callback ] = true;
@@ -10725,27 +11251,44 @@ jQuery.ajaxSetup( {
 	}
 } );
 
-// Detect, normalize options and install callbacks for jsonp requests
+// Detect, normalize options and in`stall callbacks for jsonp requests
+// -> 检测、规范化选项并在JSONP请求的“停止回调”中
+// 为 json jsonp 类型添加处理函数
 jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
 
-	var callbackName, overwritten, responseContainer,
-		jsonProp = s.jsonp !== false && ( rjsonp.test( s.url ) ?
-			"url" :
-			typeof s.data === "string" &&
+	var callbackName,
+
+		// 指定向全局上的那个 jsonp 回调函数
+		overwritten,
+
+		// jsonp 回调接收到的参数
+		responseContainer,
+	
+		// rjsonp = /(=)\?(?=&|$)|\?\?/
+		// jsonProp 就是用来判断 url , data, 是否有 jonsp 的特征
+		jsonProp = s.jsonp !== false && ( rjsonp.test( s.url ) ? // 如果匹配 ?= 形式的 url 
+			"url" : // 则就是 'url'
+			typeof s.data === "string" && 
 				( s.contentType || "" )
 					.indexOf( "application/x-www-form-urlencoded" ) === 0 &&
 				rjsonp.test( s.data ) && "data"
 		);
 
 	// Handle iff the expected data type is "jsonp" or we have a parameter to set
+	// -> 如果预期的数据类型是“JSONP”，或者我们要设置一个参数
 	if ( jsonProp || s.dataTypes[ 0 ] === "jsonp" ) {
 
 		// Get callback name, remembering preexisting value associated with it
-		callbackName = s.jsonpCallback = jQuery.isFunction( s.jsonpCallback ) ?
-			s.jsonpCallback() :
+		// 得到 callback 名字
+		// 这里的 callbackName 是 url 中 callback=? 中的 ? 部分
+		callbackName = s.jsonpCallback =
+			// 如果有则用，没有则用内部的产生 ? 部分
+			jQuery.isFunction( s.jsonpCallback ) ?
+			s.jsonpCallback() : 
 			s.jsonpCallback;
 
 		// Insert callback into url or form data
+		// 插入回调 url 或表单数据
 		if ( jsonProp ) {
 			s[ jsonProp ] = s[ jsonProp ].replace( rjsonp, "$1" + callbackName );
 		} else if ( s.jsonp !== false ) {
@@ -10753,6 +11296,7 @@ jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
 		}
 
 		// Use data converter to retrieve json after script execution
+		// -> 使用数据转换器在脚本执行后检索 json
 		s.converters[ "script json" ] = function() {
 			if ( !responseContainer ) {
 				jQuery.error( callbackName + " was not called" );
@@ -10761,27 +11305,34 @@ jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
 		};
 
 		// Force json dataType
+		// 强制变成 json 类型
 		s.dataTypes[ 0 ] = "json";
 
 		// Install callback
+		// 将回调添加到 window 上，这个回调相当于 08预处理 中的原生 jsonp 中的 jsonpCallback_test 函数
 		overwritten = window[ callbackName ];
 		window[ callbackName ] = function() {
+			// 直接用 responseContainer 接收到参数
 			responseContainer = arguments;
 		};
 
 		// Clean-up function (fires after converters)
+		// 无论请求成功与否
 		jqXHR.always( function() {
 
 			// If previous value didn't exist - remove it
+			// -> 如果以前的值不存在-删除它
 			if ( overwritten === undefined ) {
 				jQuery( window ).removeProp( callbackName );
 
 			// Otherwise restore preexisting value
+			// -> 否则，恢复先前存在的值。
 			} else {
 				window[ callbackName ] = overwritten;
 			}
 
 			// Save back as free
+			// 将回调存入到 oldCallbacks 中
 			if ( s[ callbackName ] ) {
 
 				// Make sure that re-using the options doesn't screw things around
@@ -10792,14 +11343,20 @@ jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
 			}
 
 			// Call if it was a function and we have a response
+			// -> 如果它是一个函数，并且我们有一个响应
+			// 如果回调中携带参数
+			// 且 overwritten 是一个函数
 			if ( responseContainer && jQuery.isFunction( overwritten ) ) {
+				// 则执行, 这也是 jsonp 回调函数的执行源头
 				overwritten( responseContainer[ 0 ] );
 			}
-
+			// 最后清除掉
 			responseContainer = overwritten = undefined;
 		} );
 
 		// Delegate to script
+		// -> 委托给脚本
+		// 返回给 inspectPrefiltersOrTransports() 方法中的 inspect()
 		return "script";
 	}
 } );
@@ -10937,6 +11494,7 @@ jQuery.fn.load = function( url, params, callback ) {
 
 
 // Attach a bunch of functions for handling common AJAX events
+// -> 附加一组函数来处理常见的ajax事件
 jQuery.each( [
 	"ajaxStart",
 	"ajaxStop",

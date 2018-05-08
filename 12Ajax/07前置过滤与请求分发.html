@@ -1,0 +1,158 @@
+<meta charset="UTF-8">
+<title> 前置过滤与请求分发 </title>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 1.5+，AJAX 模块提供了三个新的方法用于管理、扩展 AJAX 请求，分别是：
+// 1.前置过滤器 $.ajaxPrefilter
+// 2.请求分发器 $.ajaxTransport，
+// 3.类型转换器 ajaxConvert
+
+
+// 柯里化 curry
+// 还记得 curry 吗？
+{
+	var add = function(a){
+		return function(b){
+			return function(c){
+				return a + b + c;
+			}// 在内部保留了最外部 a 的引用
+		}
+	}
+	console.log(add(1)(2)(3));//=> 6
+}
+
+{
+	var obj = {
+		'json': 1000
+	}
+	function add(obj) {
+		return function _add(a) {
+			return obj['json'] + a
+		}
+	}
+	var oa = add(obj); // 得到返回的 _add
+	console.log(oa(10));//=> 1010
+	// curry 就是一个闭包的典型用法，可以用闭包将数据驻留到内存中的这点特性
+	// 然后就用若干形式接收不同参数的方法来做该方法要做的事
+}
+
+// curry 还有个特性就是可以在内部保留外部的引用
+// 因为闭包的关系下层作用域可访问上层作用域
+
+// 接下就看看源码
+
+// $.param()
+// 	buildParams() 
+// inspectPrefiltersOrTransports()
+// addToPrefiltersOrTransports()
+// $.ajax.done()  内部的 done() 方法
+</script>
+<script>
+
+// 先一个一个来看,首先是
+// $.param() 源码
+console.log($.param({
+	'a':100,
+	'b': [1,2,3,4]
+}))
+// 序列化这个对象
+</script>
+
+<script>
+// addToPrefiltersOrTransports() 源码
+// 该方法用于返回一个能够扩充原先过滤不同类型的对象的方法
+// 内部用于过滤器和请求分发器
+
+
+// 1. 过滤器
+
+var o = {}
+o[ 'dataType' ] = o['dataType'] || [];
+console.log(o['dataType']);//=> []
+
+// // !???
+// var o2 = {}
+// (o2[ 'dataType' ] = o2['dataType'] || []);
+// console.log(o2['dataType']);//=> Cannot read property 'dataType' of undefined
+
+// 注意，reutrn 返回的这个 _pot 是一个方法，方法，是在 addToPrefiltersOrTransports 中返回的方法
+// 就是用 curry 返回的方法，也就是说在这个 _pot 中是在 addToPrefiltersOrTransports 中传入的那个对象中添加方法
+
+// 也就说，该方法 att() 返回一个方法 _pot()
+// _pot() 可以接收两个参数，第一个参数就是用于过滤用那种方式将第二个参数添加到 att() 传入的参数对象中
+// 这样也就就可以看到 $.pfs 是内部 perfilters 的引用
+
+// 内部过滤器的引用
+console.log($.pfs);//=> {*: Array(1), script: Array(1), json: Array(1), jsonp: Array(1)}
+// 且第一个键的值都是一个数组，数组中就是存放了最后添加进去的函数
+
+console.log($.pfs['*'][0] == $.tps['*'][0]);//=> false 
+// 这两个对象中存放的 * 可都不是一样的，那里不一样，再继续看内部源码
+
+
+
+// 向上面 prefs 对象中添加处理方法，以对相同的事件做不同的处理方法
+// 然后将处理方法填充到过滤对象中 
+
+$.ajax({
+	url: '../back/json01.json',
+	crossDomain : true,
+});
+
+
+// 模拟 jQuery 内部添加方法的过程
+
+var prefs = {};
+var ajaxPrefs = $.att(prefs);
+
+
+// 先添加
+// 参数一过滤类型,默认 *
+// 参数二则是 func
+ajaxPrefs( function(o){
+	console.log('prefs o', o)
+});
+console.log(prefs);//=> {*: Array(1)}
+
+// 触发,(内部是用 inspectPrefiltersOrTransports() 方法触发)
+// console.log(ajaxPrefs[ "*" ][0]('HHH') );//=> 但是这里不能直接用 * 作为键，直接调用
+// 但是在控制台中操作其它的又可以，不知道什么情况，这里暂时当作可以执行
+
+// 为 prefs 添加过滤 script 的情况
+ajaxPrefs('script', function(s){
+	return true;
+})
+
+
+
+
+// 2. 请求分发器
+var trans = {};
+var ajaxTrans = $.att(trans);
+
+
+// 内部请求分发器的引用
+console.log($.tps);//=> {*: Array(1), script: Array(1)}
+// 只有两个元素，也说明在内部只添加了两次方法
+// 分别是 * 和 script 
+
+</script>
+
+
+<script>
+// 上面解释了什么是过滤器和请求分发器
+// 其实他们两个都是同一个道理，只是名字上不同，最后执行的回调不同
+// 都是在应用了 addToPrefiltersOrTransports() 方法后，在返回的方法中为自己添加一个不同的处理方法
+// 并且，注意，每个处理方法都接收三个参数，这是在 inspectPrefiltersOrTransports() 方法中指定的
+// 	1. 外部传入的在 $.ajax() 内部简单处理后的参数对象
+// 	2. 外部传入的原生参数对象
+// 	3. jqXHR 对象
+// 前置过滤器说白了就还是一个对参数的校正,说得更直白点就是 dataType 是 script json jsonp 的处理
+// 而请求分发器则是为了最后真正发送请求，用它的 send() 方法, (abort() 中止这次请求)
+// 这里则是要说，如何执行，用 inspectPrefiltersOrTransports() 方法，看下面
+
+// jsonp 的格式只有 GET 是合法的
+
+// inspectPrefiltersOrTransports() 源码，见 08预处理.html
+</script>
+

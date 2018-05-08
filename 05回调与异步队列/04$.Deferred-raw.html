@@ -1,0 +1,218 @@
+<meta charset="UTF-8">
+<title>$.Deferred 源码</title>
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+function argsFunc(deferred) {
+	deferred.info = "你被我 argsFunc 劫持了";
+	window.afDfd = deferred;
+}
+var deferred = $.Deferred(argsFunc);
+console.log(deferred === afDfd);//=> true
+// 这里的一个小例子解释了这样的一个问题
+// $.Deferred(func) 接收的参数，如果是一个函数
+// 则这个函数的参数就是 $.Deferred() 返回的 defered 对象
+// 用断点查看的话，也能发现， argsFunc 在 $.Deferred() 返回之前都执行了
+
+// 也就是说 $.Deferred() 接收一个回调
+// 该回调会以形参的方式得到这个 $.Deferred() 将要返回的 deferred 对象
+// 劫持 $.Deferred() 返回的这个 deferred 对象
+console.log(deferred.info);//=> 你被我 argsFunc 劫持了
+// 只要清楚了这一点，源码就好说了
+</script>
+<script>
+// 源码 $.Deferred()
+
+var cb1 = $.Callbacks();
+cb1.add(function __inner() {
+	return 1;
+})
+console.log(cb1._getList())
+
+console.log('---------')
+function _done(args){
+	console.log('_done->', args);
+}
+var dfd1 = $.Deferred();
+console.log(dfd1._tuples[1]);//=> 这个是 DoneList 回调队列元素
+// 为 DoneList 添加一个回调
+dfd1.done(_done);
+// 再看 DoneList 回调队列元素的 Callback 对象的回调队列
+// [2] 和 [3] 应该都是回调队列元素的 Callback 对象， 不知道为什么 3.1.1 有两个
+// dfd1._tuples[1][2]._list 这就是存放 deferred 回调队列的源头
+var dtl = dfd1._tuples[1][2]._list;
+console.log(dtl[dtl.length-1] == _done);//=> true
+// 证明了 _done() 添加进了 dfd1 这个 deferred 对象的 DoneList 队列中
+
+// 可以添加那怎么执行呢？ 这又不想 ajax 的处理
+// 所以这里就要说 resolve() 这个专门执行 DoneList 的方法
+// 该方法在 deferred 上，也就是在 dfd1 中
+dfd1.resolve('finally, happy!!!');//=> _done-> finally, happy!!!
+// 而这个方法，就在遍历 tuples 定义好了的
+// 调用对应的 resolveWith() Callbacks 对象的 fireWith() 方法
+
+</script>
+
+<script>
+// 这里有个小细节
+var dtl1 = dfd1._tuples[1][2]._list;
+var dtl2 = dfd1._tuples[1][3]._list;
+// 这两个分别是第 2 个和第 3 个位置的 Callbacks 对象里面的队列
+console.log(dtl1);//=> [f,f,f,f,f]
+console.log(dtl2);//=> []
+// 没错后面那个空的，为什么，这个是在 then() 里面解决的，看源码之后来解释
+
+
+
+
+var dfd2 = $.Deferred()
+dfd2.then(function _then(args) {
+	console.log('_then->', args, arguments.callee.name);
+})
+console.log(dfd2._tuples[1]);
+// 第一个 Callbacks 对象的回调队列中有4个默认的
+// 第二个 Callbacks 对象的回调队列中有一个，就是 then() 内部的那个 reslove() 返回的 那个匿名方法
+
+dfd2.resolve('cao cao cao')
+
+
+
+// 最后就是 then() 方法的源码了,这个源码非常难懂,就之后来吧
+// 它只做两件事,一内部生成一个回调函数,二就是将这个生成的添加进第二 Callbacks 对象
+</script>
+
+<script>
+// then() 方法内部的 resolve()
+// 也是 then() 做的第一件事
+function resolve_(depth, deferred, handler, special) {
+	return function() {
+		var that = this,
+			// 得到 最外部 传入的回调函数
+			args = arguments,
+			mightThrow = function() {
+				var returned, then;
+
+				// Support: Promises/A+ section 2.3.3.3.3
+				// https://promisesaplus.com/#point-59
+				// Ignore double-resolution attempts
+				if (depth < maxDepth) {
+					return;
+				}
+				// 得到最外部的三个回调之一的返回值
+				returned = handler.apply(that, args);
+
+				// Support: Promises/A+ section 2.3.1
+				// https://promisesaplus.com/#point-48
+				// 如果返回值是 promise 对象
+				if (returned === deferred.promise()) {
+					throw new TypeError("Thenable self-resolution");
+				}
+
+				// Support: Promises/A+ sections 2.3.3.1, 3.5
+				// https://promisesaplus.com/#point-54
+				// https://promisesaplus.com/#point-75
+				// Retrieve `then` only once
+				then = returned &&
+
+					// Support: Promises/A+ section 2.3.4
+					// https://promisesaplus.com/#point-64
+					// Only check objects and functions for thenability
+					(typeof returned === "object" ||
+						typeof returned === "function") &&
+					returned.then;
+
+				// Handle a returned thenable
+				if (jQuery.isFunction(then)) {
+
+					// Special processors (notify) just wait for resolution
+					if (special) {
+						then.call(
+							returned,
+							resolve(maxDepth, deferred, Identity, special),
+							resolve(maxDepth, deferred, Thrower, special)
+						);
+
+						// Normal processors (resolve) also hook into progress
+					} else {
+
+						// ...and disregard older resolution values
+						maxDepth++;
+
+						then.call(
+							returned,
+							resolve(maxDepth, deferred, Identity, special),
+							resolve(maxDepth, deferred, Thrower, special),
+							resolve(maxDepth, deferred, Identity,
+								deferred.notifyWith)
+						);
+					}
+
+					// Handle all other returned values
+				} else {
+
+					// Only substitute handlers pass on context
+					// and multiple values (non-spec behavior)
+					if (handler !== Identity) {
+						that = undefined;
+						args = [returned];
+					}
+
+					// Process the value(s)
+					// Default process is resolve
+					(special || deferred.resolveWith)(that, args);
+				}
+			},
+
+			// Only normal processors (resolve) catch and reject exceptions
+			// -> 只有普通处理器(解析)捕获和拒绝异常
+			//  如果传入的有 progressCallbacks 回调
+			//      则为 mightThrow 
+			//      否则重新定义一个
+			process = special ?
+			mightThrow :
+			function() {
+				// 执行,如果有异常
+				try {
+					mightThrow();
+				} catch (e) {
+
+					if (jQuery.Deferred.exceptionHook) {
+						jQuery.Deferred.exceptionHook(e,
+							process.stackTrace);
+					}
+
+					// Support: Promises/A+ section 2.3.3.3.4.1
+					// https://promisesaplus.com/#point-61
+					// Ignore post-resolution exceptions
+					if (depth + 1 >= maxDepth) {
+
+						// Only substitute handlers pass on context
+						// and multiple values (non-spec behavior)
+						if (handler !== Thrower) {
+							that = undefined;
+							args = [e];
+						}
+
+						deferred.rejectWith(that, args);
+					}
+				}
+			};
+
+		// Support: Promises/A+ section 2.3.3.3.1
+		// https://promisesaplus.com/#point-57
+		// Re-resolve promises immediately to dodge false rejection from
+		// subsequent errors
+		if (depth) {
+			process();
+		} else {
+
+			// Call an optional hook to record the stack, in case of exception
+			// since it's otherwise lost when execution goes async
+			if (jQuery.Deferred.getStackHook) {
+				process.stackTrace = jQuery.Deferred.getStackHook();
+			}
+			window.setTimeout(process);
+		}
+	};
+}
+</script>

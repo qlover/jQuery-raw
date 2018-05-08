@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<games>
+	<game id="1">
+		<name>QQspeed</name>
+		<size>10G</size>
+		<type>NetWork</type>
+	</game>
+	<game id="2">
+		<name>L</name>
+		<size>15G</size>
+		<type>NetWork</type>		
+	</game>
+	<game id="3">
+		<name>DrangonBall</name>
+		<size>20G</size>
+		<type>Single</type>
+	</game>
+</games>

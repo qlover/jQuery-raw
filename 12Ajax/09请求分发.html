@@ -1,0 +1,85 @@
+<meta charset="UTF-8">
+<title> ajaxTransport 请求分发 </title>
+<script src="../jquery-3.1.1.js"></script>
+
+
+<script>
+// 请求分发器源码
+
+console.log($.pfs);
+//=> {*: Array(1), script: Array(1), json: Array(1), jsonp: Array(1)}
+console.log($.tps);
+//=> {*: Array(1), script: Array(1)}
+
+// 请求分发器与预处理器不同的时,预处理器处理 jsonp, 分发器只针对于脚本的执行
+// 当然分发器也于预处理一样用 inspectPrefiltersOrTransports() 方法处理,绑定类型处理函数
+// inspectPrefiltersOrTransports 不再说,看分发器的几个类型实现
+
+// 分发器只针对于两种情况
+// 1. 不跨域情况
+// 	普通的 xhr 对象请求的情况
+// 2. 跨域情况
+// 	针对 script jsonp 
+// 都有属于自己情况的 send() abort() 方法
+
+// 因为只针对两种情况所以一经过 inspectPrefiltersOrTransports() 方法后只会将请求变成两种
+// 在 分发器 中体现出来就是 $.tps['*'] $.tps['script']
+
+// $.ajax('../back/json01.json').done(function(){
+// 	console.log(arguments)
+// })
+
+
+var xhr = new XMLHttpRequest();
+xhr.onload = function(){
+	console.log('xhr onload')
+}
+xhr.onerror = function(){
+	console.log('xhr onerror')
+}
+xhr.onabort = function(){
+	console.log('xhr onabort')
+}
+xhr.onreadystatechange = function(){
+	console.log('xhr onreadystatechange')
+}
+
+var args = {
+	'method': 'GET',
+	'url': '../back/json1.json',
+};
+xhr.open(args.method, args.url, false);
+xhr.send();
+
+if ( xhr.readyState == 4) {
+	console.log('完成了')
+}
+
+// onabort
+// 		当资源的加载已中止时，将触发中止事件。
+// onerror
+// 		发生错误时，会触发错误事件；
+// onload
+// 		当资源及其相关资源已完成加载时，会触发加载事件。
+// onreadystatechange
+// 		当文档的 readyState 属性发生更改时，会触发readystatechange事件。
+
+// 这里要注意的就是, readyState == 4 时是完成,并不就代表请求成功了
+// 而 jQuery 采用的则是一旦出现错误,则 abort()
+
+// 分发器的源码就这么多,也许会纠结, jQuery 的 ajax 执行流程看不懂了
+// 那是因为 jQuery 将很多的事件处理都给分开了
+// 这都是因为全部的事件回调都交给了 Deferred
+// 所以在看分发器的源码时会出现疑问,前面都已经将大体的流程给说明了
+</script>
+
+<script>
+// 类型转型器 ajaxConvert()
+// 这个很奇怪,该方法在内部只被一个地方调用过
+// 就是流程的最后一步, 内部 done() 中被调用
+// 那为什么还说它呢,因为,它有个非常重要的作用,就是为 jqXHR 生成 对应的 responsXXX 属性
+
+
+// converters -> 一个数据类型到数据类型转换器的对象。每个转换器的值是一个函数，返回经转换后的请求结果
+</script>
+

@@ -1,0 +1,8 @@
+{
+	"setdata": {
+		"classname": "getText",
+		"aname": "#parsingJSON",
+		"atext": "I am the text after parsing JSON",
+		"ahref": "http://www.qlover.website"
+	}
+}

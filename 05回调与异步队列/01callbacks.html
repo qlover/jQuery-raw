@@ -1,0 +1,168 @@
+<meta charset="UTF-8">
+<title>jQuery.callbcks() 回调队列</title>
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+function c1(arg){console.log('c1->', arg);}
+function c2(arg){console.log('c2->', arg);}
+function c3(arg){console.log('c3->', arg);}
+function c4(arg){console.log('c4->', arg); return false;}
+function c5(arg){console.log('c5->', arg);}
+
+/* $.Callbacks(falg) 
+参数有以下几种情况
+	once    -- 回调函数只执行一次
+	unique    -- 函数不能重复添加到回调列表中
+	memory    -- 状态记忆，主要用于 Deferred 中
+	stopOnFalse    -- 遇到return false 终止回调列表继续执行
+
+并且这些可以组合，形成不同的状态
+接下来看例子
+
+callbacks.add()        回调列表中添加一个回调或回调的集合。
+callbacks.disable()    禁用回调列表中的回调
+callbacks.disabled()   确定回调列表是否已被禁用。 
+callbacks.empty()      从列表中删除所有的回调.
+callbacks.fire()       用给定的参数调用所有的回调
+	参数可以有多个但不能是数组
+callbacks.fired()      访问给定的上下文和参数列表中的所有回调。 
+callbacks.fireWith()   访问给定的上下文和参数列表中的所有回调。
+	参数只能是数组，不能是多个参数
+	fireWith() 能够改变函数执行上下文，而 fire() 上下文固定是Callbacks对象
+callbacks.has()        确定列表中是否提供一个回调
+callbacks.lock()       锁定当前状态的回调列表。
+callbacks.locked()     确定回调列表是否已被锁定。
+callbacks.remove()     从回调列表中的删除一个回调或回调集合。
+	如果add()添加的是匿名函数，那么不能通过remove()删除
+	如果函数fn1通过add()添加了多次，那么remove()之后，这多次添加都会被删除
+	remove一个不存在的函数没有任何效果
+
+ */
+// 发布订阅和观察都模式 Pub/Sub
+</script>
+
+
+<script>
+// 普通情况不加参数
+var cb1 = $.Callbacks();
+cb1.add(c1);
+cb1.fire('common-1');
+cb1.add(c2);
+cb1.fire('common-2');
+
+// fire() 时，会将当前 fire() 参数传递的回调队列所有的回调并全部执行
+
+
+// once
+var cb2 = $.Callbacks('once');
+cb2.add(c1,c2);
+cb2.fire('once-1');
+cb2.add(c3);
+cb2.fire('once-2');
+cb2.fire('once-3');
+
+// once 时，一旦出现 fire() ，会将之前队列中的回调全部执行一次
+// 之后即使添加回调，即使再 fire() 都无效
+
+
+
+// memory 
+var cb3 = $.Callbacks('memory');
+cb3.add(c1);
+cb3.fire('memory-1')
+cb3.add(c2);
+cb3.fire('memory-2')
+cb3.add(c3);
+cb3.fire('memory-3')
+
+// 当 fire() 时，先将上一个参数交给当前的 fire() 执行
+// 然后再将当前 fire() 的参数走普通流程，只是比普通流程多了一个上一个参数执行一次当前 fire() 
+// memory缓存上一次fire/fireWith时的参数值
+// 当add()添加回调函数时，直接用上一次的参数值立刻调用新加入的回调
+
+
+// unique
+var cb4 = $.Callbacks('unique');
+cb4.add(c1);
+cb4.fire('unique-1')
+cb4.add(c1, c2); // c1 已经被添加过了，所以不能添加
+cb4.fire('unique-2')
+
+// 结果和普通流程一样，只是不能重复添加同一个函数
+
+
+// stopOnFalse
+var cb5 = $.Callbacks('stopOnFalse');
+cb5.add(c3);
+cb5.fire('stopOnFalse-1')
+cb5.add(c4, c5);
+cb5.fire('stopOnFalse-2')
+
+// 走基本流程，队列全部走一遍，只如果回调中有 false ，则回调后面的不再执行
+
+
+
+// 说一个组合的 once+memory
+var cb6 = $.Callbacks('once memory');
+cb6.add(c3);
+cb6.add(c4, c5);
+cb6.fire('om-1')
+// cb6.fire('om-2'); //=> 因为有 once ，所以只能有一个 fire()
+
+
+// 再说一个就是 .add() 会返回 this 
+// 这个 this 就是 Callbacks 对象本身 
+$.Callbacks().add(function _run(qlover){
+	console.log(qlover);
+}).fire('hello qlover');
+
+
+
+// fire() 与 fireWith()
+var obj = { a:1, b:2}
+function f1(arg) {
+	console.log(this)
+}
+var cb7 = $.Callbacks();
+cb7.add(f1);
+
+cb7.fire();//=> {add: ƒ, remove: ƒ, has: ƒ, empty: ƒ, disable: ƒ, …}
+cb7.fireWith(obj);//=> {a: 1, b: 2}
+
+
+</script>
+
+
+<script>
+// Callbacks对象的状态判断
+// has()、disabled()、locked()、fired()。
+
+// has() 的参数是一个函数，用来判断该函数是否已经存在于回调列表中，不想重复添加时很有用
+
+// disabled() 和 locked() 判断 Callbacks 对象是否处于 disabled 状态或是 locked 状态
+// disable()、locke() 改变 Callbacks 对象的状态
+// 一旦将Callbacks禁用或者锁定，那么就无法再恢复
+var callbacks1 = $.Callbacks();
+console.log(callbacks1.locked());//=> false
+callbacks1.lock();
+console.log(callbacks1.locked());//=> true
+
+var callbacks2 = $.Callbacks();
+callbacks2.disable();
+console.log(callbacks2.disabled());//=> true
+
+// fired() 判断 Callbacks 对象是否调用过 fire() 或者 fireWith() 方法
+// 一旦调用 fire() 或 fireWith() 则变为 true
+
+</script>
+
+<script>
+// 其实 jQuery.Callbacks() 源码结构很简单
+// 1. 处理 options 
+// 2. 参数的定义
+// 3. fire 的遍历回调的执行
+// 4. self 对象，最终返回的就是该对象
+
+// jQuery 源码  Callbacks()
+// 见源码分析
+</script>

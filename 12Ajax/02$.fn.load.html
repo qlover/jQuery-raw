@@ -1,0 +1,80 @@
+<meta charset="UTF-8">
+<title> $.fn.load </title>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 为什么要说这个不直接说 $.ajax() 
+// 我觉得应该先从外部到内部的将一些处理过程整理一次
+
+// 先看几个方法,也按以下方法顺序执行
+// .ajaxStart(handler(e))
+// .ajaxSend(handler(event, jqXHR, ajaxOptions))
+// .ajaxSuccess(handler(event, XMLHttpRequest, ajaxOptions))
+// .ajaxError(handler(event, jqXHR, ajaxSettings, thrownError))
+// .ajaxComplete(handler(event, XMLHttpRequest, ajaxOptions))  请求完成后
+// .ajaxStop(handler(e) )   请求完成时,全部结束时
+
+// 这几个方法是什么呢？这么多，
+// 其实一次 ajax 请求就是一次 ajax 请求事件
+// 而之所以 ajax 是异步操作就是因为是一个请求事件，并不知道何时会发生，何时会返回
+// 之所以有这几个方法，也是因为这几个方法就是当事件发生时，处理的回调的容器
+// 一个阶段就是一次事件，一次事件发生就是一个阶段发生，也就会响应当前事件绑定的处理函数
+
+// 也就是这几个方法是用来注册事件处理回调的！！！
+// 看例子
+
+// 在jQuery1.9中，jQuery全局AJAX事件的所有处理程序
+// 	包括哪些.ajaxXXX()添加的方法，必须 附加到 document上。 
+// 如果 $.ajax() 或 $.ajaxSetup()调用时
+// 	global 选项设置为 false， .ajaxXXX()将不会触发。 
+
+</script>
+
+
+<div id="send"></div>
+<div id="send2"></div>
+<script>
+// ajaxStart()
+// 为所有的 ajax 请求绑定一个 ajaxStart 事件处理
+// 在Ajax请求发送之前绑定一个要执行的函数，这是一个 Ajax Event
+$(document).ajaxStart(function _ajaxStart(e) {
+	console.log(e.type, '准备开始请求', arguments)
+});
+
+// ajaxSend(handler(event, jqXHR, ajaxOptions)) 在 start 后执行
+// 为所有的 ajax 请求绑定一个 ajaxSend 事件处理
+$(document).ajaxSend(function _ajaxSend(event, xhr, ajaxOptions) {
+	console.log(event.type, ajaxOptions.url, '发送请求', xhr.readyState)
+});
+
+
+// 为所有的 ajax 请求绑定一个 ajaxSuccess|ajaxError 事件处理
+// 成功时调用
+$(document).ajaxSuccess(function _ajaxSuccess(e, xhr, ajaxOptions) {
+	console.log(e.type, '请求成功', xhr.readyState)
+});
+// 失败时调用
+$(document).ajaxError(function _ajaxError(e, xhr, ajaxOptions) {
+	console.log(e.type, '请求失败', xhr.readyState)
+});
+
+
+// 为所有的 ajax 请求绑定一个 ajaxComplete 事件处理  // 请求完成时
+$(document).ajaxComplete(function _ajaxComplete(e, xhr, ajaxOptions) { 
+	console.log(e.type, '请求结束', xhr.readyState)
+});
+// 为所有的 ajax 请求绑定一个 ajaxStop 事件处理
+$(document).ajaxStop(function _ajaxStop(e) {  // 请求完成时,全部结束时
+	console.log(e.type, '请求全部结束')
+});
+
+
+// 注意这里不能用 $.ajax() 请求, 用 fn.load()
+// fn.load() 直接返回请求的数据
+$('#send').load('../back/json01.json')// 一次请求
+
+
+$('#send2').load('../back/game.xml')// 一次请求
+
+
+// 可以得到个结论，这种的 ajax 事件绑定是全局的
+</script>

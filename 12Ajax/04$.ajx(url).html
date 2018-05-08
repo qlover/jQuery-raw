@@ -1,0 +1,53 @@
+<meta charset="UTF-8">
+<title> $.ajax(url) </title>
+
+<button><a href="../back/json05.json">同步解析</a></button>
+<button><a href="../back/json05.json">异步解析</a></button>
+<div id="text">
+	
+</div>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// $.ajax(url)
+var xhrDeferred = $.ajax('../back/json01.json') // 一个请求，
+	.done(function(data, textState, jqXHR){ // 接收三个参数
+		console.log('成功', textState);//=> success
+		// 可见在内部将将状态用字符串处理了
+	}) // 完成时的回调
+
+// .done() 可以从控制台中看到
+// 该方法是 Callbacks 回调队列中的 add() 方法
+// 用 add() 方法将这个回调添加进队列,
+// 而不是添加一个事件
+// 这样的处理有点像 jQuery 事件处理那样
+// 是将处理的事件函数添加进一个队列,一旦触发则执行队列中的方法
+// 当然这都是因为有了 Deferred 这个对象的原因
+// 这里如果清楚了 Deferred.done() 的用法，那就明白这个地方的 done() 为什么这么用
+// 这里其实就是往 DoneList 中添加了一个回调
+// 而触发则是在内部做的事
+
+// 从源码中看，ajax() 返回的是一个附加了 promise 的 jqXHR 对象
+// 也就是说返回了一个 Deferred 
+var xhrDeferred = $.ajax('../back/json01.json')
+	.done(function(data, textState, jqXHR){
+		console.log('成功1', textState);
+	})// 那么可以可以链式,还可以添加多个回调
+	.done(function(data, textState, jqXHR) {
+		console.log('成功2', data);	
+	})
+	// 当然，也有 FailList,也就是请求失败时触发的事件回调队列
+	.fail(function(jqXHR, errorText, exception) { // 同样接收三个参数
+		// 与 error 参数中的回调一样
+		console.log('失败', arguments)
+	})
+	// 当然，也有 ProgressList ，也就是 always()
+	// 不管成功与否都执行
+	.always(function(jd, state, ej){
+		// 三个参数，如果成功则是 done() 回调的参数，失败则是 file() 的参数
+		console.log('结束', state)
+	})
+
+
+// jsonp
+</script>

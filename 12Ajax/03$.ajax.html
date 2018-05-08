@@ -1,0 +1,110 @@
+<meta charset="UTF-8">
+<title> $.ajax() </title>
+
+<button><a href="../back/json05.json">同步解析</a></button>
+<button><a href="../back/json05.json">异步解析</a></button>
+<div id="text">
+	
+</div>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 与前面的一样，要看懂源码，首先要熟悉其用法
+/*
+1、通过 new XMLHttpRequest 或其它的形式（指IE）生成ajax的对象xhr。  
+2、通过xhr.open(type, url, async, username, password)的形式建立一个连接。 
+3、通过setRequestHeader设定xhr的请求头部（request header）。  
+4、通过send(data)请求服务器端的数据。
+5、执行在xhr上注册的onreadystatechange回调处理返回数据。
+
+可能会出现的问题
+1 跨域
+2 json的格式
+3 dataType
+4 AJAX乱码问题
+5 页面缓存
+6 状态的跟踪
+7 不同平台兼容
+ */
+
+// $.ajax() 的功能就是执行一个异步的 HTTP 请求
+// 
+// 	.ajax()
+// 	.ajax(url)
+// 	.ajax(url, settings)
+// 	.ajax(settings)
+// settings 就是所需要的参数设置之类的，参数比较多
+// 这些参数会在后面的例子中一个一个介绍
+
+// 下面就来一个一个试例
+</script>
+<script>
+// $.ajax()
+// 先看没有任何参数的情况下会做些什么
+
+
+console.log($.ajax());
+// 是一样对象，这个对象有熟悉的 XMLHttpRequest 对象的方法属性
+// 也有 Deferred 对象的方法属性
+// 在源码中可以看出，这个对象是 jqXHR
+// 所有参数都可以用 $.ajaxSetup() 设置全局
+// 并且可以看出，为空时，请求的当前面面
+</script>
+
+<script>
+// 说这个的时候先来看看再没有加上 Deferred 时 ajax 的写法
+// 一切操作都该参数对象中完成
+// 在用 load() 请求时可以直接绑定那几个事件，但在 ajax() 中
+// 则是在传入的对象的参数中,以下几个参数
+// 	beforeSend -> function(xhr) 请求前调用
+// 		可修改传入的 xhr ，是一个事件，如果返回 false 则阻止后面的请求
+// 	error -> function(jqXHR, errorText, execption)
+// 		jqXHR jqXHR 对象
+// 		errorText 错误信息,可能是 null, "timeout", "error", "notmodified" 和 "parsererror"。
+// 		execption 捕获的异常
+// 		发生错误时触发的事件
+// 	dataFilter -> function(data, type)
+// 		data Ajax 返回的原始数据
+// 		type Ajax 调用 $.ajax() 提供的 dataType 参数
+// 		success 之前触发,并且要将 data 返回给 success 
+// 		但是它不是一个事件
+// 	success -> function(data, textStatus, jqXHR)
+// 		data 经过 dataFilter 过滤后的数据
+// 		textStatus 请求状态
+// 		jqXHR jqXHR 对象
+// 		请求成功后触发的事件
+// 	complete -> function(jqXHR, textStatus)
+// 		jqXHR jqXHR 对象
+// 		textStatus 请求状态
+// 		整个请求结束时调触发的事件
+// 			
+$.ajax({
+	'url' : '../back/json01.json',
+	'type' : 'POST', // 默认 GET
+	'async' : true,  // true 异步 , false 同步
+	'timeout' : 5000, // 超时时间
+	'dataType' : 'json', // 返回的数据格式， 这里会涉及到另一个东西 jsonp 后面会解释它是什么
+	// 发送之前执行的回调
+	'beforeSend' : function(xhr){
+		console.log('发送前', xhr)
+	},
+	// 发送成功执行的回调
+	'success' : function(data, textStatus, jqXHR){
+		console.log('成功', arguments)
+	},
+	// 失败时执行的回调
+	'error':function(xhr, textStatus){
+		console.log('失败', xhr, textStatus)
+	},
+
+	'dataFilter' : function(data, type){
+		console.log('请求即将成功', arguments)
+		return data; // 但是该方法记得返回
+	},
+	// 当前请求完成时执行的回调，注意这里不分成功与失败，都会执行，相当于 deferred.always() 
+	'complete': function(jqXHR, textStatus){
+		console.log('结束')
+	}
+});
+// 可以看到整个执行的流程，但是，至从加入的 Deferred 对象，则情况就变得不同了
+// 因为后面的是异步操作,可以执行的过程会不一样,扰乱视线,所以后面都是一个文件一个例子
+</script>

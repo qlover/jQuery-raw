@@ -1,0 +1,326 @@
+<meta charset="UTF-8">
+<title>Deferred 对象</title>
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+
+// Promise 是一个解决异步操作的接口
+// 而实现则是 $.Deferred 实现
+console.log(Object.keys($.Deferred().promise()));// promise
+console.log(Object.keys($.Deferred()));// deferred
+//=> ["notify", "notifyWith", "resolve", "resolveWith", "reject",
+//	 "rejectWith", "state", "always", "catch", "pipe", "then", "promise",
+//	  "progress", "done", "fail"
+//	 ]
+
+// 得到一个空 Deferred 对象
+var emptyDeferred = $.Deferred();
+</script>
+
+<script>
+// 接下来会一个一个介绍每一个方法
+var deferred1 = $.get('../back/json05.json'); 
+// defferd.done(callbacks())  异步操作成功时的回调
+// 		参数一个函数，或者函数数组，当Deferred（延迟）对象得到解决时被调用。 
+// defferd.fail()  异步操作失败时的回调
+
+deferred1.done(function(value) {
+	console.log('json05 请求完成', value)
+}).done(function(value){
+	console.log('json05 请求完成2', value)
+})
+</script>
+
+
+<script>
+// defferd.resolve( args )
+// 	1. 该 defferd 任何 doneCallback 回调被调用
+// 	2. args 会传递给每一个 doneCallbac 回调
+// 	3. 当 defferd 已经被 resolve 时,再添加的 doneCallback 回调将会立即执行,并带上 args
+// defferd.reject( args )
+// 	1. 该 defferd 任何 failCallback 回调被调用
+// 	2. args 会传递给每一个 failCallbac 回调
+// 	3. 当 defferd 已经被 resolve 时,再添加的 failCallback 回调将会立即执行,并带上 args
+
+// 这两个方法主要就是用来改变当前 deferred 对象的状态
+var deferred2 = $.get('../back/json01.json'); 
+deferred2.then(function(res){
+	console.log('deferred2 then-> 成功', res)
+}, function(res){
+	console.log('deferred2 then-> fail 失败', res)
+}).done(function(res){
+	console.log('deferred2 done-> 成功', res)
+}).fail(function(res){
+	console.log('deferred2 fail-> 失败', res)
+})
+
+// console.log(deferred2.resolve());// deferred2.resolve is not a function
+
+// 但是虽说 ajax 是返回一个 deferred 对象
+// 但是看了源码后会发现，并不是，而是返回一个 jqXHR 的 XMLHttpRequest 对象
+// 然后利用 $.Deferred().promise() 得到的空 promise 对象组合而成的最后的 jqXHR 对象
+// 从另一个角度说，也就是 $.ajax() 返回的并不是一个 Deferred ，而 promise 
+
+// Animation 类操作也可以使用 promise 对象
+</script>
+
+<script>
+// deferred.promise(target)  返回Deferred(延迟)的Promise（承诺）对象
+// 	target 绑定 promise 方法的对象
+// 	Promise 仅会暴露那些需要绑定额外的处理或判断状态的延迟方法
+// 		(then, done, fail, always, pipe, progress, state，和 promise)时
+// 	并不会暴露任何用于改变状态的延迟方法
+// 		(resolve, reject, notify, resolveWith, rejectWith, 和 notifyWith). 
+// 如果有 target ，则会将事件附加到该 target 上，然后返回这个 target 
+// 如果没有 target ，则直接返回该 promise 对象
+// 
+
+var deferredAjax = {
+	hello : function(n){
+		console.log('hello', n)
+	}
+}
+var deferred3 = $.Deferred()
+// 将 promise 绑定到 deferredAjax 中
+deferred3.promise( deferredAjax );
+console.log(deferredAjax)
+
+
+// then 绑定
+deferredAjax.then(function(n){
+	console.log('deferredAjax then', n);//=> deferredAjax then Qlover
+})
+// done 绑定
+deferredAjax.done(function(n){
+	console.log('deferredAjax done', n);//=> deferredAjax done Qlover
+})// Qlover 成为了参数给了每一个 doneCallbacks
+// 直接调用
+.hello('Honey'); //=> hello Honey
+
+// 会发现 hello 绑定到在了 deferred3 的 promise 中
+// 直接 resolve 触发所有的 doneCallbacks
+deferred3.resolve('Qlover')
+// 同样的 reject() 也是如此
+
+// 这也就是为什么刚刚 54 排那里会报错的原因
+// 这个步骤是模拟一次 ajax 内部返回 jqXHR 对象的过程
+// 也就是说，ajax 本身返回 jqXHR 对象，但因为在内部用了 $.Deferred().promise(jqXHR)
+// 将 promise 的方法附加到了 jqXHR 上
+// resolve() 本身是 deferred 对象的方法，则这里，jqXHR 只是附加了 promise 对象
+// 所以并没有 resolve() 方法
+
+
+// 也进一步解释了 ajax 返回的只是一个附加了 promise 的 jqXHR 对象
+</script>
+
+
+<script>
+// deferred.state() 返回 deferred 对象目前的状态，不接受任何参数
+// "pending": 未完成 (不是 "rejected" 或 "resolved"). 
+// "resolved": 成功，doneCallbacks 被访问（或在被调用的过程中） 。 
+// "rejected": 失败 failCallbacks 被访问（或在被调用的过程中） 。 
+
+
+
+
+</script>
+
+<input type="text">
+<div id="progress" style="background: #f00"></div>
+<div id="thanks"></div>
+<script>
+// deferred.notify(args)
+// 	所有 then() 或 progress() 的 progressCallbacks 回调被调用
+// deferred.progress(progressCallbacks[,progressCallbacks ])
+// 	1. notify() | notifyWith() 被调用，progressCallbacks  被调用
+// 	2. deferred 被 resolved (state() 返回的值) | rejected 时，回调不再被调用
+// 	3. deferred 进入 resolved | rejected 时，再调回调
+// 	4. 参数也会传递给 notify() | notifyWith()
+// 使得在异步操作执行过程中，可以执行某些操作
+
+
+</script>
+
+
+<script>
+// deferred.then( doneFilter [, failFilter ] [, progressFilter ] )
+// 	不难看出接受三个参数
+// 1.8- 之前只是 done() faile() 的语法糖
+// 1.8+ 则会返回一个新的 deferred
+// 		then() 指定的回调函数的返回值会作为参数传入后面的回调函数
+
+
+var d4, deferred4 = jQuery.Deferred();
+d4 = deferred4.done(function(a,b){
+	return a * b;
+});// 返回原先的 deferred4 
+d4.done(function( result ) { // 所以此时的 result = 2 
+    console.log("result = " + result);//=> 2
+});
+deferred4.name = 'deferred4-1';
+console.log('name', deferred4.name, d4.name);//=> deferred4-1 deferred4-1
+// done() 返回原先的 deferred 对象
+deferred4.resolve( 2, 3 );
+
+
+var d5, deferred5 = jQuery.Deferred();
+deferred5.name = 'deferred5-2';
+d5 = deferred5.then(function( a, b ) {
+	return a * b;
+});// 因为这个是 1.8+ 后的 then() 所以,返回值会返回一个新的 defereed
+	// 并且返回值是作为参数传入后的回调函数
+d5.done(function( result ) {
+	console.log("result = " + result);//=> 6
+})
+console.log('name', deferred5.name, d5.name);//=> deferred5-2 undefined
+
+deferred5.resolve( 2, 3 );
+// then() 返回了另外的一个 deferred 对象
+// 返回值也作为了后面回调的参数
+
+
+var deferred6 = jQuery.Deferred();
+deferred6.then(function( a, b ) {
+	console.log('deferred6 then1', arguments);//=> 2 3
+	return a * b;
+}).done(function( result ) {
+	console.log('deferred6 done1 ', arguments)
+	console.log("deferred6 result = " + result);//=> 6
+}).then(function( a, b ) {
+	console.log('deferred6 then2', arguments[0], arguments[1])//=> 6 undefined
+	return a * b;
+}).done(function( result ) {
+	console.log('deferred6 done2 ', arguments);//=> NaN
+	console.log("deferred6 result = " + result);//=> NaN
+});
+
+deferred6.resolve( 2, 3 );
+// 看出来了吧,前面的 then 的返回值是后面所有回调中应用的参数
+// 6 * undefined == NaN
+// 也就是 then() 可以修改返回值这一特性
+</script>
+
+<script>
+// deferred.always(alwayCallbacks[,alwayCallbacks])
+// 不管 resolve 或 reject 都要调用
+
+var deferred7 = $.get('../back/json03.json');
+deferred7.then(function(){
+	console.log('deferred7 请求成功')
+}, function(){
+	console.log('deferred7 请求失败')
+});
+
+deferred7.always(function(){
+	console.log('deferred7 请求')
+});
+
+</script>
+
+<script>
+
+// deferred.pipe(fn) 
+// 在 then(), done(), fail(), always() 所有方法之前调用
+
+var deferred8 = $.get('../back/json05.json');
+
+deferred8.then(function(){
+	console.log('deferred8 then done')
+}).done(function(){
+	console.log('deferred8 done')
+});
+
+deferred8.pipe(function(){
+	console.log('deferred8 pipe')
+})
+// 会发现 pipe 的执行早于 then() done()
+</script>
+
+<script>
+
+
+// $.when( deferreds )
+// 	参数零个或多个延迟对象，或者普通的JavaScript对象
+// 	如果没有参数 返回一个 resolved 状态的 Promise
+// 	1. 一个单独的 deferred 对象, 则返回它的 promise 对象
+// 	2. 不是一个 deferred | promise ,则会被当作 resolved 
+// 		并且绑定的所有 doneCallbacks 都会被立刻执行, failCallbacks 永远不会执行
+// 	3. 参数为空,则返回一个 resolved 状态的 promise 
+// 	4. 传入多个 deferred 时,会根据所有 deferred 的状态得到一个宿主 deferred
+// 		返回一个 promise
+// 		其实就是当每一个 deferred 完成时才调用 doneCallbacks
+// 		其中一个 fail 就调用  fialCallbacks
+
+// 当处理多个操作时
+$.when(
+	$.get('../back/json01.json'),
+	$.get('../back/json02.json'),
+	$.get('../back/json03.json'),
+).then(function(res1, res2, res3){
+	console.log('json1->', res1)
+	console.log('json2->', res2)
+	console.log('json3->', res3)
+})
+// resp1、resp2和resp3，依次对应前面三个ajax操作的返回结果
+
+// 当只是一个普通对象时,立即执行
+$.when({'name': 'qrj'}).then(function(obj){
+	console.log('obj[name]', obj.name);//=> qrj
+});
+
+
+function maybeAsync( num ) {
+  var dfd = $.Deferred();
+  if ( num === 1 ) {
+    setTimeout(function() {
+      dfd.resolve( num );
+    }, 1000);
+    return dfd.promise();
+  }
+  return num;
+}
+// 第一次 maybeAsync(1) 返回的是 promise 对象
+// 延迟 1 秒 执行
+$.when(maybeAsync(1)).then(function (resp){
+	console.log('maybeAsync(1)', resp);//=> 1
+});
+// 第二次直接返回的普通值
+// 立即执行
+$.when(maybeAsync(0)).then(function (resp){
+	console.log('maybeAsync(0)', resp);//=> 0
+});
+</script>
+
+<script>
+
+// $.wait(time) 这是一个模拟方法
+// 用于规定时间后再执行
+$.wait = function(time){
+	return $.Deferred(function(dfd) {
+		setTimeout(dfd.resolve, time);
+	})
+}
+
+
+
+
+function doSomethingLater(fn, time) {
+  var dfd = $.Deferred();
+  setTimeout(function() {
+    dfd.resolve(fn());
+  }, time || 0);
+  return dfd.promise();
+}
+var promise = doSomethingLater(function (){
+  console.log( '已经延迟执行' );
+}, 3000);
+// 最后这一点表示没怎么明白，之后来补
+
+
+// 再说一点就是 notity/resolve/rejectWith(context[,[args]]) 方法
+// context 上下文给 对应的 progress/done/failCallbacks 
+// args 数组参数
+
+// 上面的有点多,但都是为 deferred 对象的几个方法做演示
+// 终于说到最后了,要说完了,关于 deferred 的常用方法都说完了
+</script>

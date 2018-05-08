@@ -1,0 +1,50 @@
+<meta charset="UTF-8">
+<title> $.ajax(url, setting) </title>
+
+<button><a href="../back/json05.json">同步解析</a></button>
+<button><a href="../back/json05.json">异步解析</a></button>
+<div id="text">
+	
+</div>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// $.ajax(url, setting)
+// 终于该说说 setting 了
+// setting 这个参数是一个键值对的对象，它是用于整个 ajax 请求的参数选项列表
+// 可以直接传入 $.ajax() ,也可以用 $.ajaxSetup() 设置
+
+// dataType -> 预期服务器返回的数据类型，如果不指定则内部判断，可以是
+// 	xml, html, script, json, jsonp, text
+// data -> 向服务器发送的数据
+// context -> 此次请求的每个回调中的上下文, 不指定则是当前 options 这个参数为上下文
+// global -> 默认true, 如果为 false, 则不触发全局的 ajax 事件
+// timeout -> 全局超时时间
+// async -> 是否异步请求，默认 true 
+$(document).ajaxStop(function _ajaxStop(e) {  // 请求完成时,全部结束时
+	console.log(e.type, '请求全部结束');
+});
+$.ajax('../back/json05.json',{
+	type: 'POST',
+	dataType: 'json',
+	async : true,
+	timeout : 5000,
+	context : document,
+	global : false, // 为 false 则上面的 ajaxStop() 方法不会执行
+	data: {time: new Date()}, // 向服务器发送的数据
+
+})
+.done(function() {
+	console.log("success", this);//=> #document
+})
+.fail(function() {
+	console.log("error");
+})
+.always(function() {
+	console.log("complete");
+});
+
+// $.ajax(setting)
+// 其实就是 url 和 setting 在同一个 options 对象里面
+// 这里介绍了几个参数，其它的等看了源码就看
+</script>

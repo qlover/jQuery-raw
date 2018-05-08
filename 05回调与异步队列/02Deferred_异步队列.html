@@ -1,0 +1,93 @@
+<meta charset="UTF-8">
+<title>异步队列</title>
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+// JS 是单线程，在面面中发生的所有事情只有一个线程来解决
+// 不足则是当面面在处理其它操作时，不能响应鼠标键盘等操作做出响应
+// 而异步则是解决这个不足所产生的
+
+// ES6 Promise 就是一个异步对象
+// 大多情况下，promise作为一个模型
+// 提供了一个在软件工程中描述延时（或将来）概念的解决方案。
+// 它背后的思想我们已经介绍过：
+// 	不是执行一个方法然后阻塞应用程序等待结果返回，而是返回一个promise对象来满足未来值
+
+// 3.1.1 的 Deferred 已经单独存在，早期的 jQuery 中 Deferred 是和依附在回调中
+
+
+// Deferred 对象就是一个延迟对象，一是 Promise 接口的实现
+// 典型用于 ajax, 动画， worker, jQuery 的所有 Ajax 操作默认返回的就是一个 deferred 对象
+// 改变执行状态的方法有两个
+// 		成功：resolve 失败: reject
+// 分别对应两种执行回调
+// 		成功：done  失败：fail
+
+// Promises是什么
+
+// 由于 JS 单线程的特点，如果某个操作耗时很长，其他操作就必需排队等待
+// 为了避免整个程序失去响应，通常的解决方法是将那些排在后面的操作，写成“回调函数”（callback）的形式
+// 这样做虽然可以解决问题，但是有一些显著缺点：
+
+// 1.回调函数往往写成函数参数的形式，导致函数的输入和输出非常混乱，整个程序的可阅读性差；
+// 2.回调函数往往只能指定一个，如果有多个操作，就需要改写回调函数。
+// 3.整个程序的运行流程被打乱，除错和调试的难度都相应增加。
+
+// Promises 就是为了解决这些问题而提出的，它的主要目的就是取代回调函数，成为非同步操作的解决方案
+// 它的核心思想就是让非同步操作返回一个【对象】，其他操作都针对这个对象来完成
+// 	比如，假定 ajax 操作返回一个 Promise 对象。
+	
+// 在 jQuery 中所有 ajax 操作都是返回 deferred 对象的
+// 而 promise 对象是 deferred 中的内部对象
+var deferred = $.get('../back/json1.json'); // deferred 对象
+var promise = deferred.promise(); // Promise 对象
+
+console.log(promise);//=> {state: ƒ, always: ƒ, catch: ƒ, pipe: ƒ, then: ƒ, …}
+// 然后 Promise 对象有一个 then 方法，可以用来指定回调函数
+// 一旦异步操作完成，就要调用指定的回调
+promise.then(function(content){
+	console.log('json1 请求完成 ', content)
+});
+
+// 然后上面的操作可以合并,这就是 Deferred 对象的链式调用
+// 和 jQuery 本身一样，也是具有链式调用的特性
+$.get('../back/json2.json').then(function(content){
+	console.log('json1 第二次请求完成 ', content)
+})
+
+
+// 在1.7- $.ajax() 操作是采用回调函数
+$.ajax({
+	url :'../back/json3.json',
+	success : function(response){
+		console.log('json3 请求完成', response)
+	},
+})
+
+// 而 1.7+ $.ajax() 返回 Promise 对象
+// 这意味着可以用then方法指定回调函数
+$.ajax({
+	url :'../back/json3.jon',
+}).then(function(response){
+	console.log('json3 第二次请求完成', response)
+}, function(response){
+	console.log('json3 第二次请求失败', response)
+})
+// then(doneCallbacks, failCallbacks)
+
+// 当然上面的操作只是在用代码解释一遍抽象的概念
+// 什么是 Promise 
+
+// 而在 jQuery 中, Deferred 才是实现了 promise 的一个对象
+// Promise 只是一个接口,用来解决异步操作
+// Promise 只是一个接口,用来解决异步操作
+// Promise 只是一个接口,用来解决异步操作
+
+// 而在 jQuery 中真正实现的还是 Deferred
+
+
+
+
+// ！！！ 异步操作是具有随机性的
+
+</script>

@@ -1,0 +1,89 @@
+<meta charset="UTF-8">
+<title> 原生 ajax </title>
+
+<button><a href="../back/json05.json">同步解析</a></button>
+<button><a href="../back/json05.json">异步解析</a></button>
+<div id="text">
+	
+</div>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 从这开始提交到后台的数据都在  /back/ 下
+
+// ajax 并不是一项新技术
+// 只是一个 JS 的扩展对象，XMLHttpRequest 对象
+
+// ajax 可以与服务器，发送和请求数据
+
+// ajax 主要处理三种数据情况
+// HTML, XML, JSON
+
+
+window.addEventListener('load', function(e){
+	// 利用原生的 ajax 解析 JSON ---> 同步
+	document.querySelectorAll('a')[0].addEventListener('click', function(e){
+		// 1. 得到一个 XHR 对象
+		var req = new XMLHttpRequest();
+		// 2. 发送请求参数
+		var args = {
+			'method': 'GET', // 请求的方式
+			'url': this.href,  // 请求的地址,当前 a 标记的地址
+		};
+		// 3. open()
+		req.open(args.method, args.url, false); // true 异步, false 同步
+		// 4. send()
+		req.send();// 有参数时只限于 POST
+		// 5. 如果是异步，记得一定要有 onreadystatechange 
+		// 如果是同步，则不要 onreadystatechange, 直接在 send() 后面写
+		// 所有的程序按照单线程执行
+		// 用 JSON.parse 解析成 JS 对象
+		console.log(req.readyState , JSON.parse(req.responseText));//=> 也就是说状态只有完成这个状态
+		document.querySelector('#text').innerHTML = "请求完成——>"+ req.responseText;
+		// 阻止默认操作
+		e.preventDefault();
+	});
+	// Synchronous XMLHttpRequest on the main thread is deprecated because of its detrimental effects to the end user's experience
+
+
+	// 利用原生的 ajax 解析 JSON ---> 同步
+	document.querySelectorAll('a')[1].addEventListener('click', function(e){
+		var req = new XMLHttpRequest();
+		var args = {
+			'method': 'GET', // 请求的方式
+			'url': this.href,  // 请求的地址,当前 a 标记的地址
+		};
+		req.open(args.method, args.url, true); // true 异步, false 同步
+		req.send();
+		// 5. 监听
+		req.onreadystatechange = function(){
+			// 监听请求过程
+			if ( req.readyState == 4 ) {
+				if ( req.status == 200) {
+					console.log(JSON.parse(req.responseText));
+				}
+			}
+		}
+		e.preventDefault();
+	});
+
+})
+
+
+// 当然 jQuery 并不是这样的处理 ajax 不然也太简单了
+// 接下来就来实现一个原生的 ajax 请求
+</script>
+
+<script src="../Qajax.js"></script>
+<script>
+
+Qajax({
+	'url': '../back/json05.json',
+	'success': function(data){
+		console.log(data);
+	},
+	'complete': function(status){
+		console.log(status)
+	}
+});
+// 下面来看 jQuery 中对 ajax 的封装
+</script>

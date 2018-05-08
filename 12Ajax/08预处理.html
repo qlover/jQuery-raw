@@ -1,0 +1,142 @@
+<meta charset="UTF-8">
+<title> ajaxPrefilters 预处理 </title>
+<script src="../jquery-3.1.1.js"></script>
+
+
+<script>
+// 看了前置过滤器和请求分发器，不能得有点小理解
+// 过滤器就是一个预处理器，说白了就是在 $.ajax() 内部处理参数之前
+// 会先交给过滤器就预处理器进行参数的校正
+// 
+// 预处理取决于 Content-Type 的响应，但如果有 dataType 则优先使用 dataType 
+// 所以这个过滤器(预处理)就是专门用于过滤 dataType 为 script 的 script 类型和 json/jsonp 类型
+// 当然，如果不指定 dataType 则 jQuery 会自动的从 mime 头信息中得到处理的类型
+
+// 所以此时就不得不重构一下源码，重新看
+
+// 当源码再被重视一次后，来看个例子，请求，去请求一个 js 文件
+
+</script>
+<script>
+// script 类型
+
+$.ajax({
+	url : '../back/ajaxPrefilters-request.js',
+	dataType : 'script',
+	cache : true, // 当指定了缓存时， cache 在内部则为了 true ，则此次请求不会时间戳
+});
+
+$.ajax({
+	url : '../back/ajaxPrefilters-request.js',
+	dataType : 'script',
+})// 这次请求会携带时间戳
+.done(function (jqxhr, status) {
+	console.log(arguments)
+})
+// 以纯文本返回的格式内容
+
+// 1 执行脚本
+// 2 内容当作纯文本返回
+// 3 默认情况下不会通过在URL中附加查询字符串变量 "_=[TIMESTAMP]" 进行自动缓存结果，除非设置了cache参数为true
+// 4 在远程请求时(不在同一个域下)，所有POST请求都将转为GET请求。(因为将使用DOM的script标签来加载)0
+</script>
+
+<script>
+// json jsonp 类型
+// JSONP 是一个非官方的协议，它允许在服务器端集成 Script tags 返回至客户端
+// 通过 js callback 的形式实现跨域访问
+// JSON 系统开发方法是一个典型的面向数据结构的分析和设计方法
+
+// 跨域这个问题的产生根本原因是浏览器的同源策略限制
+// 理解同源策略的限制同源策略是指阻止代码获得或者更改从另一个域名下获得的文件或者信息
+// 也就是说我们的请求地址必须和当前网站的地指相同
+// 同源策略通过隔离来实现对资源的保护
+
+// 代码通过动态插入 JS 代码，来执行函数加载数据，这就是 JSONP(JSON with Padding)
+
+// 本地回调
+function showPrice(data){  
+	console.log("Symbol:" + data.symbol + ", Price:" + data.price);  
+}
+// 服务器端返回的数据
+var data = {symbol:'IBM', price:100};  
+// 本地执行
+showPrice(data);
+
+// 这就是一个 JSONP 的执行过程
+
+// JSONP 的客户端具体实现，就是凡是拥有 src 这个属性的标签都具有跨域的能力
+
+// 允许用户传递一个callback参数给服务端
+// 然后服务端返回数据时会将这个callback参数作为函数名来包裹住JSON数据
+// 这样客户端就可以随意定制自己的函数来自动处理返回数据了
+// 这就是 JSONP 真正的实意
+
+
+// jsonp -> 在一个jsonp请求中重写回调函数的名字
+// 			这用来替代在 callback=? 这种 URL 参数里的 callback 部分
+// 			1.5+ jsonp = false 可以阻止 ?callback 字符串的 URL 或试图使用 =? 转换
+// 			这种情况就应该设置 jsonpCallback 设置
+// 		
+// jsonpCallback -> 为 jsonp 请求指定一个回调函数名, 将用来取代 jQuery 自动生成的随机函数名
+// 			这样管理请求就更容易，也能方便提供回调函数和错误处理
+// 			1.5+ 使用可以使用一个函数作为该参数设置，此时，该函数的返回值就是 jsonpCallback 的结果
+
+</script>
+
+
+<script>
+// 来看一个原生的 jsonp 请求，具体的可以见 jsonp_test.html
+
+// 首先定义一个全局的 jsonp 回调函数
+function jsonpCallback_test(result){
+	console.log('jsonpCallback_test', result);//=> jsonpCallback_test {status: 1, info: "OK"}
+	// 内部执行回调处理
+	// 比如将 script 请求的标记移除
+	document.documentElement.removeChild(document.getElementById('jsonp_test'));
+}
+
+// 动态的将请求的 script 标签插入到文档中
+// src 地址是：
+// 	http://local.php.com/jQ-raw/jsonp_original.php?jsoncallback=jsonpCallback_test
+var script = document.createElement('script');
+script.id = "jsonp_test";
+// jsoncallback 后台接收
+// jsonpCallback_test 后台发送，并将 json 数据以参数的形式传递给 jsonpCallback_test()
+script.src = "http://local.php.com/jQ-raw/jsonp_original.php?jsoncallback=jsonpCallback_test";
+// 将这个 script 添加到文档中
+document.documentElement.appendChild(script);
+// 其实在 jQuery 内部也是这样作的
+
+
+// 来看实现 jQuery 的实现
+
+$.ajax({
+    url: 'http://local.php.com/jQ-raw/jsonp_test.php', // 不同的域
+    type: 'GET', // jsonp 模式只有 GET 是合法的
+    data: {
+        'action': 'qlover'
+    }, // 预传参的数组
+    dataType: 'jsonp', // 数据类型
+    jsonp: 'backfunc', // 指定回调函数名，与服务器端接收的一致，并回传回来
+    jsonpCallback : 'cb'
+})//-> http://local.php.com/jQ-raw/jsonp_test.php?backfunc=cb&action=qlover&_=1525760142576
+// 这个是请求的地址
+.done(function(){
+	console.log('jsonp_test.php', arguments)
+})
+// 因为跨域在 jQuery 底层也是用上面的原生的方式实现
+// 动态加载 script 的 src 属性,然后执行
+
+// 所以流程就有两步，如下：
+// 1. 客户端发送一个请求，规定一个可执行的函数名
+// 	（jQuery 会生成回调，并将数据交给 success ,不是传递的一个回调句柄）
+// 2. 服务端接受了这个 backfunc 函数名，然后把数据通过实参的形式发送出去
+
+// 所以接下来就来看， ajax 的底层对 跨域的处理
+// 为什么说要现在在看源码，因为执行过滤器或请求分发器针对的只是那几种 script, json, jsonp 的类型
+// 而 这个方法的内部则是处理了它们
+// inspectPrefiltersOrTransports() 源码
+// 该方法其实并不是很重要, 主要还是为了给过滤器或分发器绑定一系列的处理函数做处理
+</script>
+

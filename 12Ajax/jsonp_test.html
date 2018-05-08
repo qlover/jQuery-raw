@@ -1,0 +1,12 @@
+<meta charset="UTF-8">
+<title> 原生 JSONP 实现 </title>
+
+
+<div id="divCustomers"></div>
+<script type="text/javascript">
+function callbackFunction(result) {
+	console.log(result);
+	document.getElementById('divCustomers').innerHTML = result;
+}
+</script>
+<script type="text/javascript" src="http://local.php.com/jQ-raw/jsonp_original.php?jsoncallback=callbackFunction"></script>

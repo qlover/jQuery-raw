@@ -1,0 +1,84 @@
+<meta charset="UTF-8">
+<title> $.ajax 源码 </title>
+
+<button><a href="../back/json05.json">同步解析</a></button>
+<button><a href="../back/json05.json">异步解析</a></button>
+<div id="text">
+	
+</div>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 理解了 $.ajax() 流程，现在就来看源码
+// jQuery 1.5+ 提供了三个新的该用，
+// 1. $.ajaxPrefilter  前置过滤器
+// 2. $.ajaxTransport	 请求分发器
+// 3. ajaxConvert() 	类型转换器
+
+// $.ajaxSetup() 
+// 这个方法为设置一个全局的 ajax 参数列表,也就是说每一个调用 ajax 操作的方法时,参数都来自于它
+// 不建议使用
+
+
+// method -> HTTP 请求方式
+// type -> method 选项的别名，1.9+ 使用该选项，默认 GET
+// crossDomain -> 是否跨域请求 false 同域, true 跨域 
+// processData -> 通过 data 选项传递进来的数据, 如果是一个对象, 默认 true 
+// 				如果要发送其它 DOM 信息或不希望转换的信息则为 false 
+// tradtional -> true 为传统的方式来序列化数据
+// gobals	-> false 时不触发全局的 ajax 事件，比如 ajaxStart() ajaxStop()
+// cache 	-> 默认 true, 为 false 时不缓存该面面， dataType为"script"和"jsonp"时默认为false
+// 			但是为 false 时，在 GET 和 HEAD 请求中正常工作
+// contentType -> 当将数据发送到服务器时，使用该内容类型
+// 		默认 'application/x-www-form-urlencoded; charset=UTF-8'
+// 		也可以用 true false 表示有没有内容类型头,1.9+ 
+// 		跨域请求，内容类型设置为
+// 			application/x-www-form-urlencoded
+// 			multipart/form-data
+// 			text/plain
+// ifModified -> 是否忽略 HTTP 头信息,默认值是false ，忽略HTTP头信息
+// 			使用 HTTP 包 Last-Modified 头信息判断
+// 			只有上次请求响应改变时，才允许请求成功
+// headers -> 一个额外的"{键:值}"对映射到请求一起发送
+// contents -> 一个以"{字符串/正则表达式}"配对的对象，根据给定的内容类型，解析请求的返回结果
+// xhrFields -> 一对“文件名-文件值”组成的映射用于设定原生的 XHR对象
+// 				例如，如果需要的话，在进行跨域请求时，你可以用它来设置 withCredentials 为 true 
+// mimeType -> 一个 mime 类型用来覆盖XHR的 MIME类型
+
+
+var rantiCache = /([?&])_=[^&]*/;
+// $1 匹配第一个分组中的内容
+console.log('local.web.com?_=adf'.replace(rantiCache, "$1"));//=> local.web.com?
+console.log('local.web.com?_=adf&a=123'.replace(rantiCache, "$1"));//=> local.web.com?&a=123
+console.log('local.web.com?_=adf&a=123&time=1234'.replace(rantiCache, "$1"));//=> local.web.com?&a=123&time=1234
+
+$.ajax('http://local.web.com/JQ/JQ.raw/back/02ajax.php?a=get#abc', {
+	cache: false,
+})
+
+
+
+
+// $.param()
+// inspectPrefiltersOrTransports()
+// addToPrefiltersOrTransports()
+// $.ajax.done()  内部的一 done() 方法
+</script>
+
+<script>
+
+// 看了 $.ajax() 源码后，先总结一下
+// $.ajax() 做了这样的几件事
+// 1. 校正参数
+// 2. 添加回调到队列
+// 3. 执行请求
+// 并且在前两步的时候都还调用了两次 inspectPrefiltersOrTransports()
+// 还在一切都完成做做了一个调用了一个内部的 done() 回调
+// 有四个地方应用了该回调
+// 1. abort() 方法，中止整个操作的时候应用
+// 2. 如果没有得到请求分发器，调用一次
+// 3. 得到了请求分发器，发送出请求去后，并将该回调也发送走了
+// 4. 整个 ajax() 操作完成后，调用一次
+
+// 还有个最重要的就是 transport.send() 方法是最后发送请求最低层的方法
+// 越来越有意思了，接下来再继续 $.ajax() 的更底层实现
+</script>
