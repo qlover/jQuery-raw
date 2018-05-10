@@ -1,0 +1,77 @@
+<meta charset="UTF-8">
+<title> $.ajax 内部 done() 方法 </title>
+<script src="../jquery-3.1.1.js"></script>
+
+
+<script>
+// 当一次 $.ajax() 发出, 会经过 $.ajax() 内部的参数浅校正
+// 再进行 预处理(ajaxPerfilters) 的校正深校正
+// 在 $.ajax() 与预处理器之间配合完成参数的校正
+// 然后将 $.ajax() 的请求并给请求分器(ajaxTransport)，因为 $.ajax() 只知道自己的是一个 AJAX 请求
+// 并不知道是普通的还是跨域的，所以要交给请求分器
+// 请求分发将 $.ajax() 交给自己的请求作处理，主要两种，
+// 	一普通请求 send(headers, complete)
+// 	二跨域请求 send(_, compete)
+// 经过请求分发器的过滤得到的请求，最后在用请求分发器的 send() 发送请求
+// 接下来就到了这一节的环节，调用内部 done() 方法来对请求完成后的一系列响应，类型，做处理
+// 这个 done 存在于 send() 方法的第二个参数
+// 最终返回出 $.ajax() 
+
+
+
+$.ajax({
+	'url': '../back/json01.json',
+	// dataType : 'xml',  // 用户提供处理的 dataType 类型
+});
+
+</script>
+
+<script>
+// 响应转换器 ajaxHandleResponses()
+// 如果有响应数据则会先调用响应转换器
+// 响应转换器的主要作用就是将原生的响应数据包装
+// 将内部的 dataTypes 包装成 ['xx','xx'] 转换的键用于类型转换器
+
+// 响应转换器最主要的还是对响应的 数据类型进行了 dataTypes 重组
+// 这个数组用于类型转换器
+
+
+</script>
+
+<script>
+// 类型转型器 ajaxConvert()
+// 这个很奇怪,该方法在内部只被一个地方调用过
+// 就是流程的最后一步, 内部 done() 中被调用
+// 那为什么还说它呢,因为,它有个非常重要的作用,就是为 jqXHR 生成 对应的 responsXXX 属性
+// 并且切记这个方法在 ajax 内部的 done() 中被调用的，也就是说在 done() 之后调用的
+
+// converters -> 一个数据类型到数据类型转换器的对象
+// 			每个转换器的值是一个函数，返回经转换后的请求结果
+// 			默认: {"* text": window.String, "text html": true, "text json": jQuery.parseJSON, "text xml": jQuery.parseXML}
+// dataFilter -> 一个函数被用来处理XMLHttpRequest的原始响应数据
+// 			dataFilter(data, type)
+// 			这是一个预过滤功能，净化响应, 您应该返回安全数据
+// 			提供 data 和 type 两个参数
+// 				data 是 Ajax 返回的原始数据
+// 				type 是 调用 jQuery.ajax 时提供的 dataType 参数
+				
+
+console.log($.ajaxSettings.converters);
+//=> {* text: ƒ, text html: true, text json: ƒ, text xml: ƒ, text script: ƒ}
+// 五种，在 ajaxSettings 源码中只规定了前四种转换映射
+// 而最后一种则是在 ajaxSetup() 中添加的文本转换成脚本
+
+
+var foo = function(){
+	return 1;
+}
+var bar = true;
+console.log(foo != true);  //=> true
+console.log(foo !== true); //=> true
+console.log(bar != true);  //=> false
+console.log(bar !== true); //=> false
+// 最后提一下 jsonp 的转换的对应处理器，也就是 converters["script json"]
+// 这个转换规则是在 ajaxPrefiter("json jsonp") 预处理中被定义
+// 最后将源码看一遍，ajax 操作就完了
+</script>
+

@@ -9809,7 +9809,7 @@ jQuery.att = addToPrefiltersOrTransports;
  * @return {[type]}                 [description]
  */
 function inspectPrefiltersOrTransports( structure, options, originalOptions, jqXHR ) {
-	console.info('$> ipfot', arguments);
+	// console.info('$> ipfot', arguments);
 	var
 		// 准备一个空的对象，用于暂时存放与之对应的 dateType 为 true 
 		inspected = {},
@@ -9821,7 +9821,7 @@ function inspectPrefiltersOrTransports( structure, options, originalOptions, jqX
 	// 如果是一个过滤器, 则最终返回的是 false 
 	// 什么都不是则直接返回
 	function inspect( dataType ) {
-		console.info('\t$> ipfot inspect', dataType)
+		// console.info('\t$> ipfot inspect', dataType)
 		var selected;
 		// 设置该类型为 true 在 inspected 对象中
 		inspected[ dataType ] = true;
@@ -9832,7 +9832,7 @@ function inspectPrefiltersOrTransports( structure, options, originalOptions, jqX
 			structure[ dataType ] || [], // 如果没值则是空,
 			// 当然,如果没 dataType 这种 type 则 也不会有 prefilterOrFactory 这个处理函数
 			function _inner_insect( _, prefilterOrFactory ) {
-				console.log('\t\t> _inner_insect')
+				// console.log('\t\t> _inner_insect')
 				// 前置过滤器 或 请求分发器的 类型处理函数源头
 				
 				// 得到这个方法的返回值 dataTypeOrTransport
@@ -9845,7 +9845,8 @@ function inspectPrefiltersOrTransports( structure, options, originalOptions, jqX
 					// 且 类型处理函数返回的值不在临时存放 dataType 的对象中
 					!seekingTransport && !inspected[ dataTypeOrTransport ] ) {
 
-					// 则当前的请求参数的 datatypes 在头添加类型处理返回后的类型字符串 
+					// 则当前的请求参数的 datatypes 在头添加类型处理返回后的类型字符串
+					// 用于最后的转换器中
 					options.dataTypes.unshift( dataTypeOrTransport );
 					inspect( dataTypeOrTransport );
 					return false;
@@ -9887,59 +9888,128 @@ function ajaxExtend( target, src ) {
 
 /* Handles responses to an ajax request:
  * - finds the right dataType (mediates between content-type and expected dataType)
+ * -> 找到正确的数据类型(内容类型和预期数据类型之间的中介)
  * - returns the corresponding response
+ * -> 返回相应的答复
  */
+// 
+/**
+ * 处理响应信息
+ * @param  {object} s         $.ajax() 处理过的参数
+ * @param  {object} jqXHR     jqXHR 对象
+ * @param  {object} responses 请求响应, 被 send() 以 二进制或字符串包装过
+							{ binary : xxx} | { text: xxx}
+ * @return {[type]}           [description]
+ */
+// 其中关于 dataTypes 的改变也在这里被改变， dataTypes 参数主要用于类型转换器用来转换响应的数据
+// 而且，这里面还有个奇妙的操作，则是
+// 	因为 dataType 是用户期望返回的数据类型，且可以传入多个，以空格分开
+// 	注意是多个，以空格分开，所以到底是返回那一个则要看透这个方法了
+// 	当然，这个之后再来回味
 function ajaxHandleResponses( s, jqXHR, responses ) {
-
-	var ct, type, finalDataType, firstDataType,
+	console.info('$> ajaxHandleResponses', s.dataTypes, jqXHR, responses)
+	var ct,   // 响应的 Content-Type
+		type,
+		finalDataType,  // 待转换类型，就是类型转换器的第一个元素; ["text", "xxx"] 的 text 
+		firstDataType,  // 待转换类型副本
 		contents = s.contents,
-		dataTypes = s.dataTypes;
+		dataTypes = s.dataTypes;  // 存放转换类型数组
 
 	// Remove auto dataType and get content-type in the process
+	// jQuery 默认处理通过 MIME 类型的响应信息来智能判断响应类型
+	// 如果处理后的 dataTypes 的第一个参数是 *
+	// 则说明用户没有传入 dataType 到 $.ajax() 请求中
 	while ( dataTypes[ 0 ] === "*" ) {
+		// 则将第一个元素删除
 		dataTypes.shift();
+		// 如果 ct 没值
 		if ( ct === undefined ) {
-			ct = s.mimeType || jqXHR.getResponseHeader( "Content-Type" );
+			// 如果 mimeType 参数存在则用
+			ct = s.mimeType ||
+				// 如果没有则从 Content-Type 中获取
+				jqXHR.getResponseHeader( "Content-Type" );
 		}
 	}
 
 	// Check if we're dealing with a known content-type
+	// 如果 Content-Type 存在 
 	if ( ct ) {
+		// 则遍历 参数的 contents 匹配类型一个一个与 Content-Type 匹配
+		// 也就是匹配出需要转换的类型
+		// contents: {
+		// 	xml: /\bxml\b/,
+		// 	html: /\bhtml/,
+		// 	json: /\bjson\b/
+		// }
+		// 
 		for ( type in contents ) {
+			// 如果有
+			// 并且匹配成功
 			if ( contents[ type ] && contents[ type ].test( ct ) ) {
+				// 则将 需要转换的类型 添加到 dataTypes 头中
 				dataTypes.unshift( type );
 				break;
 			}
 		}
 	}
+	// 此时 dataTypes[0] 存放的则是
+	// 要么是用户指定的 dataType
+	// 要么是从 Content-Type 匹配到的
+	console.log('\t> ajaxHandleResponses dataTypes[0]', dataTypes[0], !dataTypes[0])
 
 	// Check to see if we have a response for the expected dataType
+	// -> 检查是否有预期数据类型的响应
+	// 判断从 Content-Type 或用户指定的 dataType 是否在 send() 包装过的 responses 中
+	// 如果有
 	if ( dataTypes[ 0 ] in responses ) {
+		// 则将最终的数据类型直接定位成从 Content-Type 或用户指定的 dataType
 		finalDataType = dataTypes[ 0 ];
-	} else {
+	}
+	// 否则
+	else {
 
 		// Try convertible dataTypes
+		// 尝试转换数据类型
+		
+		// 遍历包装过后的 responses 的键
 		for ( type in responses ) {
-			if ( !dataTypes[ 0 ] || s.converters[ type + " " + dataTypes[ 0 ] ] ) {
+			console.log('\t> ajaxHandleResponses for', type + " " + dataTypes[ 0 ])
+			// 如果已经有匹配的老板娘转换类型
+			if ( !dataTypes[ 0 ] || 
+				// 或者去 converters 对象中寻找，是否 'type dataTypes[0]' 处理的类型，如果有
+				s.converters[ type + " " + dataTypes[ 0 ] ] )
+			{
+				// 则直接确认 待转换类型
 				finalDataType = type;
 				break;
 			}
+			// 如果没 firstDataType 
+			// 前提是没有匹配到 'type dataTypep[0]'
 			if ( !firstDataType ) {
+				console.log('\t> ajaxHandleResponses for !firstDataType')
+				// 则也直接确认 firstDataType
 				firstDataType = type;
 			}
 		}
 
 		// Or just use first one
+		// 不论如何，都得到最终的 待转换类型
 		finalDataType = finalDataType || firstDataType;
 	}
+
+	// console.info('$/> ajaxHandleResponses', s.dataTypes)
 
 	// If we found a dataType
 	// We add the dataType to the list if needed
 	// and return the corresponding response
 	if ( finalDataType ) {
+		// 如果 待转换类型 与 转换类型 不一样
 		if ( finalDataType !== dataTypes[ 0 ] ) {
+			// 则向转换数组中添加 待转换类型
 			dataTypes.unshift( finalDataType );
 		}
+
+		// 直接返回原始待转换类型的 响应信息
 		return responses[ finalDataType ];
 	}
 }
@@ -9955,70 +10025,111 @@ function ajaxHandleResponses( s, jqXHR, responses ) {
  * @param  {object}  response  请求的响应
  * @param  {jqXHR}  jqXHR     请求对象
  * @param  {Boolean} isSuccess 判断是否成功
- * @return {[type]}            [description]
+ * @return {object}            { satatu : '', data: ''}
  */
 function ajaxConvert( s, response, jqXHR, isSuccess ) {
-	var conv2, current, conv, tmp, prev,
-		converters = {},
+	// 得到经过 ajaxHandleResponses() 包装过 response 
+	// 并用得到处理过了的 参数 s 中的 dataTypes 转换数组
+	// 用该数组执行对应的类型转换
+	var conv2,
+		current,   // s.dataTypes 的数组的指针，每一次指向 dataTypes 中的元素，用于遍历
+		conv, tmp,
+		prev, 		// s.dataTypes 的数组的上一个指针
+		converters = {}, 
 
 		// Work with a copy of dataTypes in case we need to modify it for conversion
 		// -> 使用数据类型的副本进行工作，以防我们需要修改它来转换
+		// 得到 dataType 转换类型数组
 		dataTypes = s.dataTypes.slice();
-	// dataTypes 可以是 text, xml, json, jsonp, script, html
 
+	console.info('$> ajaxConvert dataTypes', dataTypes)
+	// dataTypes[0] 待转换类型
+	// dataTypes[1] 转换类型
 
+	// console.info('$> ajaxConvert s.converters', s.converters);
+	//=>{* text: ƒ, text html: true, text json: ƒ, text xml: ƒ, text script: ƒ}
+	
 	// Create converters map with lowercased keys
+	// -> 用小写字母创建 converters 映射的键
+	// 其实就是将 ajaxSettings 中的转换匹配器复制一份过来
 	if ( dataTypes[ 1 ] ) {
 		for ( conv in s.converters ) {
 			converters[ conv.toLowerCase() ] = s.converters[ conv ];
 		}
 	}
 
-	// 得到第一个元素
+	// 得到第一个元素,类似于得到这个数组的指针
 	current = dataTypes.shift();
 
 	// Convert to each sequential dataType
+	// 从头遍历 dataTypes 
 	while ( current ) {
-		// responseFields 是
+
+		// responseFields 是 ajaxConvert 的一个属性
+		// 且 responseFields 只会有 text xml json 三个值
+		// 如果待转换或转换类型在这个对象中
 		if ( s.responseFields[ current ] ) {
+			// s.responseFields[ current ] 取得对就的 responseXXX 属性
+			// 则为该 jqXHR 对象的 responseXXX 属性赋值
 			jqXHR[ s.responseFields[ current ] ] = response;
 		}
 
 		// Apply the dataFilter if provided
+		// -> 如果提供数据过滤器，则应用
+		// 如果上一个指针不存在
+		// 并且就请求成功
+		// 并且有 ajax 请求 有 dataFilter 参数
 		if ( !prev && isSuccess && s.dataFilter ) {
+			// 参数过滤的方法，接收两个参数
 			response = s.dataFilter( response, s.dataType );
 		}
-
+		// 得到上一个
 		prev = current;
+		// 指针后移
 		current = dataTypes.shift();
 
+		// 如果指针还在
 		if ( current ) {
 
 			// There's only work to do if current dataType is non-auto
+			// 如果 dataType 为 * 则
 			if ( current === "*" ) {
 
+				// 则指针向前移
 				current = prev;
 
 			// Convert response if prev dataType is non-auto and differs from current
-			} else if ( prev !== "*" && prev !== current ) {
+			}
+			// -> 如果prev数据类型是非自动的，并且与当前不同，则转换响应
+			else if ( prev !== "*" && prev !== current ) {
 
 				// Seek a direct converter
+				// -> 寻找直接转换器
+				// 直接创建一个匹配规则，在转换器中
 				conv = converters[ prev + " " + current ] || converters[ "* " + current ];
-
+				console.log('\t> ajaxConvert while conv ->', prev + " " + current,  !!conv)
 				// If none found, seek a pair
+				// 如果直接创建的这个匹配规则 不存在，则要重构出一个转换器
+				// 但目前这里面也不情况是什么
 				if ( !conv ) {
+					console.log('\t> ajaxConvert while no conv')
 					for ( conv2 in converters ) {
 
 						// If conv2 outputs current
+						// tmp 为 ['text', 'xxx'] | ['*', 'xxx']
+						// 因为目前 待转换类型只有可能是 text 和 *
 						tmp = conv2.split( " " );
 						if ( tmp[ 1 ] === current ) {
 
 							// If prev can be converted to accepted input
+							// 这里用 tmp[0] 构建出来的转换器类型数组是 ['xxx', 'text'] \ ['xxx', '*']
+							// 其实这里面就是将 xxx 转换成 text 字符串的地方
 							conv = converters[ prev + " " + tmp[ 0 ] ] ||
 								converters[ "* " + tmp[ 0 ] ];
 							if ( conv ) {
 
 								// Condense equivalence converters
+								// -> 凝聚等效变换器
 								if ( conv === true ) {
 									conv = converters[ conv2 ];
 
@@ -10034,17 +10145,30 @@ function ajaxConvert( s, response, jqXHR, isSuccess ) {
 				}
 
 				// Apply converter (if not an equivalence)
+				// -> 应用转换器(如果不是等效的话)
+				// 这里只针对于 text html 情况，因为 text html 在转换器中只有它是 true 
+				// 也就是说，如果是 ['text', 'html'] 转换则直接返回
 				if ( conv !== true ) {
-
+					console.log('\t> ajaxConvert while !== true', s.throws)
 					// Unless errors are allowed to bubble, catch and return them
+					// -> 除非允许错误冒泡，否则捕获并返回错误。
+					// throws 也是一个参数 , 除上在 $.ajax() 注释外还在 $._evalUrl 中被指定为 true
+					// 但 s.throws 为 undefined 
+					// 因为 $._evalUrl() 是调用另一个 $.ajax()
+					// 目前也不情况 s.throws 有什么用
 					if ( conv && s.throws ) {
+						// 直接调用 conv 转换该数据
 						response = conv( response );
 					} else {
+						// 如果 s.throws 不为真
+						// 则也直接转换，如果出现异常
 						try {
 							response = conv( response );
 						} catch ( e ) {
+							// 则捕获异常，并直接返回
 							return {
 								state: "parsererror",
+								// 如果 conv 存在
 								error: conv ? e : "No conversion from " + prev + " to " + current
 							};
 						}
@@ -10053,9 +10177,12 @@ function ajaxConvert( s, response, jqXHR, isSuccess ) {
 			}
 		}
 	}
-
+	// 上面类型转换一切正常，则返回
 	return { state: "success", data: response };
 }
+
+// 用于测试
+jQuery.ac = ajaxConvert;
 
 // $.ajax 的扩展
 jQuery.extend( {
@@ -10100,6 +10227,7 @@ jQuery.extend( {
 		},
 
 		// 用于 prefilters[*](s) -> s.contents 的正则匹配
+		// 也用于类型转换器的数据类型匹配
 		contents: {
 			xml: /\bxml\b/,
 			html: /\bhtml/,
@@ -10115,20 +10243,29 @@ jQuery.extend( {
 
 		// Data converters
 		// Keys separate source (or catchall "*") and destination types with a single space
+		// 类型转换映射表
+		// 键以 'a b' 形式组成， a 是待转换类型 b 是需要转换的类型
+		// 值是一个转换函数
 		converters: {
 
 			// Convert anything to text
+			// 任意内容转换成字符串
 			"* text": String,
 
 			// Text to html (true = no transformation)
+			// 文本转换成 HTML true 表示不需要转换直接返回
 			"text html": true,
 
 			// Evaluate text as a json expression
+			// 文本转换成 json
 			"text json": JSON.parse,
 
 			// Parse text as xml
+			// 文本转换成 XML
 			"text xml": jQuery.parseXML
-		},
+		}, // 除上这四种，还一种在 全局设置，将 文本转换成 script 
+		// 在下面 ajaxSetup() 中
+
 
 		// For options that shouldn't be deep extended:
 		// you can add your own custom options here if
@@ -10162,8 +10299,8 @@ jQuery.extend( {
 	// Main method
     // ajax 请求主方法
 	ajax: function( url, options ) {
+        console.info('$> $.ajax')
 /*----------校正参数-----------*/
-        // console.info('$> $.ajax')
 		// If url is an object, simulate pre-1.5 signature
         // 如果只传入一个对象，则强制构建一个完整的形参列表
 		if ( typeof url === "object" ) {
@@ -10185,8 +10322,8 @@ jQuery.extend( {
 
 			// Response headers
             // 响应的头
-			responseHeadersString,
-			responseHeaders,
+			responseHeadersString,  // 缓存的响应头
+			responseHeaders,   // 内部 jqXHR 存放的头信息
 
 			// timeout handle
             // 超时处理回调
@@ -10235,7 +10372,7 @@ jQuery.extend( {
 			completeDeferred = jQuery.Callbacks( "once memory" ), // 回调队列，并且记忆只执行一次回调队列
 
 			// Status-dependent callbacks
-            // 状态码
+            // 状态码 Hook 对象
 			statusCode = s.statusCode || {},
 
 			// Headers (they are sent all at once)
@@ -10297,7 +10434,7 @@ jQuery.extend( {
 
 			// Status-dependent callbacks
             // 状态码
-            // 变里有点类似 Hook 的写法
+            // 这里有点类似 Hook 的写法
             // map 是一个 Hook 的对象写法，每一个键就是一个返回的状态码，而对的值则是一个处理函数
             // map = { 404: function(){}}
 			statusCode: function( map ) {
@@ -10351,9 +10488,14 @@ jQuery.extend( {
 		s.type = options.method || options.type || s.method || s.type;
 
 		// Extract dataTypes list
+        // 首次对 dataType 参数的重组
+        // 	如果有 dataType 参数则用
+        // 	没有则用 * 表示默认
+        // 因这这个参数在对响应数据类型判断的时候起一个关键的作用
         // 提取 dataTypes 列表
         // dataType -> 期望返回的数据类型
 		s.dataTypes = ( s.dataType || "*" ).toLowerCase().match( rnothtmlwhite ) || [ "" ];
+		console.log('\t> $.ajax dataTypes', s.dataTypes)
 
 		// A cross-domain request is in order when the origin doesn't match the current origin.
         // 如果没设置跨域请求
@@ -10404,6 +10546,7 @@ jQuery.extend( {
         // 应用前置过滤器
 		var ripot = inspectPrefiltersOrTransports( prefilters, s, options, jqXHR );
 		// console.log('ripot', ripot)
+		
 /*---------------- /预处理 ----------------------*/
 
 /*---------- 过滤后校正参数-----------*/
@@ -10528,6 +10671,7 @@ jQuery.extend( {
 				s.accepts[ "*" ]
 		);
 
+
 		// Check for headers option
         // 是否有额外的头信息
 		for ( i in s.headers ) {
@@ -10569,21 +10713,25 @@ jQuery.extend( {
 /*----/添加回调队列结束---*/
 
 
-/*-------------------执行请求----------------------*/
 
+		// console.log('\t> $.ajax before transport dataTypes', s.dataTypes)
 /*-----------------得到请求分发器----------------*/
 		// Get transport
 		// 得到请求分发器
 		transport = inspectPrefiltersOrTransports( transports, s, options, jqXHR );
+		// console.log('\t> $.ajax after transport dataTypes', s.dataTypes)
 /*-----------------得到请求分发器----------------*/
 
+/*-------------------执行请求----------------------*/
 		// If no transport, we auto-abort
 		// 如果没有请求分发器
 		if ( !transport ) {
+			console.log('\t> no transport')
 			done( -1, "No Transport" );
 		}
 		// 如果有请求分发器
 		else {
+			console.log('\t> yes transport', transport)
 			// 首先将请求状态设置为准备中
 			jqXHR.readyState = 1;
 
@@ -10610,14 +10758,20 @@ jQuery.extend( {
 			}
 
 			try {
+				// 所以的请求已经完成
 				// 设置请求为发送时 => false ; true 为 完成 
 				completed = false;
 				// 发送请求 !!! 这里请求的源头,请求从这里发送出去
+				
+				// send(headers, complete)
+				// 参数一 请求头
+				// 参数二 完成回调
+				// console.log('\t> $.ajax before transport send dataTypes', s.dataTypes)
 				transport.send( requestHeaders, done );
+				// console.log('\t> $.ajax after transport send dataTypes', s.dataTypes)
 			}
 			// 捕获可能会出现的异常
 			catch ( e ) {
-
 				// Rethrow post-completion exceptions
 				// 如果已经完成,则重新抛出完成后的异步
 				if ( completed ) {
@@ -10635,47 +10789,80 @@ jQuery.extend( {
 
 		// Callback for when everything is done
 		// -> 当一切都完成时回调
+		
+		/**
+		 * 请求完成时的回调
+		 * @param  {number}   status           请求的状态
+		 * @param  {string}   nativeStatusText 状态信息
+		 * @param  {string}   responses        请求响应, 被 send() 以 二进制或字符串包装过
+		 *                                     { binary : xxx} | { text: xxx}
+		 * @param  {string}   headers          响应的头
+		 * @return {Function}                  [description]
+		 */
+		// 该方法只有一个地方以回调形式调用
+		// 就是在请求完成时当作回调传入到 send() 中的第二个参数
 		function done( status, nativeStatusText, responses, headers ) {
+			console.info('$> $.ajax done', arguments)
 			var isSuccess, success, error, response, modified,
 				statusText = nativeStatusText;
 
 			// Ignore repeat invocations
+			// 如果完成则直接返回
 			if ( completed ) {
 				return;
 			}
 
+			// 重置
 			completed = true;
 
 			// Clear timeout if it exists
+			// 如果存在超时，则清除它
 			if ( timeoutTimer ) {
 				window.clearTimeout( timeoutTimer );
 			}
 
 			// Dereference transport for early garbage collection
 			// (no matter how long the jqXHR object will be used)
+			// 清空请求分发
 			transport = undefined;
 
 			// Cache response headers
+			// 缓存响应头
 			responseHeadersString = headers || "";
 
 			// Set readyState
+			// 设置 jqXHR 属性
 			jqXHR.readyState = status > 0 ? 4 : 0;
 
 			// Determine if successful
+			// 判断是否成功
 			isSuccess = status >= 200 && status < 300 || status === 304;
 
 			// Get response data
+			// 得到响应的数据
 			if ( responses ) {
+
+				// 转换器一： 响应转换器
 				response = ajaxHandleResponses( s, jqXHR, responses );
 			}
+			// 响应转换器，主要将 s 的 dataType 变换成了 ['text', 'xxx']
+			// 对应 converters 映射表，将返回的映射表交给类型转换器
 
+			// 转换器二： 类型转换器
 			// Convert no matter what (that way responseXXX fields are always set)
 			response = ajaxConvert( s, response, jqXHR, isSuccess );
 
+			// 暂停！！ 两个转换器出现了，一个是响应转换，另一个是类型转换
+
+
+
 			// If successful, handle type chaining
+			// -> 如果成功，则处理类型链接。
+			// 如果请求是成功的
 			if ( isSuccess ) {
 
 				// Set the If-Modified-Since and/or If-None-Match header, if in ifModified mode.
+				// 修改或设置 If-Modified-Since 头信息
 				if ( s.ifModified ) {
 					modified = jqXHR.getResponseHeader( "Last-Modified" );
 					if ( modified ) {
@@ -10688,23 +10875,34 @@ jQuery.extend( {
 				}
 
 				// if no content
+				// 204 No Content 无内容
+				// 	服务器成功处理，但未返回内容
+				// 	在未更新网页的情况下，可确保浏览器继续显示当前文档
+				// 或者请求类型是 HEAD 
 				if ( status === 204 || s.type === "HEAD" ) {
 					statusText = "nocontent";
 
 				// if not modified
+				// 304 Not Modified	未修改
+				// 	所请求的资源未修改，服务器返回此状态码时，不会返回任何资源
+				// 	客户端通常会缓存访问过的资源，通过提供一个头信息指出客户端希望只返回在指定日期之后修改的资源
 				} else if ( status === 304 ) {
 					statusText = "notmodified";
 
 				// If we have data, let's convert it
+				// 否则表示有数据
 				} else {
 					statusText = response.state;
 					success = response.data;
 					error = response.error;
 					isSuccess = !error;
 				}
-			} else {
+			}
+			// 请求不成功
+			else {
 
 				// Extract error from statusText and normalize for non-aborts
+				// -> 从 statusText 提取错误并对非中止进行规范化
 				error = statusText;
 				if ( status || !statusText ) {
 					statusText = "error";
@@ -10715,9 +10913,11 @@ jQuery.extend( {
 			}
 
 			// Set data for the fake xhr object
+			// 为 jqXHR 对象设置状态码与状态信息
 			jqXHR.status = status;
 			jqXHR.statusText = ( nativeStatusText || statusText ) + "";
 
+			// 最终执行 Deferred 回调队列的地方
 			// Success/Error
 			if ( isSuccess ) {
 				deferred.resolveWith( callbackContext, [ success, statusText, jqXHR ] );
@@ -10726,29 +10926,40 @@ jQuery.extend( {
 			}
 
 			// Status-dependent callbacks
+			// -> 状态相关回调
 			jqXHR.statusCode( statusCode );
 			statusCode = undefined;
 
+			// 如果有全局事件
 			if ( fireGlobals ) {
+				// 则用全局事件的上下文触发对应的全局 ajax 事件
 				globalEventContext.trigger( isSuccess ? "ajaxSuccess" : "ajaxError",
 					[ jqXHR, s, isSuccess ? success : error ] );
 			}
 
 			// Complete
+			// 不论成功失败回调队列
 			completeDeferred.fireWith( callbackContext, [ jqXHR, statusText ] );
 
+			// 如果全局的事件允许
 			if ( fireGlobals ) {
+				// 则触发 ajaxComplete 事件
 				globalEventContext.trigger( "ajaxComplete", [ jqXHR, s ] );
 
 				// Handle the global AJAX counter
+				// -> 处理全局Ajax计数器
 				if ( !( --jQuery.active ) ) {
+					// 触发全局 ajaxStop 事件
 					jQuery.event.trigger( "ajaxStop" );
 				}
 			}
+
+			console.info('$/> $.ajax done');
 		}
 
-
-        // console.info('$/> $.ajax', jqXHR);
+		// 整个 done() 方法完成，返回 jqXHR 对象
+		// 整个 $.ajax() 请求完成
+        console.info('$/> $.ajax');
 		return jqXHR;
 	},
 
@@ -10761,6 +10972,7 @@ jQuery.extend( {
 	}
 } );
 
+// $.get() 和 $.post() 的提供的专门的方法
 jQuery.each( [ "get", "post" ], function( i, method ) {
 	jQuery[ method ] = function( url, data, callback, type ) {
 
@@ -10935,10 +11147,11 @@ jQuery.ajaxTransport( function _star( options ) {
 			/**
 			 * 普通情况的源头 send() 方法
 			 * @param  {object} headers  请求头信息
-			 * @param  {function} complete 完成时的回调
+			 * @param  {function} complete 请求完成时的回调
 			 * @return {[type]}          [description]
 			 */
 			send: function( headers, complete ) {
+				console.info('$> normal ajax send', arguments)
 				var i,
 					xhr = options.xhr();
 
@@ -11025,7 +11238,7 @@ jQuery.ajaxTransport( function _star( options ) {
 									);
 								}
 							}
-							// 不是失败也不是中止, 直接完成
+							// 请求成功并完成
 							else {
 								// 为完成回调四个参数
 								complete(
@@ -11039,8 +11252,11 @@ jQuery.ajaxTransport( function _star( options ) {
 									// For XHR2 non-text, let the caller handle it (gh-2498)
 									// 请求的 text 内容
 									( xhr.responseType || "text" ) !== "text"  ||
+									// 判断是二进制还是字符串
 									typeof xhr.responseText !== "string" ?
+										// 如果是二进制，则用 { binary: xxx} 封装
 										{ binary: xhr.response } :
+										// 如果是字符串，则有 { text: xxx} 封装
 										{ text: xhr.responseText },
 									// 原生方法 getAllResponseHeaders()
 									// 返回所有响应头信息(响应头名和值), 如果响应头还没接受,则返回null
@@ -11127,7 +11343,7 @@ jQuery.ajaxTransport( function _star( options ) {
 // 参数一没有，则默认是 *, * 类型方式的处理函数
 // _star() 参数一接收一个 options 对象
 jQuery.ajaxPrefilter( function _star( s ) {
-	console.info('$> prefilter["*"]', arguments);//=> 这里有三个参数
+	// console.info('$> prefilter["*"]', arguments);//=> 这里有三个参数
 	// 接收的这三个参数在
 	// 	inspectPrefiltersOrTransports() 
 	// 	-> inspcet() 
@@ -11140,7 +11356,7 @@ jQuery.ajaxPrefilter( function _star( s ) {
 		// 用于测试
 		// contents 在 ajaxSettings 中，用于内部 $.ajax() 的参数
 		var sc = s.contents;
-		console.log('\t> sc->', sc)
+		// console.log('\t> sc->', sc)
 		// 其 sc.script 也是一个正则，就是下面的全局设置中被设置
 		sc.script = false;
 		// 如果是跨域，则将 匹配 script 重置为 false
@@ -11152,6 +11368,8 @@ jQuery.ajaxPrefilter( function _star( s ) {
 // -> 安装脚本数据类型
 // 在外部设置一个全局的 ajax 请求参数
 jQuery.ajaxSetup( {
+	// 内容类型发送请求头 Content-Type 用于通知服务器该请求需要接收何种类型的返回结果
+	// 如果accepts设置需要修改，推荐在$.ajaxSetup() 方法中设置一次。
 	accepts: {
 		script: "text/javascript, application/javascript, " +
 			"application/ecmascript, application/x-ecmascript"
@@ -11160,6 +11378,9 @@ jQuery.ajaxSetup( {
 	contents: {
 		script: /\b(?:java|ecma)script\b/
 	},
+
+	// 为全局的内容转换器添加一个
+	// 文本转脚本的属性， 对应在 ajaxSetting 中
 	converters: {
 		"text script": function( text ) {
 			jQuery.globalEval( text );
@@ -11197,7 +11418,7 @@ jQuery.ajaxTransport( "script", function( s ) {
 		return {
 			// 跨域的 send() 方法
 			send: function( _, complete ) {
-
+				console.info('$> jsonp send')
 				// 得到一个 script 标记,设置其属性
 				script = jQuery( "<script>" ).prop( {
 					charset: s.scriptCharset,
@@ -11494,7 +11715,7 @@ jQuery.fn.load = function( url, params, callback ) {
 
 
 // Attach a bunch of functions for handling common AJAX events
-// -> 附加一组函数来处理常见的ajax事件
+// -> 附加一组函数来处理常见的 ajax 事件
 jQuery.each( [
 	"ajaxStart",
 	"ajaxStop",

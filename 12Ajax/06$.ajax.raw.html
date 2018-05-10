@@ -9,10 +9,15 @@
 <script src="../jquery-3.1.1.js"></script>
 <script>
 // 理解了 $.ajax() 流程，现在就来看源码
-// jQuery 1.5+ 提供了三个新的该用，
-// 1. $.ajaxPrefilter  前置过滤器
-// 2. $.ajaxTransport	 请求分发器
-// 3. ajaxConvert() 	类型转换器
+// 后面源码流程主要以这三步
+// 	1. $.ajaxPrefilter  前置过滤器
+// 	2. $.ajaxTransport	 请求分发器
+// 	3. 内部 done() 		在请求完成后被调用的方法
+// 					-> 两个转换器 
+// 						ajaxConvert()  类型转换器
+// 						ajaxHandleResponses() 响应转换器
+
+
 
 // $.ajaxSetup() 
 // 这个方法为设置一个全局的 ajax 参数列表,也就是说每一个调用 ajax 操作的方法时,参数都来自于它
@@ -61,7 +66,7 @@ $.ajax('http://local.web.com/JQ/JQ.raw/back/02ajax.php?a=get#abc', {
 // $.param()
 // inspectPrefiltersOrTransports()
 // addToPrefiltersOrTransports()
-// $.ajax.done()  内部的一 done() 方法
+// $.ajax.done()  内部的 done() 方法
 </script>
 
 <script>

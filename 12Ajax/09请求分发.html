@@ -46,7 +46,7 @@ xhr.onreadystatechange = function(){
 
 var args = {
 	'method': 'GET',
-	'url': '../back/json1.json',
+	'url': '../back/json01.json',
 };
 xhr.open(args.method, args.url, false);
 xhr.send();
@@ -70,16 +70,10 @@ if ( xhr.readyState == 4) {
 // 分发器的源码就这么多,也许会纠结, jQuery 的 ajax 执行流程看不懂了
 // 那是因为 jQuery 将很多的事件处理都给分开了
 // 这都是因为全部的事件回调都交给了 Deferred
+// 而且还处理了正常请求与跨域请求
 // 所以在看分发器的源码时会出现疑问,前面都已经将大体的流程给说明了
 </script>
 
-<script>
-// 类型转型器 ajaxConvert()
-// 这个很奇怪,该方法在内部只被一个地方调用过
-// 就是流程的最后一步, 内部 done() 中被调用
-// 那为什么还说它呢,因为,它有个非常重要的作用,就是为 jqXHR 生成 对应的 responsXXX 属性
 
 
-// converters -> 一个数据类型到数据类型转换器的对象。每个转换器的值是一个函数，返回经转换后的请求结果
-</script>
 
