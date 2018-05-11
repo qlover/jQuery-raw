@@ -75,3 +75,39 @@ console.log(bar !== true); //=> false
 // 最后将源码看一遍，ajax 操作就完了
 </script>
 
+
+<script>
+console.log('-----------')
+// ajax 最后再介绍几个提供的快捷处理方法
+// $.fn.load()
+// $.get()
+// 	 .get(url, data, success, dataType)
+// 	 .get(url, success)
+// 	 .get(settings)
+// $.post()
+// $.getJson()
+// $.getScript()
+
+
+// $.get(url, data, success, dataType)
+// 	url 请求地址
+// 	data 发送的数据
+// 	success 请求成功后执行的回调
+// 		如果提供了 dataType 该参数是必须的
+// 	dataType 从服务器返回的预期的数据类型
+// 	
+// 	
+// 使用一个 HTTP GET 请求从服务器加载数据
+
+var o = 100;
+$.ajax( $.extend({
+	url : '../back/json01.json',
+}, $.isPlainObject(o) && o));
+
+
+console.log('------------')
+// $.get() 和 $.post() 内部一模一样
+// $.getJson() 和 $.getScript() 内部都只是调用了 $.get(), 只是参数不一样
+// 而 fn.load() 的用法则一早都说过了, 这里就只看看源码
+</script>
+

@@ -8678,6 +8678,7 @@ jQuery.each( [
 	// Strip and collapse whitespace according to HTML spec
 	// https://html.spec.whatwg.org/multipage/infrastructure.html#strip-and-collapse-whitespace
 	// 将多个类名组合成多个类名之间一个空格的字符串
+	// 就将 'class1   class2 class3    class4' 组合成 'class1 class2 class3 class4' 这样的字符串
 	function stripAndCollapse( value ) {
 		// 匹配出不是空白部分的数组
 		var tokens = value.match( rnothtmlwhite ) || [];
@@ -10299,10 +10300,10 @@ jQuery.extend( {
 	// Main method
     // ajax 请求主方法
 	ajax: function( url, options ) {
-        console.info('$> $.ajax')
+        console.info('$> $.ajax', arguments)
 /*----------校正参数-----------*/
 		// If url is an object, simulate pre-1.5 signature
-        // 如果只传入一个对象，则强制构建一个完整的形参列表
+        // 如果 url 传入一个对象，则强制构建一个完整的形参列表
 		if ( typeof url === "object" ) {
 			options = url;
 			url = undefined;
@@ -10311,6 +10312,8 @@ jQuery.extend( {
 		// Force options to be an object
         // 这也是一种强制型的将 options 变成一个对象
 		options = options || {};
+
+		console.log('\t> url, options', url, options)
 
         // 内部声明一大堆的变量
 		var 
@@ -10962,21 +10965,24 @@ jQuery.extend( {
         console.info('$/> $.ajax');
 		return jqXHR;
 	},
-
+	// $.getJson()
 	getJSON: function( url, data, callback ) {
 		return jQuery.get( url, data, callback, "json" );
 	},
-
+	// $.getScript()
 	getScript: function( url, callback ) {
 		return jQuery.get( url, undefined, callback, "script" );
 	}
 } );
 
-// $.get() 和 $.post() 的提供的专门的方法
+// $.get() 和 $.post()
 jQuery.each( [ "get", "post" ], function( i, method ) {
+	// $.get() 和 $.post() 的提供的专门的方法
 	jQuery[ method ] = function( url, data, callback, type ) {
 
 		// Shift arguments if data argument was omitted
+		// 如果参数只有两个则，重组参数
+		// $.get(url, success)
 		if ( jQuery.isFunction( data ) ) {
 			type = type || callback;
 			callback = data;
@@ -10984,6 +10990,9 @@ jQuery.each( [ "get", "post" ], function( i, method ) {
 		}
 
 		// The url can be an options object (which then must have .url)
+		// 其实底层还是用 $.ajax() 操作
+		// 这里 $.extend() 是两个参数,则是浅复制
+		// 如果 传入的是一个 setting ,则将 settings 浅复制进 extend 中第一个对象中的默认参数中
 		return jQuery.ajax( jQuery.extend( {
 			url: url,
 			type: method,
@@ -11650,6 +11659,14 @@ jQuery.parseHTML = function( data, context, keepScripts ) {
 
 /**
  * Load a url into a page
+ * 
+ */
+/**
+ * 加载一个 url 到页面中
+ * @param  {string}   url      url 地址
+ * @param  {object}   params   请求的参数
+ * @param  {Function} callback 当请求完成后执行的回调函数
+ * @return {[type]}            [description]
  */
 jQuery.fn.load = function( url, params, callback ) {
 	var selector, type, response,
@@ -11662,25 +11679,31 @@ jQuery.fn.load = function( url, params, callback ) {
 	}
 
 	// If it's a function
+	// $.fn.load(url, function(){})
 	if ( jQuery.isFunction( params ) ) {
-
 		// We assume that it's the callback
+		// 重组参数
 		callback = params;
 		params = undefined;
 
 	// Otherwise, build a param string
 	} else if ( params && typeof params === "object" ) {
+		// 强制构建请求类型为 POST
 		type = "POST";
 	}
 
 	// If we have elements to modify, make the request
+	// 如果当前的这个 jQuery 元素数组有元素
 	if ( self.length > 0 ) {
+		// 则还是利用底层的 $.ajax() 发送一次请求
 		jQuery.ajax( {
 			url: url,
 
 			// If "type" variable is undefined, then "GET" method will be used.
 			// Make value of this field explicit since
 			// user can override it through ajaxSetup method
+			// -> 用户能够通过 ajaxSetup() 方法设置全局的
+			// 默认为 GET 请求
 			type: type || "GET",
 			dataType: "html",
 			data: params
@@ -11688,7 +11711,7 @@ jQuery.fn.load = function( url, params, callback ) {
 
 			// Save response for use in complete callback
 			response = arguments;
-
+			// 将请求到的参数直接用 <div></div> 标记包装到该元素中
 			self.html( selector ?
 
 				// If a selector was specified, locate the right elements in a dummy div
@@ -11701,13 +11724,15 @@ jQuery.fn.load = function( url, params, callback ) {
 		// If the request succeeds, this function gets "data", "status", "jqXHR"
 		// but they are ignored because response was set above.
 		// If it fails, this function gets "jqXHR", "status", "error"
+		// 请求成功则回调传入 response 
+		// 请求失败则回调传入 jqXHR, status, error
 		} ).always( callback && function( jqXHR, status ) {
 			self.each( function() {
 				callback.apply( this, response || [ jqXHR.responseText, status, jqXHR ] );
 			} );
 		} );
 	}
-
+	// 链式关系,返回自己
 	return this;
 };
 
