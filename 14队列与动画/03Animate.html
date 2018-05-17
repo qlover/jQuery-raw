@@ -1,0 +1,211 @@
+<meta charset="UTF-8">
+<title> Animate </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+
+<div id="box" data-id="#box" style="background: #f00;"></div>
+<div id="mid" style="background: #0f0;"></div>
+
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// $.animate(prop, speed, easing, callback)
+// 	prop 一个或一组 css 属性
+// 	easing 缓动函数，默认 swing
+// 		swing 在开头/结尾移动慢，在中间移动快
+// 		linear 匀速移动
+// 注意，颜色，不在 jQuery 核心中，颜色不能被缓动
+
+
+$('#box').animate({background: '#00f'});// 没有作用
+
+$('#box').css({
+	'transition' : 'all 3s',
+	'background' : '#00f' 
+}); // 利用 css3 的属性来实现
+// 或者是用 css3 和属性动画 
+
+$('#mid').css({
+	'animation': 'bgc 3s',
+});
+
+// 也就是说 jQuery 的 animate() 是有局限性的
+// 但这都不重要，重要的是接下来的源码
+
+</script>
+
+<script>
+// 当然 ，我们自己也可以实现 jQuery 的动画原理
+var box1 =  $('#box1');
+/*
+// duration => 2000
+// 2 秒内将 left 移动到 500
+// 所以
+// 每毫秒需要移动的距离则是 500 / 2000
+// 每毫秒 left 的值将变为 left + (500 / 2000)
+// 得到动画开始时间，从开始时间，一秒一秒的加，如果当前的时间大于开始时间 2 秒则表示动画就结束了
+// 有了动画中的时间,就可以得到动画中时间与整个动画时间 2 秒的比值
+// 这个比值就可以对应 该移动的距离和整个距离的比值,就可以执行动画 
+var timerId = null;
+function time(){
+	return (+new Date)
+}
+var initLeft = 50;
+var endLeft  = 500;
+var duration = 2000;
+var
+	ie = endLeft - initLeft, // 整个距离与初始距离的差值
+	pos, 				// 每次需要移动的距离
+	startTime = time(), // 用于记录动画开始时间
+	remaining, 				// 当前时间与动画开始时间差
+	timePecent, 			// 时间与距离的比值
+	tmp,
+// time() - startTime 就等于当前时间与动画开始时间的差,如果大于了 2000 则说明时间到了
+timerId = setInterval(function(){
+	// box1.css('left', '100px');
+	// 计算出每秒需要移动的多少距离
+	remaining =  time() - startTime;
+	timePecent = remaining / duration;
+	tmp = parseInt(ie * timePecent + initLeft)
+	pos = (tmp > endLeft ? endLeft :tmp) + 'px';
+	// 最后,移动 left 到 500
+	box1.css({left: pos})
+	if( timePecent >= 1 ){
+		console.log('animate over');
+		clearInterval(timerId);
+		timerId = null;
+		return false;
+	}
+}, 8); // 8 表示一帧的时间
+*/
+
+</script>
+
+
+<script>
+function animate(elem, option, complete){
+	var timerId,
+		init = parseInt(elem.style['left']),
+		end = option.left,
+		duration = option.duration || 2000,
+		ie,
+		pos,
+		time = function(){
+			return (+new Date)
+		},
+		begTime = time(),
+		remaining, timePecent, tmp,
+		doAnimation = function(){
+			// 计算出每秒需要移动的多少距离
+			remaining =  time() - begTime;
+			// 计算出时间比
+			timePecent = remaining / duration;
+			// 得到需要移动的数, 如果 ie 为正数则为负数, 负数则为正数
+			tmp = -((ie * timePecent) + init)
+			// 最后取绝对值
+			pos = Math.abs(tmp > end ? end : tmp);
+			// console.log(remaining, timePecent,  tmp, pos)
+			// 最后,移动 left 到 500
+			if( timePecent >= 1 ){
+				elem.style['left'] = pos + 'px';
+				clearInterval(timerId);
+				timerId = null;
+				// 执行回调
+				complete && complete.call(elem);
+			} else {
+				elem.style['left'] = pos + 'px';
+			}
+		};
+
+	ie = end > init ? -(end - init) : end - init;
+	timerId = setInterval(doAnimation, 8);
+};
+animate(box1[0], {
+	left : 0,
+}, function(){
+	console.log('animate over')
+});
+
+// 这是一个基本的实现原理, jQuery 中也是如此
+</script>
+
+<script>
+// $.fn.animate() 源码
+// 该方法源码逻辑很简单
+// 1. 将自己的 option 给 $.speed() 中得到 optall,也就是处理后的参数对象
+// 2. 为每一个元素执行内部 doAnimate()
+
+
+// $.speed()
+// $.Animation() => 内部也是一个 Animate()
+
+
+
+
+// $.speed()
+// 	.speed()
+// 	.speed(duration, settings)
+// 	.speed(duration, easing, complete)
+// 	.speed(settings)
+// duration 默认 400
+// easing  动画中使用那种缓动函数, 默认 swing
+// complete 动画完成时的回调
+// settings 是一个包含了上面三个参数的对象
+
+
+console.log($.speed());//=> {complete: ƒ, duration: 400, easing: undefined, queue: "fx", old: false}
+// 返回了一个对象,这个对象有
+// 1. complete 	完成时的回调
+// 2. duration 	动画持续时间
+// 3. easing 	使用的缓动函数
+// 4. queue 	动画队列名, 可以为空,也可以为 true 都表示默认 fx 队列
+// 5. old 		属性
+// 这都是一个默认的 speed() 返回的对象
+
+// fn.animate() 中首先就是判断是否有 prop 对象
+// 第二步就是用 $.speed() 得到了一个 optall 对象,也就是上面的这个对象
+
+// $.speed(settings)
+// console.log($.speed({
+// 	duration : 500,
+// 	easing : 'swing',
+// 	complete : function _complete(){
+// 		console.log('animate over!')
+// 	}
+// }));
+console.log($.speed(500, 'swing', function _com(){ }));
+// 这下可以看情况了, old 属性是 complete 指定的回调
+// 而 complete 属性是内部处理后的一个回调
+
+
+// 不多说看源码, $.speed()
+// 该方法内部也很简单,做了两件事
+// 1. 处理初始情况下的 animate() 传来的 option
+// 2. 最主要还是提供了一个对外的接口方法 complete
+// 		该方法可以执行用户最初传入的 complete 方法
+// 		并且还会执行动画队列的下一个函数
+		
+
+// $.Animate()
+// Animation === jQuery.Animation 源码证明这个是返回 true 的
+
+</script>
+
+
+
+<script>
+// $.fx.off 是否禁用全局所有动画
+// 		当这个属性设置为 true 的时候，调用时所有动画方法将立即设置元素为他们的最终状态，而不是显示效果
+// $.fx.speeds
+// 		
+</script>

@@ -159,6 +159,7 @@ jQuery.fn = jQuery.prototype = {
 	},
 
 	// Execute a callback for every element in the matched set.
+	// 为当前 jQuery 数组对象都执行回调
 	each: function( callback ) {
 		return jQuery.each( this, callback );
 	},
@@ -4528,8 +4529,9 @@ Data.prototype = {
 
 		// In cases where either:
 		//
-		//   1. No key was specified
+		//   1. No key was specified -> 没有 key
 		//   2. A string key was specified, but no value provided
+		//   	-> 有 key 但没有 value
 		//
 		// Take the "read" path and allow the get method to determine
 		// which value to return, respectively either:
@@ -4537,9 +4539,15 @@ Data.prototype = {
 		//   1. The entire cache object
 		//   2. The data stored at the key
 		//
+		
+		// 如果 key 不存在 
 		if ( key === undefined ||
-				( ( key && typeof key === "string" ) && value === undefined ) ) {
-
+				// 或者 key 存在且是 字符串
+				( ( key && typeof key === "string" )
+					// 且没有值
+					&& value === undefined ) ) 
+		{
+			// 则 get
 			return this.get( owner, key );
 		}
 
@@ -4549,16 +4557,28 @@ Data.prototype = {
 		//   1. An object of properties
 		//   2. A key and value
 		//
+		
+		// 则设置
 		this.set( owner, key, value );
 
 		// Since the "set" path can have two possible entry points
 		// return the expected data based on which path was taken[*]
+		// 返回如果有 value ,则返回 value
+		// 如果没有 value 则返回 key
 		return value !== undefined ? value : key;
 	},
+	/**
+	 * 移除一个缓存 key
+	 * @param  {element} owner DOM 元素
+	 * @param  {string|array} key   key 或者是数组的 key 
+	 * @return {[type]}       [description]
+	 */
 	remove: function( owner, key ) {
 		var i,
 			cache = owner[ this.expando ];
 
+		// 因为存入缓存的时候用的是 expando 唯一标识,标识的缓存编号
+		// 如果没有,则直接返回
 		if ( cache === undefined ) {
 			return;
 		}
@@ -4575,7 +4595,7 @@ Data.prototype = {
 			}
 			// 如果不是一个数组，只是一个 键 
 			else {
-				// 则强行构建一个数组
+				// 则强行构建驼峰命名的 key 数组
 				key = jQuery.camelCase( key );
 
 				// If a key with the spaces exists, use it.
@@ -4850,98 +4870,182 @@ jQuery.fn.extend( {
 	}
 } );
 
-
+// $.queue() / $.queue()
 jQuery.extend( {
+	/**
+	 * 低级的 getter/setter $.queue()
+	 * @param  {element} elem DOM 元素
+	 * @param  {string|null} type 队列名, 可不指定,默认 fx 
+	 * @param  {function|array} data 添加的函数或函数数组
+	 * @return {array}      该 DOM 元素的队列函数数组
+	 */
 	queue: function( elem, type, data ) {
+		// console.info('$> $.queue', arguments)
+		// 将从缓存上获取的队列
 		var queue;
 
+		// 如果有这个元素
 		if ( elem ) {
+			// 组合默认的队列名 type + queue
+			// (type || 'fx') 默认 fx 队列名
 			type = ( type || "fx" ) + "queue";
+			// console.log('\t> type', type)
+			// 获取该元素缓存上的队列名
 			queue = dataPriv.get( elem, type );
 
 			// Speed up dequeue by getting out quickly if this is just a lookup
+			// -> 如果这仅仅是一个查找，则通过快速退出来加快排队列速度。
 			if ( data ) {
+				// 如果没有这个队列
+				// 或者是有函数数组
 				if ( !queue || jQuery.isArray( data ) ) {
+					// 则用缓存的 access() 方法
+					// 注意这个  access() 方法是缓存的方法,并不是内部那个用于专门处理 get/set 操作的 access()
+					// 		elem.type = jQuery.makeArray() 
 					queue = dataPriv.access( elem, type, jQuery.makeArray( data ) );
-				} else {
+				}
+				// 否则直接将函数入列
+				else {
 					queue.push( data );
 				}
 			}
+			// 返回
 			return queue || [];
 		}
 	},
 
+	/**
+	 * 执行队列中的函数
+	 * @param  {element} elem DOM 元素
+	 * @param  {string} type  队列名
+	 * @return {[type]}      [description]
+	 */
 	dequeue: function( elem, type ) {
+		// 默认队列名 fx
 		type = type || "fx";
 
-		var queue = jQuery.queue( elem, type ),
+		var
+			// 首先得到该元素的队列
+			queue = jQuery.queue( elem, type ),
+			// 队列的长度
 			startLength = queue.length,
+			// 第一个出列
 			fn = queue.shift(),
+			// 得到队列钩子
 			hooks = jQuery._queueHooks( elem, type ),
+			// 该方法内部的 next() 执行下一个
 			next = function() {
 				jQuery.dequeue( elem, type );
 			};
 
 		// If the fx queue is dequeued, always remove the progress sentinel
+		// 如果此时出列的是 inprogress 状态
 		if ( fn === "inprogress" ) {
+			// 则下一个在出列
 			fn = queue.shift();
+			// 则改变整个长度
 			startLength--;
 		}
 
+		// 如果有出列函数,则执行这个函数
 		if ( fn ) {
 
 			// Add a progress sentinel to prevent the fx queue from being
 			// automatically dequeued
+			// 如果是默认的队列名字
 			if ( type === "fx" ) {
+				// 则向队列开头添加 inprogress 表示状态,
+				// 此时虽然在添加进了 inprogress 但整个长度并没有改变
+				// 因为前面将之前的队头的函数出列了,而这里有点相当于将原始的队头的函数替换成 inprogress
 				queue.unshift( "inprogress" );
 			}
 
 			// Clear up the last queue stop function
+			// -> 清除最后一个队列停止函数
 			delete hooks.stop;
+			// 执行这个出列的函数
+			// 并且,这个函数接收两个参数
+			// 1. next 的引用,就是执行下一个
+			// 2. hooks 该队列的钩子
 			fn.call( elem, next, hooks );
 		}
 
+		// 如果长度执行完成并且有 hooks 
 		if ( !startLength && hooks ) {
+			// 就执行 hooks 中的 empty() 方法
+			// 清空队列
 			hooks.empty.fire();
 		}
 	},
 
 	// Not public - generate a queueHooks object, or return the current one
+	// -> 不是公共的-生成一个队列挂钩对象，或者返回当前的对象
 	_queueHooks: function( elem, type ) {
 		var key = type + "queueHooks";
+		// 返回这个元素的 队列名钩子
+		// 如果没有钩子,则返回 一个方法
+		// 	这个方法是在为当前的元素通过缓存的 access() 方法添加的 empty() 方法,也就是清空
 		return dataPriv.get( elem, key ) || dataPriv.access( elem, key, {
+			// empty() 返回一个 callbacks 对象
+			// 是一个 once memory 模式的回调,并且添加了一个回调方法
 			empty: jQuery.Callbacks( "once memory" ).add( function() {
+				// 这个回调方法就是 缓存对象的 remove() 方法
+				// 移除一个元素的缓存 key ,这里用的是以数组的形式移除, 将队列与队列钩子都移除
 				dataPriv.remove( elem, [ type + "queue", key ] );
 			} )
 		} );
 	}
 } );
 
+// $.fn.queue() / $.fn.dequeue()
 jQuery.fn.extend( {
+	/**
+	 * 原型上的 getter/setter queue() 
+	 * 将类型和函数添加到动画队列中
+	 * @param  {string} type 队列的名字
+	 * @param  {function|array} data 添加到队列的函数或函数数组
+	 * @return {[type]}      [description]
+	 */
 	queue: function( type, data ) {
+		// console.info('$> $.fn.queue')
+		// 用来标识 get/set 操作的数, 有两种情况
+		// 1. 指定了队列名, 则标识不变
+		// 2. 如果没有指定队列名,则标识改变
 		var setter = 2;
 
+		// 如果没有指定队列的名字,则重构形参
 		if ( typeof type !== "string" ) {
+			// 参数向右移
 			data = type;
+			// 默认 fx 为动画队列名
 			type = "fx";
+			// 标识变为 1
 			setter--;
 		}
 
+		// console.log('\t> setter', setter)
+		// 如果参数为空,或者只有队列名 则 get
 		if ( arguments.length < setter ) {
 			return jQuery.queue( this[ 0 ], type );
 		}
 
+		// 否则 set
 		return data === undefined ?
 			this :
 			this.each( function() {
+				// 为当前的 jQuery 对象数组依次添加队列
 				var queue = jQuery.queue( this, type, data );
 
 				// Ensure a hooks for this queue
+				// -> 确保这个队列有一个钩子
 				jQuery._queueHooks( this, type );
 
+				// 如果队列名默认, 并且此时队头不是 inprogress 状态
 				if ( type === "fx" && queue[ 0 ] !== "inprogress" ) {
+					// 则执行队头
 					jQuery.dequeue( this, type );
 				}
+				// 这里就是前面说的 在第一次添加时会执行, 就是这里的作用
 			} );
 	},
 	dequeue: function( type ) {
@@ -4949,12 +5053,20 @@ jQuery.fn.extend( {
 			jQuery.dequeue( this, type );
 		} );
 	},
+	// 清空当前元素的队列
 	clearQueue: function( type ) {
+		// 这里是手动清空 
 		return this.queue( type || "fx", [] );
 	},
 
 	// Get a promise resolved when queues of a certain type
 	// are emptied (fx is the type by default)
+	/**
+	 * [promise description]
+	 * @param  {string} type 队列名
+	 * @param  {object} obj  将要绑定到 promise 方法的对象
+	 * @return {object}    		obj 附到 Deferred 上的 promise 对象
+	 */
 	promise: function( type, obj ) {
 		var tmp,
 			count = 1,
@@ -4967,12 +5079,14 @@ jQuery.fn.extend( {
 				}
 			};
 
+		// 如果只有一个参数则重构参数
 		if ( typeof type !== "string" ) {
 			obj = type;
 			type = undefined;
 		}
 		type = type || "fx";
 
+		// 循环当前 jQuery 对象数组长度次数
 		while ( i-- ) {
 			tmp = dataPriv.get( elements[ i ], type + "queueHooks" );
 			if ( tmp && tmp.empty ) {
@@ -6867,7 +6981,7 @@ var rnumnonpx = new RegExp( "^(" + pnum + ")(?!px)[a-z%]+$", "i" );
 // 获取元素 CSSStyleDeclaration 对象
 // 也就是计算后的所有样式, getComputedStyle() 获取
 var getStyles = function( elem ) {
-	console.log('$> getStyles')
+	// console.log('$> getStyles')
 		// Support: IE <=11 only, Firefox <=30 (#15098, #14150)
 		// IE throws on elements created in popups
 		// FF meanwhile throws on frame elements through "defaultView.getComputedStyle"
@@ -6971,7 +7085,7 @@ jQuery.gStyle = getStyles;
  * @return {[type]}          [description]
  */
 function curCSS( elem, name, computed ) {
-	console.info('$> curCSS', arguments)
+	// console.info('$> curCSS', arguments)
 	var width, minWidth, maxWidth,
 		ret,  // 存放计算后的样式的值
 		// style 元素对象实例
@@ -7217,7 +7331,7 @@ jQuery.extend( {
 	cssHooks: {
 		opacity: {
 			get: function( elem, computed ) {
-				console.log('$> $.cssHooks.opacity.get', arguments)
+				// console.log('$> $.cssHooks.opacity.get', arguments)
 				if ( computed ) {
 
 					// We should always get a number back from opacity
@@ -7281,7 +7395,7 @@ jQuery.extend( {
 		// 检查设置的值是否是存在
 		// 设置属性值
 		if ( value !== undefined ) {
-			console.log('\t> $.style set')
+			// console.log('\t> $.style set')
 			// 记录传入的是什么类型
 			type = typeof value;
 
@@ -7328,7 +7442,7 @@ jQuery.extend( {
 		}
 		// 获取属性值
 		else {
-			console.log('\t> $.style get')
+			// console.log('\t> $.style get')
 			// If a hook was provided get the non-computed value from there
 			// 有钩子则用钩子设置
 			if ( hooks && "get" in hooks &&
@@ -7405,7 +7519,7 @@ jQuery.extend( {
 jQuery.each( [ "height", "width" ], function( i, name ) {
 	jQuery.cssHooks[ name ] = {
 		get: function( elem, computed, extra ) {
-			console.log('$> $.cssHooks[height/width]', arguments)
+			// console.log('$> $.cssHooks[height/width]', arguments)
 			if ( computed ) {
 
 				// Certain elements can have dimension info if we invisibly show them
@@ -8065,8 +8179,27 @@ jQuery.Animation = jQuery.extend( Animation, {
 	}
 } );
 
+// 用于测试
+// console.log(Animation === jQuery.Animation);//=> true
+
+
+/**
+ * 创建一个对象，该对象包含一组属性，可以在自定义动画的定义中使用
+ * @param  {number|string}   speed  动画持续的时间
+ * @param  {string}   easing 使用的缓动函数
+ * @param  {Function} fn     回调
+ * @return {[type]}          [description]
+ */
 jQuery.speed = function( speed, easing, fn ) {
+	// 首先判断第一个参数  speed 
+	// $.extend(target, {}) 浅拷贝
+	// 如果 speed 存在, 且是一个对象 -> $.speed(settings)
+	// 则将 speed 浅拷贝到一个空对象中
 	var opt = speed && typeof speed === "object" ? jQuery.extend( {}, speed ) : {
+		// 否则直接创建一个对象,并直接添加三个属性,
+		// complete
+		// dduration
+		// easing
 		complete: fn || !fn && easing ||
 			jQuery.isFunction( speed ) && speed,
 		duration: speed,
@@ -8074,41 +8207,64 @@ jQuery.speed = function( speed, easing, fn ) {
 	};
 
 	// Go to the end state if fx are off or if document is hidden
+	// -> 如果 fx 关闭或文档隐藏
+	// $.fx.off 是否禁用全局所有动画
+	// 		当这个属性设置为true的时候，调用时所有动画方法将立即设置元素为他们的最终状态，而不是显示效果
+	// document.hidden 属性,可判断页面是否可见
+	// 		如果不可见，则为true
+	// 		如果可见，则为false。
 	if ( jQuery.fx.off || document.hidden ) {
+		// 则直接将 duration 设为 0
 		opt.duration = 0;
 
 	} else {
+		// 判断 duration 是数字还是字符串
+		// 如果 duration 是字符串
 		if ( typeof opt.duration !== "number" ) {
+			// 如果提供的字符串在这 $.fx.speeds 其中
 			if ( opt.duration in jQuery.fx.speeds ) {
+				// 则得到在 $.fx.speeds 中的值
 				opt.duration = jQuery.fx.speeds[ opt.duration ];
 
 			} else {
+				// 否则用默认的
 				opt.duration = jQuery.fx.speeds._default;
 			}
 		}
 	}
 
 	// Normalize opt.queue - true/undefined/null -> "fx"
+	// 如果 queue 为空
+	// 或为 true 
 	if ( opt.queue == null || opt.queue === true ) {
+		// 则默认动画队列名 fx
 		opt.queue = "fx";
 	}
 
 	// Queueing
+	// -> 排队技术
 	opt.old = opt.complete;
 
+	// 为 opt 扩展一个方法 complete, 这个 complete 是真正返回出去的 complete
+	// 也是为外部提供的一接口,用于完成后执行
 	opt.complete = function() {
+		// 如果传入的参数 complete 是一个函数
 		if ( jQuery.isFunction( opt.old ) ) {
+			// 则执行那个函数
 			opt.old.call( this );
 		}
-
+		// 并且, 如果存在该动画队列名
 		if ( opt.queue ) {
+			// 则用 $.dequeue() 执行该队列
 			jQuery.dequeue( this, opt.queue );
 		}
 	};
 
+	// 最终返回这个处理过的 opt 对象
 	return opt;
 };
 
+// $.fn.animate()
 jQuery.fn.extend( {
 	fadeTo: function( speed, to, easing, callback ) {
 
@@ -8119,22 +8275,34 @@ jQuery.fn.extend( {
 			.end().animate( { opacity: to }, speed, easing, callback );
 	},
 	animate: function( prop, speed, easing, callback ) {
-		var empty = jQuery.isEmptyObject( prop ),
+		console.info('$> animate')
+		var
+			// 判断 prop 是否为空
+			empty = jQuery.isEmptyObject( prop ),
+			// 接收 options 的所有参数，从 $.speed 来
+			// speed 会返回一个对象,这个对象用于自定义动画
 			optall = jQuery.speed( speed, easing, callback ),
+			// 一个动画函数,是一个闭包
 			doAnimation = function() {
 
 				// Operate on a copy of prop so per-property easing won't be lost
 				var anim = Animation( this, jQuery.extend( {}, prop ), optall );
 
 				// Empty animations, or finishing resolves immediately
+				// 是没有 属性, 或 已经完成
 				if ( empty || dataPriv.get( this, "finish" ) ) {
+					// 清空该元素的动画队列，并且停止在当前动画执行的地方
 					anim.stop( true );
 				}
 			};
+			// 这里目前不情况是什么意思
 			doAnimation.finish = doAnimation;
-
+			console.log('\t> doAnimation', doAnimation === doAnimation.finish);//=> true
+		// 继续链式调用
 		return empty || optall.queue === false ?
+			// 有动画队列 queue, 则直接每个元素执行
 			this.each( doAnimation ) :
+			// 如果 optall 中没有队列,则向队列中添加 doAnimation
 			this.queue( optall.queue, doAnimation );
 	},
 	stop: function( type, clearQueue, gotoEnd ) {
@@ -8306,11 +8474,13 @@ jQuery.fx.stop = function() {
 	timerId = null;
 };
 
+// 默认提供的以字符串表示的 duration 的对象
 jQuery.fx.speeds = {
 	slow: 600,
 	fast: 200,
 
 	// Default speed
+	// 默认
 	_default: 400
 };
 

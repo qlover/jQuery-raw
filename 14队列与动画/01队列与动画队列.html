@@ -1,0 +1,147 @@
+<meta charset="UTF-8">
+<title> 队列 </title>
+<!-- <script src="../jquery-1.4.2.js"></script> -->
+<!-- <script src="../jquery-2.0.3.js"></script> -->
+
+
+<div id="top" data-id="#top" style="width: 50px; height: 50px; background: #f00;"></div>
+<div id="mid"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 队列是一种特殊的线性表，只允许在表的前端（队头）进行删除操作（出队）
+// 在表的后端（队尾）进行插入操作（入队）
+// 队列的特点是先进先出（FIFO-first in first out），即最先插入的元素最先被删除。
+// 队列就是允许一系列函数被异步地调用而不会阻塞程序
+// 并且在 jQuery 中每一组队列操作都是 getter/setter
+// queue 入列
+// dequeue 出列，并执行
+
+// 整个 jQuery 动画依赖于 队列 
+// 现在就来看看为会么，动画要依赖队列
+
+
+// $.fn.queue()
+// .queue( [queueName ] )
+// 		queueName 获取该队列名称的队列
+// .queue( [queueName ], newQueue )
+// 		newQueue 一个 替换 当前列队内容的函数数组
+// .queue( [queueName ], callback )
+// 		callback 需要添加到当前队列的函数
+// 	queueName 默认 fx 为标准队列
+
+
+function c1 () {console.log('c1');}
+function c2 () {console.log('c2');}
+function c3 () {console.log('c3');}
+
+
+var $top = $('#top');
+
+// set
+$top.queue(c1);//=> c1
+// 当该元素第一次添加到队列的函数会被首次执行
+$top.queue(c2);
+$top.queue(c3);
+// 当然队列名可以指定
+
+// get
+console.log($top.queue());//=> ["inprogress", ƒ, ƒ]
+// 上面会按顺序将 c1 c2 c3 分别加入到 $top 这个元素上
+// 等待 $.fn.dequeue() 的执行
+
+
+// 执行
+// 默认队列名 fx
+$top.dequeue(); //=> c3 
+$top.dequeue(); //=> c3
+
+// 当第一次添加进队列的方法会被首次执行
+// 而后,则用 dequeue() 手动执行队列的下一个方法
+
+// 也就是说,队列就是一个让多个方法依次执行的地方
+// 而动画则是一个完成后另一个再开始,也就是为什么动画会依赖队列了
+
+// 当然, jQuery 中很多的实现都是高级 API 调用低级 API 来想到实现
+// 而这个低级 API ,则是 $.queue()
+</script>
+
+<script>
+console.log('-----')
+// $.queue()
+// 	.queue( element [, queueName ] )
+// 		elements 一个 DOM 元素
+// 	.queue( element, queueName, newQueue )
+// 	.queue( element, queueName, callback )
+// 用最底层的 $.queue() 完成上面的功能
+
+var $mid = $('#mid');
+
+// .queue( element [, queueName ] )
+
+// 将 c1() 添加到 $mid 队列中
+// 在 fn.queue() 中对 type 是处理了的，所以在用  $.queue() 中需要传入一个队列名
+// 默认的也要传入
+// 因为内部的 queueName 默认是 fx ，可为什么还要传
+// 这是因为，内部只做了 type 判断，并没有重组参数
+// 所以要占位
+$.queue($mid[0], null, c1); // 第一次没有执行,并且内部默认 fx 名字队列
+
+$.queue($mid[0], 'fx', c2);
+
+
+// $.dequeue() 执行队列
+// 因为底层是将元素的队列缓存在缓存对象中，所以 $.dp 可以获得
+console.log($.dp.get($mid[0], 'fxqueue')); //=>  [ƒ, ƒ]
+
+// 参数一是 DOM 元素
+$.dequeue($mid[0], 'fx');
+
+console.log($.dp.get($mid[0], 'fxqueue')); //=> ["inprogress", ƒ]
+
+// 清空队列
+$.dequeue($mid[0], 'fx', []);
+console.log($.dp.get($mid[0], 'fxqueue')); //=> ["inprogress"]
+// 将第一个执行的状态返回
+
+
+// fn.queue() 在第一次添加时会执行
+// $.queue() 在第一次添加时不会执行
+
+// queue 源码
+
+// $.queneu() 源码,很简单,就是做两个操作
+// 1. 将函数或函数数组添加进元素的队列中
+// 2. 获取元素的队列函数
+
+$mid.queue(); // setter = 1
+$mid.queue('abc'); // setter = 2
+$mid.queue(function(){}); // setter = 1
+$mid.queue('abc', function(){}); // setter = 2
+// 所以
+// 1. 指定了队列名, 则标识不变
+// 2. 如果没有指定队列名,则标识改变
+
+// $.clearQueue([queue])
+// 	queue 队列名清空该队列 转义 fx 队列名
+
+$mid.clearQueue('abc');
+
+
+</script>
+<script>
+
+// $.fn.promise([type], [target])
+// 返回一个 Promise 对象，观察某种类型被绑定到集合的所有行动，是否已被加入到队列中。
+// 1. 返回一个动态生成的 Promise，当绑定到集合中的所有特定动作（action）已经被加入或未被加入到队列中时
+// 		生成的 Promise 将被受理（resolve）。
+// 2. type 的默认值是"fx" 
+// 		这意味着被受理（resolve）的 Promise 对象是在所有被选中元素的动画都完成时返回的。
+// 3. 如果提供 target 参数，.promise() 在该参数上添加方法
+// 		然后返回这个对象，而不是创建一个新的
+// 		它适用于在一个已经存在的对象上添加 Promise 行为的情况。
+
+
+// 该方法在后面会单独的说明
+</script>
+

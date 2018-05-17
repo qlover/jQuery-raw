@@ -39,13 +39,17 @@ var isPlainObject = function( obj ) {
 
 // jQuery 的源码 extend
 var extend = function () {
-  var options, name, src, copy, copyIsArray, clone, target = arguments[0] || {},
-    i = 1,
+  var options, name, src, copy, copyIsArray, clone,
+    // 获取所有的参数，如果第一个参数是 true
+  	target = arguments[0] || {},
+    i = 1, // 用于表示参数的个数，好用于处理不同的参数情况
+    // 如果参数只有一个，则是表示是扩展，所以 length 为 1
     length = arguments.length,
-    deep = false;
+    deep = false;  // 用于表示是否是深拷贝，从 arguments[0] 获取
 
-  // 判断是否为深拷贝
+  // 判断是否为深拷贝,如果第一个参数是 true 则表示深拷贝
   if (typeof target === "boolean") {
+  	// 则标记是深拷贝
     deep = target;
 
     // 参数后移

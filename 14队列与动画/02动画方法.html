@@ -1,0 +1,240 @@
+<meta charset="UTF-8">
+<title> 动画方法 </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+</style>
+
+<div id="box" data-id="#box" style="background: #f00;"></div>
+<div id="mid" style="background: #0f0;"></div>
+
+<div id="box1" style="background: #ff0"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 队列只供动画使用
+// 队列只供动画使用
+// 队列只供动画使用
+
+// 这四个方法主要用于动画队列，只供动画使用
+// 	$.queue()
+// 	$.dequue()
+// 	$.clearQueue()
+// 	$.promis()
+
+// 而动画方法
+//  $.fn.fadeTo()
+//  $.fn.animate()
+//  $.fn.stop()
+//  $.fn.finish()
+
+// 一样的，动画和 ajax 是一个大的操作，其内部也做了非常多的兼容，底层也很复杂
+// 看源码，之前还是看看怎么用
+
+// 动画队列与队列没什么区别，队列只供动画使用
+// 则动画队列则是管理一组的动画
+
+
+
+// $.animate() 动画的主方法 $.animate
+// 		.animate(properties [, duration ] [, easing ] [, complete ])
+// 			properties  键值对的 css 属性，动画将根据这组对象移动
+// 			duration  	数字或字符串，用于指示动画执行多久，默认 400
+// 			easing 		一个字符串，用于表示过渡时用什么缓函数,默认 swing 
+// 			complete 	完成时的回调
+// 		.animate( properties, options )
+
+
+
+var box = $('#box');
+var mid = $('#mid');
+
+// $.animate(properties)
+// box.animate({
+// 	marginLeft : '100px',
+// 	marginTop : '50px'
+// });
+// 会发现，它是在一个周期中全部都执行完了，并不是一个属性一个属性的执行
+// mid.animate({
+// 	marginLeft : '100px',
+// }).animate({
+// 	marginTop : '50px'
+// });
+
+
+// $.animate(properties, )
+var box1 = $('#box1');
+
+// box1.animate({
+// 	width : '300px',
+// }, 500 /* 持续时间 */, function(){ //  回调
+// 	console.log('animate completed!')
+// })
+
+
+// 上面都没啥主就是照着参数写，而第二种则不同， animate() 参数二变成了一个对象
+// 所有动画需要的参数都在这个对象中定义
+
+// $.animate(properties, options)
+// 下面一个一个列出 options 中的参数起什么作用
+
+
+// duration -> 数字或字符串，用于指示动画执行多久，默认 400
+// easing 	-> 一个字符串，用于表示过渡时用什么缓函数,默认 swing
+// queue 	-> 一个布尔值，指示是否将动画放置在效果队列中
+// 		false 立即开始动画
+// 		1.7+ 则可以是一个队列名，用 dequeue() 来启动它
+// specialEasing -> 由此方法的第一个参数 properties 定义的一个或多个 CSS 属性
+// 					及其相应的缓动函数组成的键值对map 1.4+
+// step 	-> 每个动画元素的每个动画属性将调用的函数
+// 		这个函数为修改Tween 对象提供了一个机会来改变设置中得属性值。 
+// 			每个动画元素都执行单独的函数
+// 			Function(now, fx)
+// 			now 当前改变的值
+// 			fx 	是一个 Tween 对象
+// 			
+// complete -> 动画完成时执行的函数
+// progress -> 每一步动画完成后调用的一个函数，无论动画属性有多少
+// done 	-> 动画完成时执行的函数，是一个 promise 
+// faile 	-> 动画失败时执行的函数, 是一个 promise 
+// always	-> 动画完成或失败情况下停止执行的函数， 是一个 promise
+// 最后四个参数可以理解成是 Callbacks 定义
+
+
+box1.animate({
+	width : '300px',
+},{
+	duration : 1000,
+	// progress : function () {
+	// 	console.log('animate progress');
+	// },
+	done : function () {
+		console.log('animate success');
+	},
+	faile : function () {
+		console.log('animate failed');
+	},
+	always : function () {
+		console.log('animatet always');
+	},
+	complete : function () {
+		console.log('animate complete');
+	},
+	// step: function( now, fx ) {
+	// 	// now 也存在于 fx.now 中
+	// 	console.log(fx.now);
+	// }
+})
+
+// 四个回调的执行优先
+// 1. progress <-> step
+// 2. success / faile
+// 3. complete
+// 4. always
+
+
+// Tween 对象
+// Tween 动画又称 “补间动画”、“中间动画”
+</script>
+
+
+<div id="box2" style="background: #0ff;"></div>
+<div id="box3" style="background: #f0f;"></div>
+<div id="box4" style="background: #0f0;"></div>
+<div id="box5" style="background: #ff0;"></div>
+
+
+<script>
+// $.fn.fadeTo() 调整元素透明度
+// 	.fadeTo(duration, opacity, complete)
+// 		duration 动画持续时间，数字或字符串 fast => 600, slow => 200
+// 		opacity 0 和 1 之间的数字表示透明度
+// 		complete 	可选 ，动画完成时的回调
+// 	.fadeTo(duration, opacity, easeing, complete)
+// 		easeing 	一个字符串，表示动画过渡使用哪种缓动函数
+// 		
+
+// $('#box2').fadeTo('300', 0.5, function() {
+// 	console.log('box2 fadeto over');
+// });
+
+// 随机透明
+$('#box2').fadeTo('slow', Math.random());
+
+
+// $.fn.stop() 停止匹配元素当前正在运行的动画
+// 	.stop(clearQueue, jumpToEnd)
+// 		clearQueue 一个布尔值，指示是否取消队列动画默认 false
+// 		jumpToEnd 是否立即完成当前动画  默认 false
+// 	.stop(queue, clearQueueu, jumpToEnd)
+// 		queue  需要停止的动画队列名
+
+var box3 = $('#box3');
+// 看这里，该元素有 5 个动画队列
+// box3.hover(function() {
+// 	$(this).animate({width: '400px'}).fadeTo(500, 0.5)
+// }, function() {
+// 	$(this).animate({width: '50px'}).fadeTo(500, 1)
+// });
+// 代码看起来没有任何问题
+// 但是当快速的来回 mouseenter mouseleave 时，会发现有动画 的 bug 不是我们想的那种动画
+// 这是因为，每当 mouseenter 事件一发生，就有一个队列动画
+// 如果此时又做了一个 mouseenter 则这一个动画没有完， fadeOut() 又添加进了队列
+// 所以此时，stop() 就有用处了
+
+// 可取消队列动画的执行
+// box3.hover(function() {
+// 	$(this).stop(true).animate({width: '400px'}).fadeTo(500, 0.5)
+// }, function() {
+// 	$(this).stop(true).animate({width: '50px'}).fadeTo(500, 1)
+// });
+// 加上了 true ，则表示，将前面的队列全部取消掉，执行后面的队列
+
+// 比较下面两种 stop() 的用法
+
+$('#box3').click(function(){
+	$(this).animate({width: '100px'}).stop(true).animate({height: '100px'})
+})
+// 原本是先改变宽度，然后改变高度
+// 这里却是直接只改变了高度
+$('#box4').click(function(){
+	$(this).animate({width: '100px'}).stop(true, true).animate({height: '100px'})
+})
+// 这里则是直接完成了宽度，在改变的高度
+
+
+
+// 也就是说
+// 一个 true 表示取消 stop() 前面队列中的动画,包括当前的动画，，执行剩下的动画
+// 二个 true 表示 stop() 前面队列中的动画直接完成(就是没有过渡的过程)，在执行处理的动画队列
+/*
+总结：
+
+stop(true, true) | clearQueue().finish()
+  清空该元素的动画队列，并且直接完成当前动画
+stop(true, false) | clearQueue().stop()
+  清空该元素的动画队列，并且停止在当前动画执行的地方
+stop() ==> stop(false, false)
+  跳过当前动画，执行下一个动画
+stop(false, true)
+  直接完成当前动画，执行下面动画
+finish()
+  清空当前元素，直接完成最后一个动画
+
+ */
+</script>
+
+<script>
+
+// $.fn.fisish([queue]) 停止当前正在运行的动画，删除所有排队的动画，并完成匹配元素所有的动画
+// 	queue 停止动画的名称, 默认 fx
+// 这个方法借用 jQuery 官网的一个例子来说明
+
+// 也就是说 finish() 会清空当前元素的动画队列，并直接完成最后一个动画（就是没有动画过程的直接完成动画）
+
+// 有关动画的方法很多很多，有自己实现也有用底层用 animate() 实现
+// fn.show() 和 fn.hide() 分别用的是 showHide() 这个内部方法
+</script>
