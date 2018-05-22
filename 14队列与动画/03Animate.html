@@ -106,10 +106,12 @@ function animate(elem, option, complete){
 		begTime = time(),
 		remaining, timePecent, tmp,
 		doAnimation = function(){
-			// 计算出每秒需要移动的多少距离
-			remaining =  time() - begTime;
+			// 计算出剩下的时间
+			// remaining =  time() - begTime; // 直接从当前时间减去开始时间，也就是从小到大的比值
+			// 而这一个则是用总的时间减去当前时间，也就是从大到小的比值
+			remaining = Math.max( 0, begTime + duration - time() )
 			// 计算出时间比
-			timePecent = remaining / duration;
+			timePecent = 1 - (remaining / duration || 0); // 因为从大到小的比值，所以要用 1 - 得到比值
 			// 得到需要移动的数, 如果 ie 为正数则为负数, 负数则为正数
 			tmp = -((ie * timePecent) + init)
 			// 最后取绝对值
@@ -130,15 +132,18 @@ function animate(elem, option, complete){
 	ie = end > init ? -(end - init) : end - init;
 	timerId = setInterval(doAnimation, 8);
 };
-animate(box1[0], {
-	left : 0,
-}, function(){
-	console.log('animate over')
-});
+// animate(box1[0], {
+// 	left : 0,
+// }, function(){
+// 	console.log('animate over')
+// });
 
 // 这是一个基本的实现原理, jQuery 中也是如此
 </script>
 
+
+
+<div id="box2" style="background: #0fe; width: 60px; min-width: 20px;" ></div>
 <script>
 // $.fn.animate() 源码
 // 该方法源码逻辑很简单
@@ -196,16 +201,29 @@ console.log($.speed(500, 'swing', function _com(){ }));
 // 		并且还会执行动画队列的下一个函数
 		
 
-// $.Animate()
+// $.Animate() 源码 
 // Animation === jQuery.Animation 源码证明这个是返回 true 的
 
-</script>
+var obj = {
+	a : 10,
+	b : 20
+}
+
+console.log($.extend(true, {
+	c : 30,
+	a : 100
+}, obj));// ['a'] = 10
+// 没有被覆盖
+
+var obj2 = {
+	a : { width : '100px'}
+};
+var o3 = obj2.a;
+o3.width = '200px';
+console.log(obj2)
 
 
-
-<script>
-// $.fx.off 是否禁用全局所有动画
-// 		当这个属性设置为 true 的时候，调用时所有动画方法将立即设置元素为他们的最终状态，而不是显示效果
-// $.fx.speeds
-// 		
+// $.cssHooks()
+console.log(Object.keys($.cssHooks))
+// 源码,没看完,主要还是 jQuery 在处理动画属性参数上的机制
 </script>

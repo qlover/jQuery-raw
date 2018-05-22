@@ -1,0 +1,141 @@
+<meta charset="UTF-8">
+<title> Tween </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box" data-id="#box" style="background: #f00; border-style: solid; border-width: 20px;"></div>
+<div id="mid" style="background: #0f0;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// $.fx 
+console.log($.fx === $.Tween.prototype.init);//=> true
+// ！！！
+// 这是相等的，且源码是这样写的
+// jQuery.fx = Tween.prototype.init
+
+console.log(Object.keys($.fx));
+//=> ["step", "tick", "timer", "interval", "start", "stop", "speeds"]
+
+console.log(Object.keys($.Tween.prototype.init));
+//=> ["step", "tick", "timer", "interval", "start", "stop", "speeds"]
+
+// 这也看得出来了， $.fx 是一个对象，是一个 $.Tween 的一个实例
+// 所以，$.fx 就先入一边
+// 接下来看 Tween 
+
+
+</script>
+
+<script>
+
+console.log(new jQuery())
+console.log(jQuery())
+
+console.log(new jQuery().__proto__ === jQuery().__proto__); //=> true 
+// 也就是说即使 new jQuery() 和 直接调用 jQuery() 返回的是同一个类的实例
+
+var aQ = function(){
+	return ['aq', this]
+}
+
+console.log(new aQ()) //=> ['aq', aQ]
+console.log(aQ()) //=> ['aq', Window]
+
+var Init = function(){
+	return ['init', this];
+}
+var aQuery = function(){
+	return new Init();
+}
+
+console.log(new aQuery()) //=> ['init', Init]
+console.log(aQuery()) //=> ['init', Init]
+// 所以明白了吧
+// 还不明白可以去参考 [new一个函数和直接调用函数的区别]
+
+
+
+// 回忆下 jQuery 的结构
+
+// 1. jQuery 	类本身
+// 2. $ 		jQuery 的别名
+// 3. jQuery() 	构造器  === $()
+// 4. jQuery.prototype 	jQuery 原型
+// 5. jQuery.fn 		jQuery 原型的别名     === $.prototype
+// 6. jQuery.fn.init 	jQuery 原型上的 init($() 最终返回的实例对象)  === $.prototype.init
+// 7. jQuery.fn.init.prototype  jQuery 原型上的 init 的原型  === $.prototype
+
+// Tween 也是这样做的
+function Tw(){
+	return new Tw.prototype.init();
+}
+Tw.prototype = {
+	constructor: Tw,
+	// init 构造器
+	init : function(){
+		return this;
+	}
+}
+// 最重要的一步
+Tw.prototype.init.prototype = Tw.prototype;
+
+console.log(new Tw());//=> init{}
+console.log(Tw());//=> init{}
+
+console.log(new Tw().__proto__ === Tw().__proto__);//=> true
+</script>
+
+<script>
+console.log('-------------------------')
+// jQuery 的 Tween 
+console.log($.fx.tick === $.Tween.prototype.init.tick);//=> true
+// 明白了吧，从 $.fx 可以修改原本 Tween 原型上 init 实例
+
+
+$('#box1').animate({left: 0})
+console.log($.timers)
+// $.fx 源码 
+
+
+// --> $.animate() 的整个过程
+// --- 参数处理部分
+// 1. 以两种形式接收用户传入的 动画属性对象 和 动画参数
+// 	+ 动画参数是散参数时
+// 	+ 动画参数是对象时
+// 2. 将接收到的两个对象交给 $.speed 做第一步处理，主要处理 动画参数, 返回 optall 对象
+// 	+ 内部将动画参数强行构建一个对象，并添加额外动画需要的属性
+// 3. 然后为每一个元素执行内部的 doAnimation() 回调
+// 	并且在该回调中，将 动画属性对象 和 optall 对象交给 $.Animation
+// 4. $.Animation
+// 	+ 在内部定义一个用 promise 对象控制的用于管理动画的进程执行的 animation 对象
+// 	+ 定义 tick ，用于 $.fx.timer 的定时器函数
+// 	+ 用 propFilter 预处理器，处理 动画属性对象 和 特定的动画缓动函数 map 表（specialEasing）
+// 	+ 在利用 默认预处理器 将元素，animation, optall 和 动画属性对象 做动画开始之前的临时处理
+// 		属性值是 toggle | show | hide 或 是本身元素溢出 和 本身的inline状态处理
+// 	+ 注意这里为 optall 提供了一个 start 接口方法，可以接收 animation 对象，可在处理一层
+// 	+ 将元素，animation, 和 队列名 附加到 tick 中，传给 $.fx.timers 中
+// 	---- 动画执行部分
+// 	5. $.fx 管理动画执行时的队列，并时刻处理，处理 createTween 产生的 tween 对象
+// 	6. 执行动画，两种方式执行 createTween 产生的对象
+// 		+ requestAnimationFrame
+// 		+ setInterval 	循环执行 $.fx.tick
+// 	$.fx 本身就是一个 $.Tween 对象
+// 	而该对象就是产生缓动函数，也就是执行动画过程补间动画的对象
+// 	--> 结束 $.animate()
+// 	动画的整个行为，参数，
+// 		行为与 promise 流程有密切的关系
+// 		参数与两个默认的处理器 和 $.Animation 本身离不开关系
+// 		而执行，却离不开 Tween 这个补间的对象
+
+</script>

@@ -1,0 +1,204 @@
+<meta charset="UTF-8">
+<title> 参数传递 </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box" data-id="#box" style="background: #f00;"></div>
+<div id="mid" style="background: #0f0;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 03Animation 其实主要就是说了一个事,就是动画执行的原理
+// 是用得到时间比值操作属性比值,并且定时器来执行,而在这之前,就是一堆的属性参数预处理
+// 其它先不看,看属性的预处理
+
+// fn.animate()
+// 	1. $.speed() 得到 optall
+// 	2. 给每 jQuery 对象数组执行内部的 doAnimation
+
+// 在这之间会经历一个过程,这个过程就是 $.Animation
+// 是一个构造器, 是一个动画定义,参数定义的地方
+
+// 在 $.Animation 中做很多复杂的操作
+// 其中就包括参数的预处理，其实主要还是 jQuery 的扩展 specialEading 参数的处理
+// 和 propFilter() 方法
+
+console.group('模拟部分');
+// 模拟一 --> 参数传入不是一个对象
+(function(){
+	console.log('----- 模拟一 -----')
+	// 1. 从 fn.animate() 得到参数
+	// 	-> (prop, speed, easing, callback)
+	var 
+		prop = { left : 0},
+		speed = 500,
+		easing = 'swing',
+		callback = function _callback(){};
+	// 2. 将这些参数交给 $.speed()
+	// 记住 $.speed() 就是创建一个对象
+	// 	如果传入对象，则扩展对象
+	// 	如果没传入对象，则创建对象
+	// 没有传入对象，则在内部创建一个对象
+	var optall = $.speed(speed, easing, callback);
+
+	// 3. 将参数交给 $.Animation(elem, props, options)
+	// 每一个元素执行 doAnimation() 得到 anim 对象
+	var 
+		elem = $('#box1')[0],
+		// 浅拷贝得到 props 
+		props = $.extend({}, prop),
+		// $.speed() 返回的对象
+		options = optall; 
+	// 其实这里也是打开了执行动画的打门
+	$.Animation(elem, props, options);
+	// 0:div#box1
+	// 1:{left: 0}
+	// 2:{complete: ƒ, duration: 500, easing: "swing", queue: "fx", old: ƒ}
+})();
+
+// 模拟二  --> 参数传入是一个对象
+(function(){
+	console.log('----- 模拟二 -----')
+	// 1. 从 fn.animation() 得到参数
+	// 	-> (prop, options)
+	var 
+		prop = { left : 0},
+		// 可以有 10 个属性
+		// duration，easing，queue，specialEasing，step，complete，progress，done，faile，always
+		option = {
+			duration : 500,
+			easing : 'swing',
+			complete : function _outer_complete(){},
+			// 因为是传入对象，所以要就可以传入其它属性
+			specialEasing : {
+				left : 'linear'
+			}
+		}; 
+
+	// 2. 将参数交给 $.speed()
+	var speed = option;
+	// 传入的 speed 是一个对象，则浅拷贝 jQuery.extend( {}, speed )
+	var optall = $.speed(speed);
+	console.log(optall)
+	// 3. 将 optall 交给 $.Animation(elem, props, options)
+	var 
+		elem = $('#box1')[0],
+		props = prop,
+		options = optall;
+	var anim = $.Animation(elem, props, options)
+
+	// 4. 在 $.animate() 中得到 anim 动画对象
+	// 		--> 注意，这里是得到了最后的 anim 对象，也就是经过预处理了的
+	console.log(anim)
+
+})();
+// 当 $.Animation 得到一系列参数后，就是 optall 时
+// 无论是用 模式一还是模式二，在内部做这件事
+// 1. 每动画提供 animation 对象
+// 2. 属性预处理			-> propFilter
+// 3. 定义动画参数		-> Tween 创建补间动画
+
+
+
+// 模拟预处理
+(function(){
+	console.log('----- 预处理部分 -----')
+	// 1. 从 fn.animation() 得到参数
+	// 	-> (prop, options)
+	var 
+		prop = { left : 0},
+		// 可以有 10 个属性
+		// duration，easing，queue，specialEasing，step，complete，progress，done，faile，always
+		option = {
+			duration : 500,
+			easing : 'swing',
+			complete : function _outer_complete(){},
+			// 因为是传入对象，所以要就可以传入其它属性
+			specialEasing : {
+				left : 'linear'
+			}
+		}; 
+	// 2. 将参数交给 $.speed()
+	var speed = option;
+	// 传入的 speed 是一个对象，则浅拷贝 jQuery.extend( {}, speed )
+	var optall = $.speed(speed);
+	
+	// 3. 将 optall 交给 $.Animation(elem, properties, options)
+	var 
+		elem = $('#box1')[0],
+		properties = prop,
+		options = optall;
+	
+
+	var deferred =  $.Deferred();
+		// 该对象就是用于附加 promise 对象的 animation 对象
+		promiseObj = {
+			// 在该对象中,会创建一些新的属性用于动画 
+			elem : elem,
+			// 浅复制一份 properties 
+			props: jQuery.extend( {}, properties ),
+			// ！！！ 深拷贝一份 options 对象，并多附加两个属性
+			opts: jQuery.extend( true, {
+				specialEasing: {},
+				easing: jQuery.easing._default // 默认 swing 
+			}, options ),
+			originalProperties: properties,
+			originalOptions: options,
+			startTime : Date.now(),
+			duration : options.duration,
+			tweens : [],
+			createTween : function(){},
+			stop : function(){}
+		},
+		// 直接将 promise 附到 promiseObj 对象上
+		animation = deferred.promise( promiseObj );
+
+	// 到这里最后的 animation 对象就得到了
+	// animation 是一个 promise 对象！！！
+
+
+
+	// 模拟内部预处理 propFilter()
+	console.log('----- 预处理 -----')
+
+	// 传给 propFilter(props, specialEasing) 
+	var
+		// 这是一个在外部的引用,只为了一个方便
+		props = animation.props,
+		specialEasing = animation.opts.specialEasing;
+
+	console.log('props', props)
+	console.log('specialEasing', specialEasing)
+	
+	// 注意, 这里抽出去, 抽出去
+	// 注意, 这里抽出去, 抽出去
+	// 注意, 这里抽出去, 抽出去
+
+	console.log('----- /预处理部分 -----')
+	console.log(animation);
+
+	// 4. 在 $.animate() 中得到 anim 动画对象
+	// 		--> 注意，这里是得到了最后的 anim 对象，也就是经过预处理了的
+	// console.log(anim)
+})();
+
+console.groupEnd("模拟部分结束");
+
+
+// 整个 $.animate() 执行以下几个流程
+// 1. 得到 $.animate() 的 arguments
+// 2. 将参数给 $.speed() 得到 optall 对象
+// 3. 将 optall 对象给 $.Animation() 得到最后的 anim 对象
+
+// 而在 得到 anim 对象前，有个很重要的操作，参数的预处理
+// propFilter()
+</script>

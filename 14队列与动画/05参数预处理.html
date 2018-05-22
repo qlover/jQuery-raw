@@ -1,0 +1,153 @@
+<meta charset="UTF-8">
+<title> 参数预处理 </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box" data-id="#box" style="background: #f00; border-style: solid; border-width: 20px;"></div>
+<div id="mid" style="background: #0f0;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 当源码走到了 $.Animation 中间，也就是预处理参数时
+// 此时的参数就发生了变化
+
+// 源码
+
+// 会有个专门处理 width : ['toggle', 'swing'] 的情况
+
+for (var name in $.cssHooks) {
+	if ( "expand" in $.cssHooks[name]) {
+		console.log(name)
+	}
+};// => margin padding borderWidth 
+// 这些属性是拥有 expand 方法的钩子,则优先使用
+
+// $.cssHooks
+//=> [
+//	"opacity", "height", "width", "marginLeft",
+// "margin", "padding", "borderWidth",  "top", "left" 
+// ]
+// 
+
+// 1. 将属性名变成驼峰名
+// 2. 处理值是数组情况
+// 3. 有钩子则先用钩子
+
+// 钩子处理中有两种情况
+// 1. 有钩子属性
+// 2. 满足有 expand() 方法
+
+console.log($.cssHooks['margin'].expand(0));
+//=> {marginTop: 10, marginRight: 10, marginBottom: 10, marginLeft: 10}
+console.log($.cssHooks['padding'].expand(0));
+//=> {paddingTop: 10, paddingRight: 10, paddingBottom: 10, paddingLeft: 10}
+console.log($.cssHooks['borderWidth'].expand(0));
+//=> {borderWidthTop: 10, borderWidthRight: 10, borderWidthBottom: 10, borderWidthLeft: 10}
+// 看懂了吧
+
+// 如果两种同时存在,则 只有 margin, padding, borderWidth
+// 并且,需要驼峰命名的只有 borderWidth
+// $.cssHooks[borderWidth].expand() 返回的是边框对应的上,下,左,右四个 width 属性
+
+
+
+// 预处理部分
+var
+	// 这是一个在外部的引用,只为了一个方便
+	props = {
+		'border-width': [0, 'swing']
+
+	},
+	// specialEasing 对象是从 $.speed() 中得到的
+	// 如果用户是以 对象方式 传入 $.animate() 时，并且携带了 specialEasing 对象
+	// 或者 没有携带 specialEasing 对象，则创建，这就是在 $.speed() 内部完成的事
+	specialEasing = {
+		left : 'linear',
+		'border-width' : 'linear', // 先使用它的缓动函数
+	};
+
+// 在这之前，源码中并没有修改过参数，而是先用预处理修改参数
+$.pf(props, specialEasing);
+// 这就是预处理后的参数
+console.log(props, specialEasing)
+
+// 这是在 $.Animation 中做的事,并没有在外部做的事,不要忘了
+// 接下来还是回归正题, $.Animation 后面的处理
+
+</script>
+
+
+<script>
+// $.Animation 后面的处理
+$('#box').animate({
+	'border-width': [0, 'linear'],
+},{
+	specialEasing : {
+		'border-width': 'swing',
+	},
+})
+
+// 源码 ,看到这里,也就将动画之前的所需要的参数做完了
+// 剩下的就是 $.Animation 中内部的这三个东西
+// 	1. $.fx.timer
+// 	2. $.map(props, createTween, animation)
+// 	3. Animation.prefilters 中默认预处理器 defaultPrefilter
+	
+// 接下来会一一解决它们
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+// toggle 表示让一个属性在初始值和最小值之间切换
+// 能够使用toggle的属性有width、height、opacity等包含数字值属性
+// $('#box2').animate({
+// 	width : ['toggle', 'swing'],
+// 	border : '1px solid #000'
+// },{
+// 	specialEasing :{
+// 		width : 'swing',
+// 	}
+// });
+
+
+// 说到这里就不得不说一下,这个属性值的取值
+// 可以是 字面量、function、”toggle|show|hide”、简单表达式
+// 如果是function会把返回值赋给属性
+// 而 toggle show hide 是三种特殊情况, 后面会说
+
+
+
+
+
+// $.fx.off 是否禁用全局所有动画
+// 		当这个属性设置为 true 的时候，调用时所有动画方法将立即设置元素为他们的最终状态，而不是显示效果
+// $.fx.speeds
+// $.Animation
+// $.speed()
+// propFilter()
+// $.defaultPrefilter()
+// $.proxy()
+</script>

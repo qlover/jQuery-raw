@@ -1,0 +1,79 @@
+<meta charset="UTF-8">
+<title> defaultPrefilter() </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box" data-id="#box" style="background: #f00; border-style: solid; border-width: 20px;"></div>
+<div id="mid" style="background: #0f0;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+// 这个方法有怪,它是 $.prefilters 中的第一个默认方法
+
+// defaultPrefilter()
+//  这是源码 -> Animation.prefilters[ index ].call( animation, elem, props, animation.opts );
+//  Animation.prefilters[ index ] == defaultPrefilter
+
+console.log($.Animation.prefilters[ 0 ] === $.dpf); //=> true
+var box = $('#box');
+
+box.animate({
+	'border-width': 0,
+},{
+	specialEasing:{
+		'border-width' : 'linear'
+	},
+});
+// 元素的 fxshow 缓存
+console.log($.dp.get(box[0], 'fxshow'))
+
+// 元素默认的 fx 钩子
+console.log($._queueHooks(box[0], 'fx'))
+
+// 钩子的 unqueued 属性
+console.log($._queueHooks(box[0], 'fx').unqueued)
+
+// 元素的队列
+console.log($.queue(box[0], 'fx'))
+
+// $.speed() 	处理 $.animate() 第二个参数，optall 对象
+// propFilter() 处理 $.animate() 第一个参数，预处理属性对象
+
+
+// 当动画是 width 或 height 时
+// 	1. 要先处理本身元素溢出
+// 	2. 元素本身的 inline 状态处理
+
+// 这只是浅浅的理解这个该方法是做什么
+// 它就是在动画执行前临时做的变更，对属性的变更，做一些特殊的处理
+
+
+// 属性过滤 specialEasing 处理的 propFilter 方法
+// 通过 Deferred 生成流程控制体系
+// 通过 defaultPrefilter 方法对动画执行的临时修正
+// 通过 createTween 方法，生成动画的算法与流程控制器
+// 最后通过 setInterval 来控制每一个 createTween 对象的执行
+
+
+// isHiddenWithinTree()
+// showHide()
+// createTween()
+</script>
+
+
+<script>
+// $.map()
+
+
+
+</script>

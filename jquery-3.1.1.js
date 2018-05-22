@@ -471,6 +471,13 @@ jQuery.extend( {
 	},
 
 	// arg is for internal usage only
+	/**
+	 * 将数组或对象中的所有项转换为新的项数组
+	 * @param  {element}   elems    元素
+	 * @param  {Function} callback 回调
+	 * @param  {object}   arg      回调的第二个参数
+	 * @return {[type]}            [description]
+	 */
 	map: function( elems, callback, arg ) {
 		var length, value,
 			i = 0,
@@ -508,6 +515,7 @@ jQuery.extend( {
 
 	// Bind a function to a context, optionally partially applying any
 	// arguments.
+	// -> 将函数绑定到上下文，可以部分应用任何争论
 	proxy: function( fn, context ) {
 		var tmp, args, proxy;
 
@@ -4980,6 +4988,7 @@ jQuery.extend( {
 
 	// Not public - generate a queueHooks object, or return the current one
 	// -> 不是公共的-生成一个队列挂钩对象，或者返回当前的对象
+	// 得到 元素 匹配类型的 钩子 --> 是一个回调对象
 	_queueHooks: function( elem, type ) {
 		var key = type + "queueHooks";
 		// 返回这个元素的 队列名钩子
@@ -7642,7 +7651,14 @@ jQuery.fn.extend( {
 	}
 } );
 
-
+/**
+ * Tween 补单动画的构造器
+ * @param {element} elem    动画元素
+ * @param {options} options [description]
+ * @param {[type]} prop    [description]
+ * @param {[type]} end     [description]
+ * @param {[type]} easing  [description]
+ */
 function Tween( elem, options, prop, end, easing ) {
 	return new Tween.prototype.init( elem, options, prop, end, easing );
 }
@@ -7742,7 +7758,7 @@ Tween.propHooks.scrollTop = Tween.propHooks.scrollLeft = {
 		}
 	}
 };
-
+// 提供默认缓动选项的对象
 jQuery.easing = {
 	linear: function( p ) {
 		return p;
@@ -7753,6 +7769,9 @@ jQuery.easing = {
 	_default: "swing"
 };
 
+// 得到 Tween 原型上的 init 的引用
+// 	$.fx === Tween.prototype.init
+// 相当于 $.fn.init === $.prototype.init 一个别名
 jQuery.fx = Tween.prototype.init;
 
 // Back compat <1.8 extension point
@@ -7762,24 +7781,37 @@ jQuery.fx.step = {};
 
 
 var
-	fxNow, timerId,
+	// 记录动画的当前时间
+	fxNow,
+	// 记录动画定时器的 ID 
+	timerId,
+	// 匹配 toggle | show | hide 
 	rfxtypes = /^(?:toggle|show|hide)$/,
+	// 匹配 queueHooks 结尾
 	rrun = /queueHooks$/;
-
+// 为 requestAnimationFrame 提供的回调
 function raf() {
+	// console.log('$> raf')
 	if ( timerId ) {
+		// 递归执行 raf
 		window.requestAnimationFrame( raf );
+		// 其实该方法最后还是调用的 $.fx.tick()
 		jQuery.fx.tick();
 	}
 }
 
 // Animations created synchronously will run synchronously
+// -> 同步创建的动画将同步运行
+// 为动画返回当前时间
 function createFxNow() {
 	window.setTimeout( function() {
 		fxNow = undefined;
 	} );
 	return ( fxNow = jQuery.now() );
 }
+
+// 用于测试
+jQuery.cf = createFxNow;
 
 // Generate parameters to create a standard animation
 function genFx( type, includeWidth ) {
@@ -7815,21 +7847,42 @@ function createTween( value, prop, animation ) {
 		}
 	}
 }
-
+/**
+ * 默认预处理，也是加强预处理部分
+ * @param  {element} elem  动画元素
+ * @param  {object} props 元素的动画属性，是经过 propFilter() 过滤后的
+ * @param  {object} opts  $.speed() 过滤后的 optall 对象
+ * @return {[type]}       [description]
+ */
+// 该方法只有一个地方被调用， 遍历 $.Animation.prefilters 
 function defaultPrefilter( elem, props, opts ) {
+	console.info('$> defaultPrefilter', arguments)
 	var prop, value, toggle, hooks, oldfire, propTween, restoreDisplay, display,
 		isBox = "width" in props || "height" in props,
+		// 得到当前元素的上下文
+		// 就用 call 传入的上下文，那个对象就是一个 promise 对象
 		anim = this,
 		orig = {},
+		// 元素的 style 对象
 		style = elem.style,
+		// 判断元素是否是隐藏的
 		hidden = elem.nodeType && isHiddenWithinTree( elem ),
+		// 得到这个元素的 fxshow 缓存
 		dataShow = dataPriv.get( elem, "fxshow" );
+		console.log('\t> datashow', dataShow)
 
+	console.log('\t> opts.queue', opts.queue)
 	// Queue-skipping animations hijack the fx hooks
+	// -> 跳队列动画劫持FX钩子
+	// 如果元素的 queue 参数没有传入，也就是没有指定
 	if ( !opts.queue ) {
+		// 则获取这个元素的默认 fx 钩子
 		hooks = jQuery._queueHooks( elem, "fx" );
+
 		if ( hooks.unqueued == null ) {
 			hooks.unqueued = 0;
+			//  hooks.empty once memory 模式的回调
+			// 得到 hooks 这个回调的执行引用
 			oldfire = hooks.empty.fire;
 			hooks.empty.fire = function() {
 				if ( !hooks.unqueued ) {
@@ -7838,7 +7891,7 @@ function defaultPrefilter( elem, props, opts ) {
 			};
 		}
 		hooks.unqueued++;
-
+ 
 		anim.always( function() {
 
 			// Ensure the complete handler is called before this completes
@@ -7852,6 +7905,8 @@ function defaultPrefilter( elem, props, opts ) {
 	}
 
 	// Detect show/hide animations
+	// -> 检测显示/隐藏动画
+	// 处理值是 toggle | show | hidden 的情况
 	for ( prop in props ) {
 		value = props[ prop ];
 		if ( rfxtypes.test( value ) ) {
@@ -7876,10 +7931,13 @@ function defaultPrefilter( elem, props, opts ) {
 	// Bail out if this is a no-op like .hide().hide()
 	propTween = !jQuery.isEmptyObject( props );
 	if ( !propTween && jQuery.isEmptyObject( orig ) ) {
+		// 目前只有这里返回
 		return;
 	}
 
 	// Restrict "overflow" and "display" styles during box animations
+	// 处理属性的第二种情况， height/width 时元素本身是 inline 情况
+	// 如果有 width 或 height 属性时
 	if ( isBox && elem.nodeType === 1 ) {
 
 		// Support: IE <=9 - 11, Edge 12 - 13
@@ -7925,9 +7983,11 @@ function defaultPrefilter( elem, props, opts ) {
 		}
 	}
 
+	// 设置溢出隐藏
 	if ( opts.overflow ) {
 		style.overflow = "hidden";
 		anim.always( function() {
+			// 复原 overflow 
 			style.overflow = opts.overflow[ 0 ];
 			style.overflowX = opts.overflow[ 1 ];
 			style.overflowY = opts.overflow[ 2 ];
@@ -7985,69 +8045,153 @@ function defaultPrefilter( elem, props, opts ) {
 			}
 		}
 	}
-}
 
+	console.info('$/> defaultPrefilter')
+}
+// 用于测试
+jQuery.dpf = defaultPrefilter;
+
+/**
+ * 可动画 CSS 属性过滤器,处理属性值有数组或者是字符串的情况
+ * @param  {object} props         css 属性对象
+ * @param  {object} specialEasing 规定某个对象以那种缓动函数来执行
+ * @return {[type]}               [description]
+ */
 function propFilter( props, specialEasing ) {
-	var index, name, easing, value, hooks;
+	var
+		index,  // 原始属性名
+		name,	// 驼峰属性名
+		easing,
+		value,  // 原始属性名的值
+		hooks;
 
 	// camelCase, specialEasing and expand cssHook pass
+	// 遍历可动画的 css 属性
 	for ( index in props ) {
+		// 1. 将属性名变成驼峰命名
 		name = jQuery.camelCase( index );
+		// 得与该属性名对应的 specialEasing 对象的缓动函数
 		easing = specialEasing[ name ];
 		value = props[ index ];
+		
+		// 2. 处理 width : ['toggle', 'swing'] 情况
 		if ( jQuery.isArray( value ) ) {
+			// 缓动函数则为第二个
 			easing = value[ 1 ];
+			// 值则是第一个元素
+			// 同时也修改了该属性的这个值
 			value = props[ index ] = value[ 0 ];
 		}
-
+		// 如果原始的名字和更改后的驼峰名字不相等
 		if ( index !== name ) {
+			// 则用驼峰的名字
 			props[ name ] = value;
+			// 然后删除掉原始的名字
 			delete props[ index ];
 		}
 
+		// console.log('\t> props[name]', props[name])
+		// console.log('\t> props[index]', props[index])
+		console.log('\t> index, name ->', index, name)
+		// 3. 钩子情况,优先
 		hooks = jQuery.cssHooks[ name ];
+
+		// 用于测试 if 判断
+		if ( hooks ) {
+			console.log('\t> has hooks', hooks)
+		}
+
+		// borderWidth, margin, padding 这些属性钩子中有 expand 方法
+		// 如果有钩子
+		// 并且钩子有 expand 方法
 		if ( hooks && "expand" in hooks ) {
+			console.log('\t> hooks has expand, value ->', value)
+			// 取这个值的四个对就值, 比如 maringTop,marginLeft,marginRight,marginButton
+			// expand() 返回一个对象
 			value = hooks.expand( value );
+			console.log('\t> value is->', value)
+			// 删除驼峰的名字
 			delete props[ name ];
 
 			// Not quite $.extend, this won't overwrite existing keys.
 			// Reusing 'index' because we have the correct "name"
+			// 遍历 value 对象
 			for ( index in value ) {
+				// 如果 expand() 返回对象的键不在原始的属性列表中
 				if ( !( index in props ) ) {
+					// 则更新这个值
 					props[ index ] = value[ index ];
+					// 并且将对应的缓动函数也改变
 					specialEasing[ index ] = easing;
 				}
 			}
-		} else {
+		}
+		// 如果没有 expand 方法
+		else {
+			console.log('\t> hooks no expand')
+			// 则直接用原始 specialEasing 中对应的缓动函数
+			// 或者用属性值第二个参数指定的缓动函数
 			specialEasing[ name ] = easing;
 		}
 	}
 }
 
+// 用于测试
+jQuery.pf = propFilter;
+
+/**
+ * Animation() 构造器
+ * @param {element} elem       动画执行元素
+ * @param {object} properties 可动画的 css 属性集合对象
+ * @param {object} options    一个拥有 complete, duration, easing 属性的对象
+ *                            	该对象主要从 $.speed() 返回的对象
+ *                            	用于自定义动画
+ */
 function Animation( elem, properties, options ) {
+	console.info('$> Animation', arguments)
 	var result,
-		stopped,
+		stopped,  // 记录是否停止动画
 		index = 0,
 		length = Animation.prefilters.length,
+		// 内部的 deferred 对象，并添加了一个 always() 
+		// 不论是成功或失败间都会被调用
 		deferred = jQuery.Deferred().always( function() {
 
 			// Don't match elem in the :animated selector
+			// 不适应元素用 :animated 选择器
+			// $(':animated') 选择正在执行动画的元素
 			delete tick.elem;
 		} ),
+		// 用于定时器执行的函数
+		// 这个方法应该就简单了，因为前面就实现过
+		// 该方法做了 03Animate.html 中 doAnimation() 这个方法的功能
 		tick = function() {
+			// console.info('$> Animation tick')
 			if ( stopped ) {
 				return false;
 			}
-			var currentTime = fxNow || createFxNow(),
+			var 
+				// 当前时间
+				currentTime = fxNow || createFxNow(),
+				// 计算出剩下时间
+				// animation.startTime 动画开始时间
+				// animation.duration  动画持续时间
 				remaining = Math.max( 0, animation.startTime + animation.duration - currentTime ),
 
 				// Support: Android 2.3 only
 				// Archaic crash bug won't allow us to use `1 - ( 0.5 || 0 )` (#12497)
+				// 时间比值
 				temp = remaining / animation.duration || 0,
-				percent = 1 - temp,
+				// 最后得到用 1 减的时间百分比
+				// 得到动画在 duration 时间中执行的比值
+				// 从小到大的比值， 用 1- 减
+				percent = 1 - temp,  // 当 >= 1  则说明动画结束
 				index = 0,
 				length = animation.tweens.length;
-
+				// console.log(remaining, temp, percent, length)
+				
+			// 动画缓动执行的部分，先暂时不看
+			
 			for ( ; index < length; index++ ) {
 				animation.tweens[ index ].run( percent );
 			}
@@ -8061,18 +8205,32 @@ function Animation( elem, properties, options ) {
 				return false;
 			}
 		},
+		// 该 Animation() 核心 -- 提供一系列重要参数
+		// 扩展用户传入的参数, 并为动画执行提供参数
+		
+		// deferred.promise() 将 promise 对象附加到参数对象中
+		// 也就是说这个对象就有 then() done() faile() always() progress() 这些方法
 		animation = deferred.promise( {
 			elem: elem,
+			// 同样复制一份可动画的 css 属性对象
 			props: jQuery.extend( {}, properties ),
+			// ！！！ 深拷贝一份 options 对象，并多附加两个属性
+			// options -> optall -> $.speed -> $.animate  第二个参数
 			opts: jQuery.extend( true, {
 				specialEasing: {},
+				// 得到一个默认的缓动处理函数
 				easing: jQuery.easing._default
 			}, options ),
+			// 提供对原始属性的引用
 			originalProperties: properties,
+			// 提供对原始参数的引用
 			originalOptions: options,
+			// 创建开始时间
 			startTime: fxNow || createFxNow(),
+			// 动画的持续时间
 			duration: options.duration,
 			tweens: [],
+			// 创建一个 tween 对象
 			createTween: function( prop, end ) {
 				var tween = jQuery.Tween( elem, animation.opts, prop, end,
 						animation.opts.specialEasing[ prop ] || animation.opts.easing );
@@ -8103,12 +8261,21 @@ function Animation( elem, properties, options ) {
 				return this;
 			}
 		} ),
+		// 在 animation 外部提供一个可操作可动画的 css 属性的引用
 		props = animation.props;
-
+	// console.log('\t> animation', animation)
+	// Animation 看到这里就先暂停
+	// 接下来的事必搞懂一件事, 动画之前的参数预处理
+	// 也就是 propFilter
+	
 	propFilter( props, animation.opts.specialEasing );
+	// 预处理完成后
 
+	// 先不考虑
 	for ( ; index < length; index++ ) {
+		// 得到默认的预处理器的返回值 --> defaultPrefilter
 		result = Animation.prefilters[ index ].call( animation, elem, props, animation.opts );
+		console.log('\t> result', result)
 		if ( result ) {
 			if ( jQuery.isFunction( result.stop ) ) {
 				jQuery._queueHooks( animation.elem, animation.opts.queue ).stop =
@@ -8120,23 +8287,38 @@ function Animation( elem, properties, options ) {
 
 	jQuery.map( props, createTween, animation );
 
+	// 如果 opts 对象 start 是一个方法
+	//  --> opts 的源头还是来看用户传入的 $.animate() 第二个是对象参数中
 	if ( jQuery.isFunction( animation.opts.start ) ) {
+		console.log('\t> yes opts.start')
+		// 则先执行该方法,并将 animation 对象传入,可在这这个启动方法中做处理
 		animation.opts.start.call( elem, animation );
 	}
 
+	// 将 tick() 加入到 $.fx.timer 中, 交给 $.fx 控制全局动画
 	jQuery.fx.timer(
+		// 将 元素， animation 对象 和 动画队列名 queue 复制到 tick 上
+		// 传给 $.fx.timer
 		jQuery.extend( tick, {
+			// 元素
 			elem: elem,
+			// anim 对象
 			anim: animation,
+			// 队列名
 			queue: animation.opts.queue
 		} )
+		// tick 是一个函数 ！！！
 	);
+	// $.fx.timer
+	// $.map(props, createTween, animation)
+	// Animation.prefilters 中默认预处理器 defaultPrefilter
 
 	// attach callbacks from options
-	return animation.progress( animation.opts.progress )
-		.done( animation.opts.done, animation.opts.complete )
-		.fail( animation.opts.fail )
-		.always( animation.opts.always );
+	// 从用户的传入的四个状态接口函数中得到并添加到该  promise 对象中
+	return animation.progress( animation.opts.progress )  // 1. progressCallbcaks
+		.done( animation.opts.done, animation.opts.complete ) //2. doneCallbacks
+		.fail( animation.opts.fail ) //3. failCallbacks
+		.always( animation.opts.always ); //4. alwaysCallbacks
 }
 
 jQuery.Animation = jQuery.extend( Animation, {
@@ -8168,8 +8350,10 @@ jQuery.Animation = jQuery.extend( Animation, {
 		}
 	},
 
+	// $.Animation 的处理器集合
 	prefilters: [ defaultPrefilter ],
 
+	// Animation 的预处理器
 	prefilter: function( callback, prepend ) {
 		if ( prepend ) {
 			Animation.prefilters.unshift( callback );
@@ -8191,7 +8375,8 @@ jQuery.Animation = jQuery.extend( Animation, {
  * @return {[type]}          [description]
  */
 jQuery.speed = function( speed, easing, fn ) {
-	// 首先判断第一个参数  speed 
+	console.info('$> speed', arguments)
+	// 首先判断第一个参数  speed 	
 	// $.extend(target, {}) 浅拷贝
 	// 如果 speed 存在, 且是一个对象 -> $.speed(settings)
 	// 则将 speed 浅拷贝到一个空对象中
@@ -8205,7 +8390,7 @@ jQuery.speed = function( speed, easing, fn ) {
 		duration: speed,
 		easing: fn && easing || easing && !jQuery.isFunction( easing ) && easing
 	};
-
+	console.log('\t> opt', opt, opt === fn)
 	// Go to the end state if fx are off or if document is hidden
 	// -> 如果 fx 关闭或文档隐藏
 	// $.fx.off 是否禁用全局所有动画
@@ -8247,7 +8432,7 @@ jQuery.speed = function( speed, easing, fn ) {
 
 	// 为 opt 扩展一个方法 complete, 这个 complete 是真正返回出去的 complete
 	// 也是为外部提供的一接口,用于完成后执行
-	opt.complete = function() {
+	opt.complete = function _complete() {
 		// 如果传入的参数 complete 是一个函数
 		if ( jQuery.isFunction( opt.old ) ) {
 			// 则执行那个函数
@@ -8275,7 +8460,7 @@ jQuery.fn.extend( {
 			.end().animate( { opacity: to }, speed, easing, callback );
 	},
 	animate: function( prop, speed, easing, callback ) {
-		console.info('$> animate')
+		console.info('$> animate', arguments)
 		var
 			// 判断 prop 是否为空
 			empty = jQuery.isEmptyObject( prop ),
@@ -8286,18 +8471,20 @@ jQuery.fn.extend( {
 			doAnimation = function() {
 
 				// Operate on a copy of prop so per-property easing won't be lost
+				// anim 是从 Animation 内部经过一麻烦得到的 promise 对象
 				var anim = Animation( this, jQuery.extend( {}, prop ), optall );
 
 				// Empty animations, or finishing resolves immediately
-				// 是没有 属性, 或 已经完成
+				// 是没有属性, 或 已经完成
 				if ( empty || dataPriv.get( this, "finish" ) ) {
+					// 则用 promise 中的 stop() 
 					// 清空该元素的动画队列，并且停止在当前动画执行的地方
 					anim.stop( true );
 				}
 			};
 			// 这里目前不情况是什么意思
 			doAnimation.finish = doAnimation;
-			console.log('\t> doAnimation', doAnimation === doAnimation.finish);//=> true
+			//console.log('\t> doAnimation', doAnimation === doAnimation.finish);//=> true
 		// 继续链式调用
 		return empty || optall.queue === false ?
 			// 有动画队列 queue, 则直接每个元素执行
@@ -8400,6 +8587,7 @@ jQuery.fn.extend( {
 	}
 } );
 
+// 处理三种情况特殊的值时的快捷方式方法
 jQuery.each( [ "toggle", "show", "hide" ], function( i, name ) {
 	var cssFn = jQuery.fn[ name ];
 	jQuery.fn[ name ] = function( speed, easing, callback ) {
@@ -8423,54 +8611,76 @@ jQuery.each( {
 	};
 } );
 
+// 定时器函数的暂存列表
 jQuery.timers = [];
 jQuery.fx.tick = function() {
+	console.log('$> $.fx.tick')
 	var timer,
 		i = 0,
 		timers = jQuery.timers;
 
 	fxNow = jQuery.now();
 
+	// 遍历 timers 容器
 	for ( ; i < timers.length; i++ ) {
 		timer = timers[ i ];
 
 		// Checks the timer has not already been removed
+		// -> 检查计时器尚未被移除。
 		if ( !timer() && timers[ i ] === timer ) {
+			// splice 两个参数就是删除元素
 			timers.splice( i--, 1 );
 		}
 	}
 
+	// 如果 timers 容器没有内容了
 	if ( !timers.length ) {
+		// 则 $.fx.stop()
 		jQuery.fx.stop();
 	}
 	fxNow = undefined;
 };
-
+// 向 $.timers 中添加一个函数
 jQuery.fx.timer = function( timer ) {
+	// 直接向 timers 窗口中添加这个定时器函数
 	jQuery.timers.push( timer );
+	// 如果该 timers 定时器函数有返回值
 	if ( timer() ) {
+		// 则 $.fx.start()
 		jQuery.fx.start();
-	} else {
+	}
+	// 如果没有返回值
+	else {
+		// 则直移除窗口最后一个元素
 		jQuery.timers.pop();
 	}
 };
-
+// 动画补间的帧数
+// ！！！全局的
 jQuery.fx.interval = 13;
 jQuery.fx.start = function() {
+	// 如果不存在 timerId
 	if ( !timerId ) {
+		// 则用 requestAnimationFram 或 setInterval 设置
 		timerId = window.requestAnimationFrame ?
+			// 第一次用 requestAnimationFrame 执行
 			window.requestAnimationFrame( raf ) :
+			// 第一次用 setInterval 执行
 			window.setInterval( jQuery.fx.tick, jQuery.fx.interval );
 	}
 };
 
+// 清除定时器
+// 也是有两种情况
+// 1. cancelAnimationFram
+// 2. clearInterval
 jQuery.fx.stop = function() {
 	if ( window.cancelAnimationFrame ) {
 		window.cancelAnimationFrame( timerId );
 	} else {
 		window.clearInterval( timerId );
 	}
-
+	// id 置空
 	timerId = null;
 };
 
@@ -9916,7 +10126,7 @@ function addToPrefiltersOrTransports( structure ) {
 	// func 
 	// dataTypeExpression is optional and defaults to "*"
 	return function _pot( dataTypeExpression, func ) {
-		console.info('$> _pot', arguments)
+		// console.info('$> _pot', arguments)
 		// 如果只传入一个参数时 func 则重组参数
 		if ( typeof dataTypeExpression !== "string" ) {
 			func = dataTypeExpression;

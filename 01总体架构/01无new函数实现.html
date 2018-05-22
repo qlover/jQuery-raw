@@ -109,6 +109,14 @@
 	console.log(jq.__proto__ === jQuery.prototype);  //=> true
 	jQuery().each(); //=> each
 	// 没有报错了
+
+	// 而 new jQuery() 和 jQuery() 的关系
+	console.log(new jQuery());// init()
+	console.log(jQuery());// init()
+	console.log(new jQuery().__proto__ === jQuery().__proto__); //=> true 
+	// 也就是说即使 new jQuery() 和 直接调用 jQuery() 返回的是同一个类的实例
+
+	
 }
 
 // 其实 jQuery 它就是这样做的
