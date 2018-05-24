@@ -1,0 +1,85 @@
+<meta charset="UTF-8">
+<title> createTween() </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box" data-id="#box" style="background: #f00; border-style: solid; border-width: 20px;"></div>
+<div id="mid" style="background: #0f0;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// createTween() 方法有两个
+// 1. $.Animation 中 animation 对象中的 createTween
+// 2. 就是 $ 内部专门的一个 createTween
+// 它们的作用都是返回一个 tween 对象
+
+
+// 先说第 2 个 jQuery 内部的 createTween()
+// 它只在两个地方被调用
+// 1. 默认预处理器
+// 2. $.Animation 的 $.map() 中
+
+
+// $.map(elems, callbacks, arg)
+// 	elems 是数组 		遍历每一个数组元素，将当前元素，当前元素索引和 arg 交给回调
+// 						如果回调有返回值则接收
+// 	elems 是一个对象		遍历该对象的所有键，将当前对象的该键的值，当前的键，和 arg 交给回调
+// 						如果回调有返回值则接收
+// 	最后返回接收到的所有数组
+console.log(
+	$.map($('div'), function(elem, index, arg){
+		console.log(elem['id'], index, arg)
+		return arg;
+	}, 'happy')
+)
+
+
+// jQuery.map( props, createTween, animation )
+// 因为这里 props 传入的是一个对象，不是一个数组
+// 所以 $.map() 是这样解决的
+// 	props 是一个对象，则遍历这个对象
+// 	分别将遍历到的每一个键的值，键， animation 这三个参数交给 jQuery 内部的 createTween() 处理
+// 	最后并没有接收返回的值，所以接收的值就不管了
+// 接下来就看内部 createTween
+// 所以就看 createTween 内部是怎么处理的
+// 源码 
+
+$('#box1').animate({ left: 0})
+
+// 这是过程
+// createTween() --> $.Animation.tweeners --> animation.createTween()
+
+// 第 1 个 $.Animation 中 animation 对象中的 createTween()
+// 从上面源码中，也看出来了吧
+// 该方法是最后底层返回 tween 对象的方法
+
+
+// 一个小小总结：
+// 1. 当 $.map() 在为 props 中每一个属性与值获取 tween 对象时
+// 2. 首先会将属性与值给 $ 内部的 createTween() 方法做个代理
+// 	用来调度尝试获取 tween 对象
+// 3. 如果有指定属性的 tween 获取器，则直接从该函数获取
+// 		如果没有则从 $.Animation.tweeners 对象中默认的函数 [*] 获取 tween 对象
+// 4. 在这个默认的 [*] 方法中是用 animation 上下文的 createTween() 获取的最后的 tween 对象
+// 		并且同时还用 adjustCSS() 校正了属性最后才返回
+// 5. 如果在 animation 对象中的 createTween() 中得到了指定的 tween 对象时
+// 6. 将这个 tween 添加到该 animation 上下文的 tweens 集合中，收集所有属性的 tween 对象
+// 7. 最后的最后, 在 $ 内部的 createTween() 并没有接收 tween 对象,也是因为在 tweens 集合中
+
+// 这就是 $.Animation 中 $.map() 的做用
+// 为每一个属性获取一个补间对象 tween ,并用 animation.createTween() 这个底层的方法
+// 将每一个属性的 tween 对象添加进自己的 tweens 集合中
+// $ 内部的 createTween() 其实就是做一个代理的调度的做用
+
+// adjustCSS()
+</script>

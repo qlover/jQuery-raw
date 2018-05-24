@@ -12,32 +12,15 @@
 	}
 </style>
 <div id="box" data-id="#box" style="background: #f00; border-style: solid; border-width: 20px;"></div>
-<div id="mid" style="background: #0f0;"></div>
-<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+<div id="box1" style="background: #0f0; position: relative; "></div>
+<div id="box2" style="background: #ff0; position: relative; "></div>
 
 <script src="../jquery-3.1.1.js"></script>
 <script>
 
-// $.fx 
-console.log($.fx === $.Tween.prototype.init);//=> true
-// ！！！
-// 这是相等的，且源码是这样写的
-// jQuery.fx = Tween.prototype.init
-
-console.log(Object.keys($.fx));
-//=> ["step", "tick", "timer", "interval", "start", "stop", "speeds"]
-
-console.log(Object.keys($.Tween.prototype.init));
-//=> ["step", "tick", "timer", "interval", "start", "stop", "speeds"]
-
-// 这也看得出来了， $.fx 是一个对象，是一个 $.Tween 的一个实例
-// 所以，$.fx 就先入一边
-// 接下来看 Tween 
-
-
-</script>
-
-<script>
+// $.Animation 中的 animation 对象的 createTween() 对象是底层实例化 Tween 的方法
+// 这是动画的最后一节, 为什么会是 Tween ?
+// 先不说,看看结构
 
 console.log(new jQuery())
 console.log(jQuery())
@@ -63,7 +46,6 @@ console.log(new aQuery()) //=> ['init', Init]
 console.log(aQuery()) //=> ['init', Init]
 // 所以明白了吧
 // 还不明白可以去参考 [new一个函数和直接调用函数的区别]
-
 
 
 // 回忆下 jQuery 的结构
@@ -102,12 +84,33 @@ console.log('-------------------------')
 console.log($.fx.tick === $.Tween.prototype.init.tick);//=> true
 // 明白了吧，从 $.fx 可以修改原本 Tween 原型上 init 实例
 
-
-$('#box1').animate({left: 0})
-console.log($.timers)
 // $.fx 源码 
 
 
+// 说到这里,就不得不总结下从 $.animate() 到最后的 animation.tweens[ index ].run( percent ) 这个过程了
+
+// 比较两个动画的 tweens 对象, --> 一个 tween 对象就是对应到动画属性上的一个属性
+$('#box1').animate({ left: 300 }, { duration : 500, 
+	// 用 done 接口来监听 tweens 对象容器
+	done : function(animation){
+		console.log(animation.tweens); //=> [init]
+	}
+})
+
+$('#box2').animate({ left: 300, width : 200 }, { duration : 600,
+	// 用 done 接口来监听 tweens 对象容器
+	done : function(animation){
+		console.log(animation.tweens); //=> [init, init]
+	}
+})
+// 内部并没在动画执行完后清空 tweens 容器,所以当 doneCallbcaks 调用时还是会得到
+// 对吧,没有错吧, 一个属性是对应一个 tween 对象,而这些对象都最终在 animation.tweens 容器中
+// tick 执行也是一次性将里面的每一个 tween 对象 run()
+
+</script>
+
+
+<script>
 // --> $.animate() 的整个过程
 // --- 参数处理部分
 // 1. 以两种形式接收用户传入的 动画属性对象 和 动画参数
@@ -137,5 +140,15 @@ console.log($.timers)
 // 		行为与 promise 流程有密切的关系
 // 		参数与两个默认的处理器 和 $.Animation 本身离不开关系
 // 		而执行，却离不开 Tween 这个补间的对象
+
+
+
+
+// 属性过滤 specialEasing 处理的 propFilter 方法
+// 通过 Deferred 生成流程控制体系
+// 通过 defaultPrefilter 方法对动画执行的临时修正
+// 通过 createTween 方法，生成动画的算法与流程控制器
+// 最后通过 setInterval 来控制每一个 createTween 对象的执行
+
 
 </script>

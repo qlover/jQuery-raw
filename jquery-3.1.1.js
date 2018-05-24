@@ -474,10 +474,14 @@ jQuery.extend( {
 	/**
 	 * 将数组或对象中的所有项转换为新的项数组
 	 * @param  {element}   elems    元素
-	 * @param  {Function} callback 回调
-	 * @param  {object}   arg      回调的第二个参数
+	 * @param  {Function} callback 回调三个参数
+	 *                             	1. 当前元素
+	 *                             	2. 元素的索引
+	 *                             	3. 参数三
+	 * @param  {object}   arg      回调的第三个参数
 	 * @return {[type]}            [description]
 	 */
+	// 
 	map: function( elems, callback, arg ) {
 		var length, value,
 			i = 0,
@@ -487,6 +491,7 @@ jQuery.extend( {
 		if ( isArrayLike( elems ) ) {
 			length = elems.length;
 			for ( ; i < length; i++ ) {
+				// 将元素本身，元素索引和参数三传给回调
 				value = callback( elems[ i ], i, arg );
 
 				if ( value != null ) {
@@ -5070,12 +5075,6 @@ jQuery.fn.extend( {
 
 	// Get a promise resolved when queues of a certain type
 	// are emptied (fx is the type by default)
-	/**
-	 * [promise description]
-	 * @param  {string} type 队列名
-	 * @param  {object} obj  将要绑定到 promise 方法的对象
-	 * @return {object}    		obj 附到 Deferred 上的 promise 对象
-	 */
 	promise: function( type, obj ) {
 		var tmp,
 			count = 1,
@@ -5247,6 +5246,7 @@ function getDefaultDisplay( elem ) {
 }
 
 function showHide( elements, show ) {
+	console.info('$> showHide')
 	var display, elem,
 		values = [],
 		index = 0,
@@ -7654,10 +7654,10 @@ jQuery.fn.extend( {
 /**
  * Tween 补单动画的构造器
  * @param {element} elem    动画元素
- * @param {options} options [description]
- * @param {[type]} prop    [description]
- * @param {[type]} end     [description]
- * @param {[type]} easing  [description]
+ * @param {options} options 动画的 options 对象
+ * @param {object} prop    动画属性
+ * @param {object} end     动画属性的结束值
+ * @param {string} easing  动画缓动函数
  */
 function Tween( elem, options, prop, end, easing ) {
 	return new Tween.prototype.init( elem, options, prop, end, easing );
@@ -7666,6 +7666,16 @@ jQuery.Tween = Tween;
 
 Tween.prototype = {
 	constructor: Tween,
+	/**
+	 * Tween init() 构造器
+	 * @param  {element} elem    动画元素
+	 * @param  {options} options 动画的 options 对象
+	 * @param  {object} prop    动画属性
+	 * @param  {object} end     动画属性的结束值
+	 * @param  {string} easing  动画缓动函数
+	 * @param  {string} unit    动画属性的值，如果在 cssNumber 中的属性，则为空，否则为 px
+	 * @return {[type]}         [description]
+	 */
 	init: function( elem, options, prop, end, easing, unit ) {
 		this.elem = elem;
 		this.prop = prop;
@@ -7675,33 +7685,55 @@ Tween.prototype = {
 		this.end = end;
 		this.unit = unit || ( jQuery.cssNumber[ prop ] ? "" : "px" );
 	},
+	// 返回当前元素的 prop 当前值
 	cur: function() {
+		// 得到当前元素属性的钩子
 		var hooks = Tween.propHooks[ this.prop ];
 
+		// 如果没有钩子,则用 默认的 Tween.propHooks._defalt.get() 来获取该属性的当前值
 		return hooks && hooks.get ?
 			hooks.get( this ) :
 			Tween.propHooks._default.get( this );
 	},
 	run: function( percent ) {
+		// console.log('$> Tween -> run', percent)
 		var eased,
+			// 取当前属性的 tween 钩子
 			hooks = Tween.propHooks[ this.prop ];
 
+		// 指定的持续时间 duration
 		if ( this.options.duration ) {
+			// 钩子方法，接收5个参数,用于返回动画的算法
+			// 1. 剩下时间比值
+			// 2. 比值的持续时间
+			// 3. 0
+			// 4. 1
+			// 5. 持续时间
 			this.pos = eased = jQuery.easing[ this.easing ](
 				percent, this.options.duration * percent, 0, 1, this.options.duration
 			);
-		} else {
+		}
+		// 如果没有指定动画持续时间 duration ，则直接
+		else {
 			this.pos = eased = percent;
 		}
+
+		// 每一次改变当前属性的值
 		this.now = ( this.end - this.start ) * eased + this.start;
 
+		// 为用户提供 step 接口
 		if ( this.options.step ) {
+			// 如果有，则调用，二个参数
+			// 1. 当前值
+			// 2. 当前 tween 对象
 			this.options.step.call( this.elem, this.now, this );
 		}
 
+		// 设置值，也是改变属性值的地方，用钩子用钩子改变
 		if ( hooks && hooks.set ) {
 			hooks.set( this );
 		} else {
+			// 没有，则用 默认的改变
 			Tween.propHooks._default.set( this );
 		}
 		return this;
@@ -7712,13 +7744,18 @@ Tween.prototype.init.prototype = Tween.prototype;
 
 Tween.propHooks = {
 	_default: {
+		// 返回该 tween 对象的当前属性的值
 		get: function( tween ) {
 			var result;
 
 			// Use a property on the element directly when it is not a DOM element,
 			// or when there is no matching style property that exists.
+			// 如果该 tween 对象元素不是一个 DON 元素
 			if ( tween.elem.nodeType !== 1 ||
+				// 或者该 prop 是该元素的一个 DOM 属性
+				// 并且他的 css 样式不存在
 				tween.elem[ tween.prop ] != null && tween.elem.style[ tween.prop ] == null ) {
+				// 则直接返回这个 DOM 的 prop 属性
 				return tween.elem[ tween.prop ];
 			}
 
@@ -7726,11 +7763,14 @@ Tween.propHooks = {
 			// attempt a parseFloat and fallback to a string if the parse fails.
 			// Simple values such as "10px" are parsed to Float;
 			// complex values such as "rotate(1rad)" are returned as-is.
+			// 用 $.css() 得到该元素的 prop 样式
 			result = jQuery.css( tween.elem, tween.prop, "" );
 
 			// Empty strings, null, undefined and "auto" are converted to 0.
+			// 返回样式的值
 			return !result || result === "auto" ? 0 : result;
 		},
+		// 设置该 tween 对象的当前属性的值
 		set: function( tween ) {
 
 			// Use step hook for back compat.
@@ -7751,6 +7791,7 @@ Tween.propHooks = {
 
 // Support: IE <=9 only
 // Panic based approach to setting things on disconnected nodes
+// 为 propHooks 的钩子提供了一个 scrollTop/scrollLeft 的 set 方法
 Tween.propHooks.scrollTop = Tween.propHooks.scrollLeft = {
 	set: function( tween ) {
 		if ( tween.elem.nodeType && tween.elem.parentNode ) {
@@ -7760,11 +7801,16 @@ Tween.propHooks.scrollTop = Tween.propHooks.scrollLeft = {
 };
 // 提供默认缓动选项的对象
 jQuery.easing = {
+	// 表示均速，没有改变时间比值
 	linear: function( p ) {
 		return p;
 	},
 	swing: function( p ) {
-		return 0.5 - Math.cos( p * Math.PI ) / 2;
+		// console.info('$> swing', arguments)
+		// 用于测试
+		var res = 0.5 - Math.cos( p * Math.PI ) / 2;
+		// console.log('\t> swing retuns res ->', res)
+		return res;
 	},
 	_default: "swing"
 };
@@ -7789,9 +7835,10 @@ var
 	rfxtypes = /^(?:toggle|show|hide)$/,
 	// 匹配 queueHooks 结尾
 	rrun = /queueHooks$/;
-// 为 requestAnimationFrame 提供的回调
+// 为 requestAnimationFrame() 提供的回调
+// 其实默认的回调参数还是会得到
 function raf() {
-	// console.log('$> raf')
+	// console.log('$> raf', arguments)
 	if ( timerId ) {
 		// 递归执行 raf
 		window.requestAnimationFrame( raf );
@@ -7833,16 +7880,33 @@ function genFx( type, includeWidth ) {
 
 	return attrs;
 }
-
+// 当在 $.map() 传入的第一个参数是 props 情况下
+// 	value 是遍历 props 其中的对象的值
+// 	prop  则是遍历 props 其中的对象的键
+// 	animation 则是得到的 animation 对象
 function createTween( value, prop, animation ) {
+	console.info('$> createTween', arguments)
 	var tween,
+		// 取 tweenres 中的对应 prop 的处理函数
+		// 并连接到 默认的 * 那个数组中
 		collection = ( Animation.tweeners[ prop ] || [] ).concat( Animation.tweeners[ "*" ] ),
 		index = 0,
 		length = collection.length;
+	console.log('\t> collection', collection)
+
+	// collection 中存放的是返回对应 prop 的 tween 的函数
+	// 有几个就遍历几个
+	// 如果没有其它指定的 tweeners[prop] 函数
+	// 则是用 tweeners[*] 那个默认的函数
 	for ( ; index < length; index++ ) {
+		// 其中的每一个返回相应 tween 对象的函数的 上下文 就是 animation 对象
+		// 看 Animation.tweeners[*]
+		// 如果有返回值，则返回这个值
+		// 		如果用当前的 prop 和 value 在 animation.createTween() 方法中有返回的 tween 时
 		if ( ( tween = collection[ index ].call( animation, prop, value ) ) ) {
 
 			// We're done with this property
+			// 则将 tween 返回
 			return tween;
 		}
 	}
@@ -7869,9 +7933,9 @@ function defaultPrefilter( elem, props, opts ) {
 		hidden = elem.nodeType && isHiddenWithinTree( elem ),
 		// 得到这个元素的 fxshow 缓存
 		dataShow = dataPriv.get( elem, "fxshow" );
-		console.log('\t> datashow', dataShow)
+		// console.log('\t> datashow', dataShow)
 
-	console.log('\t> opts.queue', opts.queue)
+	// console.log('\t> opts.queue', opts.queue)
 	// Queue-skipping animations hijack the fx hooks
 	// -> 跳队列动画劫持FX钩子
 	// 如果元素的 queue 参数没有传入，也就是没有指定
@@ -8092,24 +8156,24 @@ function propFilter( props, specialEasing ) {
 
 		// console.log('\t> props[name]', props[name])
 		// console.log('\t> props[index]', props[index])
-		console.log('\t> index, name ->', index, name)
+		// console.log('\t> index, name ->', index, name)
 		// 3. 钩子情况,优先
 		hooks = jQuery.cssHooks[ name ];
 
 		// 用于测试 if 判断
 		if ( hooks ) {
-			console.log('\t> has hooks', hooks)
+			// console.log('\t> has hooks', hooks)
 		}
 
 		// borderWidth, margin, padding 这些属性钩子中有 expand 方法
 		// 如果有钩子
 		// 并且钩子有 expand 方法
 		if ( hooks && "expand" in hooks ) {
-			console.log('\t> hooks has expand, value ->', value)
-			// 取这个值的四个对就值, 比如 maringTop,marginLeft,marginRight,marginButton
+			// console.log('\t> hooks has expand, value ->', value)
+			// 取这个值的四个对应值, 比如 maringTop,marginLeft,marginRight,marginButton
 			// expand() 返回一个对象
 			value = hooks.expand( value );
-			console.log('\t> value is->', value)
+			// console.log('\t> value is->', value)
 			// 删除驼峰的名字
 			delete props[ name ];
 
@@ -8128,7 +8192,7 @@ function propFilter( props, specialEasing ) {
 		}
 		// 如果没有 expand 方法
 		else {
-			console.log('\t> hooks no expand')
+			// console.log('\t> hooks no expand')
 			// 则直接用原始 specialEasing 中对应的缓动函数
 			// 或者用属性值第二个参数指定的缓动函数
 			specialEasing[ name ] = easing;
@@ -8162,16 +8226,18 @@ function Animation( elem, properties, options ) {
 			// $(':animated') 选择正在执行动画的元素
 			delete tick.elem;
 		} ),
-		// 用于定时器执行的函数
+		// 用于定时器执行的函数 requestAnimationFrame 和 setInteravl 的回调
 		// 这个方法应该就简单了，因为前面就实现过
 		// 该方法做了 03Animate.html 中 doAnimation() 这个方法的功能
+		// 经过, $.Animation 内部的底层 createTween() 方法得到的 tween 对象后
+		// 直接将该方法交给了 $.fx.timer, 也是最终 定时器 执行的回调
 		tick = function() {
 			// console.info('$> Animation tick')
 			if ( stopped ) {
 				return false;
 			}
 			var 
-				// 当前时间
+				// 当前时间, 在 $.fx.tick 中初始化
 				currentTime = fxNow || createFxNow(),
 				// 计算出剩下时间
 				// animation.startTime 动画开始时间
@@ -8191,17 +8257,32 @@ function Animation( elem, properties, options ) {
 				// console.log(remaining, temp, percent, length)
 				
 			// 动画缓动执行的部分，先暂时不看
-			
+
+			// animation.tweens 是最后的 tween 对象容器
+			// 同时将容器中的所有 tween 对象缓动执行
+			// 		也就是说 $.animate() 可以接收多个动画属性,就是这个原因
 			for ( ; index < length; index++ ) {
+				// 分别执行每一个 tween 对象的 run 
+				// !!! 一个 tween 对象是一个 元素的 prop 属性的动画
+				// 也就是一个动画属性对应一个 tweens 对象, 所有的 tween 对象都在 tweens 容器中
+				// 缓动执行 tween.run
+				// 大头大头大头 !!!
 				animation.tweens[ index ].run( percent );
 			}
 
+			// 对用户提供的 progress 回调接口
+			// 每一步动画完成后调用的一个函数，无论动画属性有多少
+			// 时时监控动画
 			deferred.notifyWith( elem, [ animation, percent, remaining ] );
 
+			// 如果动画未完成,用 percent 比值控制
 			if ( percent < 1 && length ) {
+				// 返回剩下时间值
 				return remaining;
 			} else {
+				// 动画完成后,执行 doneCallbacks
 				deferred.resolveWith( elem, [ animation ] );
+				// 直接返回
 				return false;
 			}
 		},
@@ -8229,12 +8310,25 @@ function Animation( elem, properties, options ) {
 			startTime: fxNow || createFxNow(),
 			// 动画的持续时间
 			duration: options.duration,
+			// tween 对象的集合
 			tweens: [],
-			// 创建一个 tween 对象
+			// animation 对象上的 createTween()
+			// 也是底层 animation 对象返回 tween 对象的地方
 			createTween: function( prop, end ) {
+				console.log('$.Animation createTween', arguments)
+				// 1. 得到当前 prop 这个属性的一个 Tween 实例对象 tween
+				// - elem 动画元素
+				// - opts 动画的 options 对象
+				// - prop 动画的属性值，单个
+				// - end  动画属性结束值
+				// - prop 的 缓动函数
 				var tween = jQuery.Tween( elem, animation.opts, prop, end,
 						animation.opts.specialEasing[ prop ] || animation.opts.easing );
+				// 2. 将这个 tween 添加到集合中
+				// 这也是为什么下面 $.map() 不接收的关系
+				// 因为这里将 tween 依附到了，animation.tweens 集合中！！！
 				animation.tweens.push( tween );
+				// 3. 返回这个  tween 
 				return tween;
 			},
 			stop: function( gotoEnd ) {
@@ -8269,13 +8363,14 @@ function Animation( elem, properties, options ) {
 	// 也就是 propFilter
 	
 	propFilter( props, animation.opts.specialEasing );
+	console.log('animation.opts.specialEasing', animation.opts.specialEasing)
 	// 预处理完成后
 
 	// 先不考虑
 	for ( ; index < length; index++ ) {
 		// 得到默认的预处理器的返回值 --> defaultPrefilter
 		result = Animation.prefilters[ index ].call( animation, elem, props, animation.opts );
-		console.log('\t> result', result)
+		// console.log('\t> result', result)
 		if ( result ) {
 			if ( jQuery.isFunction( result.stop ) ) {
 				jQuery._queueHooks( animation.elem, animation.opts.queue ).stop =
@@ -8285,12 +8380,23 @@ function Animation( elem, properties, options ) {
 		}
 	}
 
+	// 这里在的 createTween 函数是该方法外部的 createTween, 外部 createTween
+	// 因为这里 props 传入的是一个对象，不是一个数组
+	// 所以 $.map() 是这样解决的
+	// 	props 是一个对象，则遍历这个对象
+	// 	分别将遍历到的每一个键的值，键， animation 这三个参数交给 jQuery 内部的 createTween() 处理
+	// 	最后并没有接收返回的值，所以接收的值就不管了
+	// 接下来就看内部 createTween
 	jQuery.map( props, createTween, animation );
+	// ？？？为什么跟踪到代码最后，还是看到了 animation.createTween() 时到这里
+	// 最后还是没有接收那个 tween 对象
+	// 这是因为在，底层 animation.createTween() 得到的 tween 时
+	// 在内部将这个  tween 依附到了 animation 的 tweens 集合中
 
 	// 如果 opts 对象 start 是一个方法
 	//  --> opts 的源头还是来看用户传入的 $.animate() 第二个是对象参数中
 	if ( jQuery.isFunction( animation.opts.start ) ) {
-		console.log('\t> yes opts.start')
+		// console.log('\t> yes opts.start')
 		// 则先执行该方法,并将 animation 对象传入,可在这这个启动方法中做处理
 		animation.opts.start.call( elem, animation );
 	}
@@ -8324,9 +8430,15 @@ function Animation( elem, properties, options ) {
 jQuery.Animation = jQuery.extend( Animation, {
 
 	tweeners: {
-		"*": [ function( prop, value ) {
+		// 默认的
+		"*": [ function _tweeners$( prop, value ) {
+			console.info('$> Animation.tweeners[*]')
+			// 1. 调用当前上下文的 createTween ，一般情况下当前上下文是 animation 
+			// 这里的 tween 是 animation 的 createTween() 返回的 tween 对象
 			var tween = this.createTween( prop, value );
+			// 2. 利用 adustCSS() 校正里面的 css 属性
 			adjustCSS( tween.elem, prop, rcssNum.exec( value ), tween );
+			// 3. 返回 tween 对象
 			return tween;
 		} ]
 	},
@@ -8390,7 +8502,7 @@ jQuery.speed = function( speed, easing, fn ) {
 		duration: speed,
 		easing: fn && easing || easing && !jQuery.isFunction( easing ) && easing
 	};
-	console.log('\t> opt', opt, opt === fn)
+	// console.log('\t> opt', opt, opt === fn)
 	// Go to the end state if fx are off or if document is hidden
 	// -> 如果 fx 关闭或文档隐藏
 	// $.fx.off 是否禁用全局所有动画
@@ -8432,7 +8544,10 @@ jQuery.speed = function( speed, easing, fn ) {
 
 	// 为 opt 扩展一个方法 complete, 这个 complete 是真正返回出去的 complete
 	// 也是为外部提供的一接口,用于完成后执行
+	// 并且该方法也是 流程控制中的 doneCallbacks 
+	// 也就是说当一个动画完成，就是执行它
 	opt.complete = function _complete() {
+		console.log('$> _complete -> next queue')
 		// 如果传入的参数 complete 是一个函数
 		if ( jQuery.isFunction( opt.old ) ) {
 			// 则执行那个函数
@@ -8440,7 +8555,7 @@ jQuery.speed = function( speed, easing, fn ) {
 		}
 		// 并且, 如果存在该动画队列名
 		if ( opt.queue ) {
-			// 则用 $.dequeue() 执行该队列
+			// 执行下一个队列
 			jQuery.dequeue( this, opt.queue );
 		}
 	};
@@ -8468,7 +8583,12 @@ jQuery.fn.extend( {
 			// speed 会返回一个对象,这个对象用于自定义动画
 			optall = jQuery.speed( speed, easing, callback ),
 			// 一个动画函数,是一个闭包
+			// 并且该函数，表示一个动画，表示一个动画队列中的一个回调
 			doAnimation = function() {
+
+				// 监听当前元素的动画队列
+				console.log('\t> this queue', $.queue(this, 'fx'));
+
 
 				// Operate on a copy of prop so per-property easing won't be lost
 				// anim 是从 Animation 内部经过一麻烦得到的 promise 对象
@@ -8485,11 +8605,13 @@ jQuery.fn.extend( {
 			// 这里目前不情况是什么意思
 			doAnimation.finish = doAnimation;
 			//console.log('\t> doAnimation', doAnimation === doAnimation.finish);//=> true
+		
 		// 继续链式调用
 		return empty || optall.queue === false ?
 			// 有动画队列 queue, 则直接每个元素执行
 			this.each( doAnimation ) :
 			// 如果 optall 中没有队列,则向队列中添加 doAnimation
+			// fn.queue() 在第一次添加时会执行  ---> 这里启动了动画队列中的第一个
 			this.queue( optall.queue, doAnimation );
 	},
 	stop: function( type, clearQueue, gotoEnd ) {
@@ -8613,22 +8735,25 @@ jQuery.each( {
 
 // 定时器函数的暂存列表
 jQuery.timers = [];
+// requestAnimationFrame 和 setInterval 的回调
 jQuery.fx.tick = function() {
-	console.log('$> $.fx.tick')
 	var timer,
 		i = 0,
 		timers = jQuery.timers;
-
+	// 1. 当前时间, 也是交给 $.Animation 中 tick 的 fxNow 
 	fxNow = jQuery.now();
 
 	// 遍历 timers 容器
 	for ( ; i < timers.length; i++ ) {
+		// 循环取容器中的每一个 timers
 		timer = timers[ i ];
 
 		// Checks the timer has not already been removed
 		// -> 检查计时器尚未被移除。
+		// 执行，
 		if ( !timer() && timers[ i ] === timer ) {
 			// splice 两个参数就是删除元素
+			// 删除这一个元素
 			timers.splice( i--, 1 );
 		}
 	}
@@ -8642,6 +8767,9 @@ jQuery.fx.tick = function() {
 };
 // 向 $.timers 中添加一个函数
 jQuery.fx.timer = function( timer ) {
+	// 用于测试
+	jQuery.tr = timer;
+	console.info('$> $.fx.timer', arguments)
 	// 直接向 timers 窗口中添加这个定时器函数
 	jQuery.timers.push( timer );
 	// 如果该 timers 定时器函数有返回值
@@ -8651,13 +8779,17 @@ jQuery.fx.timer = function( timer ) {
 	}
 	// 如果没有返回值
 	else {
-		// 则直移除窗口最后一个元素
+		// 则直移除容器最后一个元素
 		jQuery.timers.pop();
 	}
 };
 // 动画补间的帧数
 // ！！！全局的
 jQuery.fx.interval = 13;
+// 初始用来判断 timerId 属于 requestAnimationFrame 的 ID 还是 setInterval 的 ID 
+// 并执行回调
+// requestAnimationFrame 执行 raf
+// setInterval 			执行 $.fx.tick
 jQuery.fx.start = function() {
 	// 如果不存在 timerId
 	if ( !timerId ) {

@@ -124,6 +124,7 @@ function animate(elem, option, complete){
 				timerId = null;
 				// 执行回调
 				complete && complete.call(elem);
+				return false;
 			} else {
 				elem.style['left'] = pos + 'px';
 			}

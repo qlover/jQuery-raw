@@ -1,0 +1,111 @@
+<meta charset="UTF-8">
+<title> requestimationframe </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+
+<div id="box" style="background: #f00; position: relative;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// HTML5 提供了一个新的特性， requestAnimationFrame 这也是一个定时器的接口
+// 是专门用来做动画的，与 setTimeout 和 setInterval 不同
+
+// 显示器的刷新频率一般是是60Hz，大概相当于每秒钟重绘60次
+// 大多数浏览器都会对重绘操作加以限制，不超过显示器的重绘频率
+// 因为即使超过那个频率用户体验也不会有提升
+// 因此，最平滑动画的最佳循环间隔是 1000ms/60，约等于16.6ms
+
+// 而 setTimeout 和 setInterval 的问题是，它们都不精确
+// 它们的内在运行机制决定了时间间隔参数实际上只是指定了把动画代码添加到浏览器UI线程队列中以等待执行的时间
+// 如果队列前面已经加入了其他任务，那动画代码就要等前面的任务完成后再执行
+
+
+// 而 requestAnimationFrame 采用系统时间间隔，不会因为间隔时间过短，造成过度绘制，增加开销
+// 也不会因为间隔时间太长，使用动画卡顿不流畅，让各种网页动画效果能够有一个统一的刷新机制
+// 从而节省系统资源，提高系统性能，改善视觉效果
+
+
+// 特点
+// 1. 会将一帧中的所有 DOM 操作集合起来,在一次或回流中完成
+// 2. 不会对隐藏或不可见的元素操作
+// 3. 是专门为动画提供的 API, 如果不是激活状态下的话，动画会自动暂停
+// 用法与 setTimout 相似,但只接收一个参数
+
+
+// window.requestAnimationFrame(callbcak)
+// 	callbcak(timestamp) 函数在下次重新绘制动画时调用的时间, 接收一个参数
+// 		timeStamp  performace.now() 返回的一个时间(5/1000 毫秒)
+// 			表示从时间起点 PerformanceTiming.navigationStart 以来经过的时间
+// 返回值，一个唯一的 long 整数标识，没有别的意义，可以用 window.cancelAnimationFrame 取消这个回调		
+
+
+
+var id1 = null,
+	s1,
+	duration = 1000;
+window.requestAnimationFrame(function _setp(timeStamp){
+	// 初始化开始时间
+	if( !s1 ) s1 = timeStamp;
+	// 持续 1000 
+	if ( timeStamp - s1 < duration) {
+		// arguments.callee 表示当前的函数引用
+		// 内部循环执行 requestAnimationFrame
+		window.requestAnimationFrame(arguments.callee)
+	} else 	return ;
+})
+
+
+
+// 实例
+
+var start = null;
+var element = document.getElementById('box');
+// timestamp 下一帧绘制时的时间
+function step(timestamp) {
+  if (!start) start = timestamp;
+  var progress = timestamp - start;
+  element.style.left = Math.min(progress / 10, 200) + 'px';
+  if (progress < 2000) {
+    window.requestAnimationFrame(step);
+  }
+}
+window.requestAnimationFrame(step);
+
+// 没错, requestAnimationFrame 就是这样的
+// 和普通的定时器是一样的,只是会专门针对 DOM 的渲染
+// 而 jQuery 将 setInterval 和 该 API 做了兼容,也就是说 setInterval 和该 API 都会执行同一个回调
+
+// 看 $.fx.raf 源码,会发现 arguments 还是会有一个时间的值,这个时间值就是 timestamp
+$('#box1').animate({left:0},{
+	progress : function(){
+		console.log('progress', arguments)
+	}
+})
+
+// 只是 jQuery 并没有用这个值, 而是用了专门的一个缓动算法得到的时间比值
+// 		这个算法在 03Animation.html 中介绍过
+// 而是在 $.fx.tick 上做的操作,也是为了让两个底层缓动的方法
+// 	requestAnimationFrame 和 setInterval 调用是一样的
+
+// 源码 
+
+
+// 虽然都是执行的 $.fx.tick 
+// 但是 $.fx.tick 执行的都是 $.fx.timers 容器中的回调
+// 而 $.fx.timers 容器中的回调则是从 $.fx.timer 添加进来
+// 那这个回调到底从哪来, 就是 $.Animation 中的 tick 
+
+// 这里就不再模拟那个算法了,只要知道  requestAnimationFrame 和 setInterval 是底层执行动画的定时器
+// 并且回调是 $.Animation 中的 tick 
+// 接下来, 就是大头了,正直的大头,动画执行的源头
+</script>

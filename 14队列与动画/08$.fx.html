@@ -1,0 +1,64 @@
+<meta charset="UTF-8">
+<title> $.fx </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box" data-id="#box" style="background: #f00; border-style: solid; border-width: 20px;"></div>
+<div id="mid" style="background: #0f0;"></div>
+<div id="box1" style="background: #ff0; position: relative; left: 300;"></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 到这里 $.Animation 的源码,只剩下最后一个东西了
+// 就是 $.fx.timer 
+
+// 经过一系列的处理,校正,修正
+// 由 $.animate() 得到的两个参数 props, options
+// 在最后 props 由 propFilter 和 defaultPrefilter 两个预处理器的处理
+// 并且也做了一个很重要的步骤,从 $.map() 遍历的预处理后的 props 中的每一个属性
+// 用 $ 内部 createTween() 代理处理的 tween 的对象添加到了 animation.tweens 集合中
+
+// 上面的完成后, 将 $.Animation 中的 tick ,并附加三个参数给了 $.fx.timer
+// 	1. 动画的元素 elem
+// 	2. 该动画元素的 animation 对象 anim
+// 	3. 队列名, 其实也就是在 anim 对象中
+
+
+
+// $.fx 
+console.log($.fx === $.Tween.prototype.init);//=> true
+// ！！！
+// 这是相等的，且源码是这样写的
+// jQuery.fx = Tween.prototype.init
+
+console.log(Object.keys($.fx));
+//=> ["step", "tick", "timer", "interval", "start", "stop", "speeds"]
+
+console.log(Object.keys($.Tween.prototype.init));
+//=> ["step", "tick", "timer", "interval", "start", "stop", "speeds"]
+
+// 这也看得出来了， $.fx 是一个对象，是一个 $.Tween 的一个实例
+
+
+// 看 $.Animation 与 Tween 的接口 $.fx.timer() 源码 
+$('#box1').animate({left:0})
+
+// 在源码中用于测试的属性
+console.log(Object.keys($.tr)); //=> ["elem", "anim", "queue"]
+// 看着吧, 有三个从  $.Animation() 得到的三个参数,分别是
+console.log($.tr.elem);
+console.log($.tr.anim);
+console.log($.tr.queue);
+
+// 元素的 tween 对象
+console.log($.tr.anim.tweens[0])
+
+</script>

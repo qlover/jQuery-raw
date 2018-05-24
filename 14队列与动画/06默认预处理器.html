@@ -18,7 +18,7 @@
 <script src="../jquery-3.1.1.js"></script>
 
 <script>
-// 这个方法有怪,它是 $.prefilters 中的第一个默认方法
+// 这个方法有点怪,它是 $.Animation.prefilters 中的第一个默认方法
 
 // defaultPrefilter()
 //  这是源码 -> Animation.prefilters[ index ].call( animation, elem, props, animation.opts );
@@ -57,14 +57,6 @@ console.log($.queue(box[0], 'fx'))
 // 这只是浅浅的理解这个该方法是做什么
 // 它就是在动画执行前临时做的变更，对属性的变更，做一些特殊的处理
 
-
-// 属性过滤 specialEasing 处理的 propFilter 方法
-// 通过 Deferred 生成流程控制体系
-// 通过 defaultPrefilter 方法对动画执行的临时修正
-// 通过 createTween 方法，生成动画的算法与流程控制器
-// 最后通过 setInterval 来控制每一个 createTween 对象的执行
-
-
 // isHiddenWithinTree()
 // showHide()
 // createTween()
@@ -73,6 +65,10 @@ console.log($.queue(box[0], 'fx'))
 
 <script>
 // $.map()
+// $.Animation 内部做了一件事
+// 就是遍历 jQuery 对象数组，为每一个元素都执行了第二个参数的回调
+// jQuery.map( props, createTween, animation )
+
 
 
 

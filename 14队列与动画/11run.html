@@ -1,0 +1,124 @@
+<meta charset="UTF-8">
+<title> Tween 源码 -- run() </title>
+
+<style>
+	div{
+		width: 50px;
+		height: 50px;
+	}
+	@keyframes bgc{
+		0% { background: #0f0; }
+		100%{ background: #ff0; }
+	}
+</style>
+<div id="box1" style="background: #0f0; position: relative; "></div>
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// 动画的源头 -- run()
+
+
+$('#box1').animate({ left: 300}, { duration : 500,
+	// 用 done 接口来监听 tweens 对象容器
+	done : function(animation){
+		console.log(animation.tweens); //=> [init]
+	},
+})
+
+$('#box1').animate({ width:['200px', 'linear'] }, {
+	specialEasing : {
+		width : 'swing'
+	}
+})
+
+
+$('#box1').hide(300);
+// 源码
+
+</script>
+
+<script>
+// 到此，动画就结束了，来一个大体上的总结
+
+// 动画 依赖于 动画队列(fxqueue)
+// 	- 一个 animate() 或 hide() show() 是一个队列回调
+// 	- 而不是一个 left : 0, width : 200
+// 	- 并且一个动画在是一个动画队列中的函数，这个函数就是 doAnimation() 闭包函数
+// 
+// 动画入口 $.animate()
+// 	+ 以两种形式接收两种参数
+// 		1. 动画属性对象 --> properties
+// 		2. 动画参数对象 --> options
+// 			1. 传入对象  --> animate({}, {})
+// 			2. 传入不是对象 --> animate({}, 500, 'swing', function(){})
+//	+ 利用 $.speed() 得到动画参数对象 --> optAll 
+// 		1. 处理入口传入的 动画参数 
+// 			1. 如果不是对象，则以参数创建对象
+// 			2. 如果是对象，则用该对象 --> options 
+// 		2. 得到处理后的 动画参数对象 --> opt
+// 			1. 确认队列名 fx
+// 			2. 重定义 complete 接口
+// 				- 执行原本的 complete
+// 				- 并执行动画队列下一个动画队列元素
+// 
+// 动画队列的元素 doAnimation() 是一个闭包
+// 	- 无论 animate() 底层做了如何复杂的处理，不管预处理，定时器，还是 tween 对象也好
+// 	- 最终都是将一个动画对应一个 doAnimation() 方法添加进该元素的动画队列 fxqueue
+// 	
+// 所有动画的开端
+// 	- 每一个动画队列中的元素是一个 doAnimation() 回调，动画执行，也是依次执行该队列中的回调
+// 	- 该回调就是用来控制与处理动画的属性与动画的参数
+// 	+ $.Animation
+// 		1. 定义一系列重要的对象
+// 			1. 整个 doAnimation() 流程的 promise() 对象
+// 				- 因为 promise() 有 progress, done, faile, always 四种状态机制
+// 			2. 定时器执行的底层回调 --> tick
+// 				1. 动画进行中，返回时间比
+// 				2. 动画完成|失败，返回 false 
+// 				3. 执行 tween 的 run() 
+// 			3. 动画参数 promise 对象 --> animation
+// 				+ .tweens 	存放当前 doAnimation() 动画属性对应的 tween 对象容器
+// 					-因为一个动画属性就是一个 tween 缓动对象
+// 				+ .createTween() 
+// 					- 将得到的 tween 对象添加进 tweens 容器
+// 			4. 预处理动画属性对象 和 动画参数对象的 specialEasing 对象
+// 				- specialEasing 是一个对象，用于指定属性键用那种值的缓动函数
+// 				+ 处理属性
+// 					1. 属性名变成驼峰
+// 					2. 当属性值是数组形式，属性值为第一个
+// 				+ 处理 specialEasing
+// 					1. specialEasing 指定优先
+// 					2. 用 expand() 方法处理四个特殊的值
+// 			5. 加强预处理 $.Animation.prefilters
+// 				1. 默认预处理 --> defaultPrefilter
+// 					1. 修正属性值是 toggle|show|hide 情况
+// 					2. 修正元素本身不是一个盒子情况
+// 					3. 修正元素溢出
+// 					4. 并且实现 属性值是 show/hide 情况
+// 						- 用 showHide() 
+// 				2. 自定义预处理器
+// 			6. 生成 tween --> $.map(props, createTween, animation)
+// 				1. 遍历属性对象,属性名,属性值与 animation 对象传给 createTween
+// 				2. 为每一个属性创建 tween 对象从 createTween()
+// 					1. 类钩子机制, 在 tweener 中使用 _tweeners$() 方法否则使用 ['*'] 默认
+// 					2. 调用当前上下文对象的 createTween() 得到 tween
+// 					3. adjustCSS() 最后在校验属性
+// 				
+// 			7. 为用户提供动画参数 start 接口
+// 					
+// 			8. $.fx.timer	
+// 				1. 将底层回调 tick() 添加进 $.fx.timers 容器
+// 				2. $.fx.timer 得到 tick() 返回值
+// 					1. 启动定时器 --> $.fx.start
+// 						1. requestAnimationFrame --> $.fx.tick
+// 						2. setInterval --> $.fx.tick
+// 					2. 动画完成|失败，移除容器最后一个元素
+// 				3. $.fx.tick
+// 					1. 得到当前时间 fxNow
+// 					2. 遍历 $.fx.timer 容器,并执行
+// 					3. 容器没了则 stop()
+// 		2. 返回添加了四个接口回调的 promise 对象
+// 		
+// 	$.Animation 就是定义动画队列中的回调，最后为每一个元素执行自己的动画队列
+
+</script>
