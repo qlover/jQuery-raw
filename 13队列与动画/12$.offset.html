@@ -1,0 +1,143 @@
+<meta charset="UTF-8">
+<title> 坐标 </title>
+
+<style>
+*{margin: 0; padding: 0}
+	div{
+		width: 100px;
+		height: 50px;
+	}
+</style>
+
+<div id="box1" style="background: #0f0; "></div>
+<div id="box2" style="background: #ff0; padding: 10px ">
+	<div id="box3" style="background: #f00; "></div>
+</div>
+
+
+
+<script src="../jquery-3.1.1.js"></script>
+<script>
+// $.fn.offset()
+// $.fn.offsetParent()
+// $.fn.position()
+
+
+// $.fn.offset() 获取匹配元素集合中第一个元素的当前坐标，相对于文档
+// 	.offset() -- get
+// 		返回一个坐标对象 coords
+// 	.offset( coordinates ) -- set
+// 		coordinates  一个包括 top, left 属性的对象用于设置坐标
+// 	.offset( function ) -- set
+// 		function(index, coords)
+// 			index 当前元素的索引
+// 			coords 当前元素的坐标
+// 			返回一个新的 coords 对象
+
+//  get 
+// $.fn.offset()
+console.log($('#box1').offset());//=> {top:8, left:8}
+
+
+// set
+
+// $.fn.offset(coordinates)
+// 重置该元素的坐标
+$('#box1').offset({ left : 200, top: 0})
+
+// $.fn.offset(function)
+// 用回调重置元素坐标
+$('#box2').offset(function(index, coords){
+	console.log(index, coords)
+	// 该方法一定要返回一个包含 top left 的对象
+	return {
+		top : 20,
+		left : 100
+	}
+})
+
+
+// $.fn.postion() 获取匹配元素集合中第一个元素的当前坐标，相对于文档
+
+console.log($('#box3').offsetParent());// #box2
+console.log($('#box3').position());//=> {top : 10, left : 10}
+
+
+// $.fn.offsetParent()
+// 获取当前元上级元素 position 为 absolut 或 fixed 的父元素
+// 该方法在源码中作了解释，该方法 ->没有作为实际的用例来表示-< 所以就简单看下
+
+
+
+// 用法很简单，那看源码
+</script>
+
+<div id="box4" style="background: #00f;"></div>
+
+<script>
+// Element.getClientRects() 
+// 方法返回一个指向客户端中每一个盒子的边界矩形的矩形集合
+// 该方法返回一个方框区域对象，这个区域是由 css 的 top,left, right,bottom 等属性所表示
+// 并且这些属性只读
+console.log($('#box2')[0].getClientRects())
+
+// Element.getBoundingClientRect()
+// 方法返回元素的大小及其相对于视口的位置。
+
+$('div').each(function(index, el) {
+	console.log(arguments)
+});
+
+
+
+// $.offset.setOffset(elem, options, i) 源码 
+
+// 该源码看完，会发现一个彩蛋，提供了一个 using 接口
+
+// get 
+console.log($('#box4').offset());//=> {top: 120, left:0}
+
+console.log($('#box4').css('position'));//=> static
+
+// set 跳过 $.offset() 直接设置坐标
+$.offset.setOffset($('#box4')[0], {
+	left : 200,
+	top : 200,
+	// jQuery 对象对外的接口 using
+	// 接收处理后的 props 属性对象
+	'using' : function(prop){
+		$(this).css(prop)
+	}
+}, 0)
+
+
+
+// html 节点的坐标
+console.log($('html').offset())
+
+//  offset() 或 position() 都是有 元素的 left, top 属性值做的对象坐标
+//  也就是说，坐标是由元素的 left, top 组成的对象
+// 该方法会在当前的当前位置开始改变坐标，而不是相对于整个文档
+</script>
+
+<div id="box5" style="width: 200px; height: 100px; background: #0f0; overflow-y: scroll;">
+	<p>1</p>
+	<p>1</p>
+	<p>1</p>
+	<p>1</p>
+	<p>1</p>
+	<p>1</p>
+	<p>1</p>
+	<p>1</p>
+</div>
+
+<script>
+
+// scrollTop() & scrollLeft()
+// 还剩下两个东西，获取元素滚动条的位置，也只相对于第一个元素
+// 并且这两个也是 getter/setter 方法
+
+// 可设置该元素的 滚动条相对于顶部的值
+$('#box5').scrollTop(50)
+
+</script>

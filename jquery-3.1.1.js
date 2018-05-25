@@ -295,6 +295,7 @@ jQuery.extend( {
 	isArray: Array.isArray,
 
 	isWindow: function( obj ) {
+		// window === window.window
 		return obj != null && obj === obj.window;
 	},
 
@@ -374,6 +375,7 @@ jQuery.extend( {
 		return string.replace( rmsPrefix, "ms-" ).replace( rdashAlpha, fcamelCase );
 	},
 
+	// 返回小写的节点名
 	nodeName: function( elem, name ) {
 		return elem.nodeName && elem.nodeName.toLowerCase() === name.toLowerCase();
 	},
@@ -4122,6 +4124,8 @@ jQuery.fn.ready = function( fn ) {
 	return this;
 };
 
+
+// 核心处理-- rady 事件
 jQuery.extend( {
 
 	// Is the DOM ready to be used? Set to true once it occurs.
@@ -4195,7 +4199,8 @@ if ( document.readyState === "complete" ||
  * @param  {Function} fn        用于处理得到的 key,value 做 get/set 操作
  * @param  {object}   key     分三种情况, 字符串, 对象, null
  * @param  {object}   value     传入的值,可以是字符串,可以是函数
- *                              当是函数时, value(index, oldPropertyValue ) 获取当前对象索引为 index 的 key 的原来的值
+ *                              当是函数时
+ *                              value(index, oldPropertyValue ) 获取当前对象索引为 index 的 key 的原来的值
  * @param  {number}   chainable true 表示可以链式调用 fales 表示不能
  * @param  {undefined}   emptyGet  目前未知
  * @param  {boolean}   raw       判断 value 是否是一个函数 true 表示不是 fale 则是
@@ -12282,76 +12287,132 @@ jQuery.expr.pseudos.animated = function( elem ) {
  * Gets a window from an element
  */
 function getWindow( elem ) {
+	// nodeType === 9 表示是文档片段
+	// 如果元素是 window ，则直接返回
+	// 否则如果元素是片段，并且是 FF访问子框架内联样式的 iframe 时，则返回 window
+	// 否则返回 false 
 	return jQuery.isWindow( elem ) ? elem : elem.nodeType === 9 && elem.defaultView;
 }
+// 用于测试
+jQuery.gw = getWindow;
 
 jQuery.offset = {
+	/**
+	 * 设置元素坐标
+	 * @param {Element} elem    坐标元素
+	 * @param {Object|Function} options 坐标对象，包含 top, left 属性的对象,或都是一个函数
+	 * @param {Number} i       元素的索引
+	 */
 	setOffset: function( elem, options, i ) {
+		console.info('$> $.offset.setOffset', arguments)
 		var curPosition, curLeft, curCSSTop, curTop, curOffset, curCSSLeft, calculatePosition,
+			// 得到当前元素的 position 属性
 			position = jQuery.css( elem, "position" ),
+			// 当前元素 jQuery 包装过的
 			curElem = jQuery( elem ),
+			// 最后需要用 $.fn.css() 设置的属性对象
 			props = {};
 
 		// Set position first, in-case top/left are set even on static elem
+		// 如果没有指定 position 属性值
 		if ( position === "static" ) {
+			// 则初始 relative 
+			// 因为 top,left 是基于定位的
 			elem.style.position = "relative";
 		}
 
+		// 也就是说，该方法会在当前的当前位置开始改变坐标，而不是相对于整个文档
+
+		// get 元素的坐标对象
 		curOffset = curElem.offset();
+		// get 元素的 top|left 属性
 		curCSSTop = jQuery.css( elem, "top" );
 		curCSSLeft = jQuery.css( elem, "left" );
+		// 记录元素的 top left 值是否是自动
 		calculatePosition = ( position === "absolute" || position === "fixed" ) &&
 			( curCSSTop + curCSSLeft ).indexOf( "auto" ) > -1;
 
 		// Need to be able to calculate position if either
 		// top or left is auto and position is either absolute or fixed
+		// 如果不是绝对或固定定位且不是自动的值
 		if ( calculatePosition ) {
+			// 则重新定义元素的相当于父元素定位元素的 top left 
 			curPosition = curElem.position();
 			curTop = curPosition.top;
 			curLeft = curPosition.left;
 
 		} else {
+			// 否则直接得到 top left 值
 			curTop = parseFloat( curCSSTop ) || 0;
 			curLeft = parseFloat( curCSSLeft ) || 0;
 		}
 
+		// options 是函数的情况，则先处理
 		if ( jQuery.isFunction( options ) ) {
 
 			// Use jQuery.extend here to allow modification of coordinates argument (gh-1848)
+			// curOffset 是 fn.offset() 获取得只读属性， 用 $.entend() 复制一份好修改
+			// 将元素索引 和 元素的当前坐标交给函数
+			// 得到该函数返回的 坐标对象
 			options = options.call( elem, i, jQuery.extend( {}, curOffset ) );
 		}
 
+		// 是函数返回的坐标对象则用函数返回的
+		// 不是函数返回的坐标对象则用参数得到的
+		
+		// 向 props 设置属性对象中添加值
+		// 指定的坐标 - 当前的坐标 + css 对应的属性值
 		if ( options.top != null ) {
+			// 设置 top
 			props.top = ( options.top - curOffset.top ) + curTop;
 		}
 		if ( options.left != null ) {
+			// 设置 left
 			props.left = ( options.left - curOffset.left ) + curLeft;
 		}
+		
+		// 最后将需要移动的距离添加到 props 中
 
+		// 对外提供的一个接口，
+		// 如果有指定  using 函数则用该函数处理
 		if ( "using" in options ) {
 			options.using.call( elem, props );
 
 		} else {
+			// 否则就直接用 $.css() 设置
 			curElem.css( props );
 		}
 	}
 };
 
+// $.fn.offset() | $.fn.position() 
 jQuery.fn.extend( {
+	/**
+	 * 相当于文档的坐标获取
+	 * @param  {object} options 当用该对象时，表示 set
+	 * @return {[type]}         [description]
+	 */
+	// setter/getter
 	offset: function( options ) {
 
+		// set 
 		// Preserve chaining for setter
+		// 首先判断是否有参数 --> set
 		if ( arguments.length ) {
 			return options === undefined ?
 				this :
+				// 则为当前每一个元素 
 				this.each( function( i ) {
+					// $.offset.setOffset() 设置坐标
 					jQuery.offset.setOffset( this, options, i );
 				} );
 		}
 
 		var docElem, win, rect, doc,
+			// 因为一组 jQuery 对象，所以获取第一个
 			elem = this[ 0 ];
 
+		// get
 		if ( !elem ) {
 			return;
 		}
@@ -12363,9 +12424,11 @@ jQuery.fn.extend( {
 			return { top: 0, left: 0 };
 		}
 
+		// 获取该元素的相对于视口的位置
 		rect = elem.getBoundingClientRect();
 
 		// Make sure element is not hidden (display: none)
+		// -> 确保元素没有隐藏
 		if ( rect.width || rect.height ) {
 			doc = elem.ownerDocument;
 			win = getWindow( doc );
@@ -12378,9 +12441,10 @@ jQuery.fn.extend( {
 		}
 
 		// Return zeros for disconnected and hidden elements (gh-2310)
+		// 如果是隐藏的元素，则直接返回该对象
 		return rect;
 	},
-
+	// 该方法不接收任何参数
 	position: function() {
 		if ( !this[ 0 ] ) {
 			return;
@@ -12388,27 +12452,38 @@ jQuery.fn.extend( {
 
 		var offsetParent, offset,
 			elem = this[ 0 ],
+			// 初始化父元素的坐标
 			parentOffset = { top: 0, left: 0 };
 
 		// Fixed elements are offset from window (parentOffset = {top:0, left: 0},
 		// because it is its only offset parent
+		// 先判断元素是否是 fixed
 		if ( jQuery.css( elem, "position" ) === "fixed" ) {
 
 			// Assume getBoundingClientRect is there when computed position is fixed
+			// 则返回相对于视口的位置对象
 			offset = elem.getBoundingClientRect();
 
-		} else {
+		}
+		// 如果不是 fixed 固定定位
+		else {
 
 			// Get *real* offsetParent
+			// 先得到有 position 的父元素
 			offsetParent = this.offsetParent();
 
 			// Get correct offsets
+			// 得到改正的坐标
 			offset = this.offset();
+			// 如果父元素是 html
 			if ( !jQuery.nodeName( offsetParent[ 0 ], "html" ) ) {
+				// 则改变父元素坐标为 html 的 坐标
 				parentOffset = offsetParent.offset();
 			}
 
 			// Add offsetParent borders
+			// 如果不是 html ，则直接改变值
+			// 并且将坐标加上边框的值，当前边框是纯数字
 			parentOffset = {
 				top: parentOffset.top + jQuery.css( offsetParent[ 0 ], "borderTopWidth", true ),
 				left: parentOffset.left + jQuery.css( offsetParent[ 0 ], "borderLeftWidth", true )
@@ -12416,6 +12491,8 @@ jQuery.fn.extend( {
 		}
 
 		// Subtract parent offsets and element margins
+		// 最后返回一个坐标对象
+		// 当前元素的坐标 - 父元素的坐标 - 边距 得到最后需要移动的坐标
 		return {
 			top: offset.top - parentOffset.top - jQuery.css( elem, "marginTop", true ),
 			left: offset.left - parentOffset.left - jQuery.css( elem, "marginLeft", true )
@@ -12436,34 +12513,49 @@ jQuery.fn.extend( {
 		return this.map( function() {
 			var offsetParent = this.offsetParent;
 
+			// 循环向该元素上找,如果元素定位都是 static 则继续，执行循环到根元素
 			while ( offsetParent && jQuery.css( offsetParent, "position" ) === "static" ) {
 				offsetParent = offsetParent.offsetParent;
 			}
-
+			// 如果还是没有，则返回根元素
 			return offsetParent || documentElement;
 		} );
 	}
 } );
 
 // Create scrollLeft and scrollTop methods
+// fn.scrollLeft() | fn.scrollTop()
 jQuery.each( { scrollLeft: "pageXOffset", scrollTop: "pageYOffset" }, function( method, prop ) {
+	// 用于判断是设置 x 坐标还是 y 坐标
 	var top = "pageYOffset" === prop;
 
+	// 方法定义
 	jQuery.fn[ method ] = function( val ) {
+		// 通过内部 access() 
+		// fn(elem, key) --> get
+		// fn(elem, key, val) --> set
+		// 也就是说外部如果没有传入 val ，则为 get ，有则为 set
 		return access( this, function( elem, method, val ) {
+			// 得到元素是否是 window
 			var win = getWindow( elem );
 
+			// 如果为没有值 -- get
 			if ( val === undefined ) {
+				// 则直接返回
 				return win ? win[ prop ] : elem[ method ];
 			}
 
+			// 如果是 windoq  -- set
 			if ( win ) {
+				// scrollTo(xpos,ypos) 方法可把内容滚动到指定的坐标
+				// pageXOffset 和 pageYOffset 属性返回文档在窗口左上角水平和垂直方向滚动的像素
 				win.scrollTo(
 					!top ? val : win.pageXOffset,
 					top ? val : win.pageYOffset
 				);
 
 			} else {
+				// 否则直接为 scrollLeft|scrollTop 设置
 				elem[ method ] = val;
 			}
 		}, method, val, arguments.length );
