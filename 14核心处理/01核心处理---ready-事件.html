@@ -1,0 +1,105 @@
+<meta charset="UTF-8">
+<title> 核心处理--- ready 事件 </title>
+<script src="../jquery-3.1.1.js"></script>
+
+<script>
+
+// jQuery.ready
+// $.fn.ready()
+// $.holdReady(hold)
+// $.readyException()
+
+
+// onload 事件
+// onload 当前元素加载完成后执行的事件
+// 写法有两种形式
+// 	1. DOM0 标签中的 onload 属性
+// 		<body>, <frame>, <frameset>, <iframe>, <img>, <input type="image">, <link>, <script>, <style>
+// 	2. DOM2 
+// 		window.onload = function(){}  == <body onload="">
+function pageOver () {
+	console.log(this, '页面加载完成')
+}
+
+window.onload = pageOver;
+
+// 即使 window 与 body 同时添加 onload 事件，也会只执行一个
+// 都表示页面加载完成后
+
+// 图片加完完成的事件
+function imgOver () {
+	console.log(this, '图片加载完成')
+}
+
+
+// 如果网页上有大量的图片，效果可想而知，用户可能在没有看到图片的时候
+// 就已经开始操作页面了，而这时我们的页面还没有初始化，事件还没有注册上，这岂不是太晚了
+// 所以取而代知的则是
+
+
+// onDOMContentLoaded 事件
+// 基于标准的浏览器支持这个事件, 当所有 DOM 解析完以后会触发这个事件
+// 文档被加载和解析，并且 DOM 被完全构造
+// ！！！但链接的资源（例如图像，样式表和子框架（subframes））可能尚未被加载
+
+
+// 1）支持DOMContentLoaded事件的，就使用DOMContentLoaded事件
+// 2）IE6、IE7不支持DOMContentLoaded，但它支持 onreadystatechange 事件
+// 		该事件的目的是提供与文档或元素的加载状态有关的信息
+// 3)  更低的ie还有个特有的方法 doScroll
+// 		通过间隔调用：document.documentElement.doScroll("left");
+//   	可以检测DOM是否加载完成
+//   	当页面未加载完成时，该方法会报错，直到 doScroll 不再报错时，就代表DOM加载完成了
+//   	该方法更接近DOMContentLoaded的实现。
+
+// https://developer.mozilla.org/zh-CN/Add-ons/WebExtensions/API/webNavigation/onDOMContentLoaded
+</script>
+
+<script>
+// 也下是元素和页面都有 加载 事件，所以 jQuery 有着
+// $.fn.ready()
+// $.ready()
+
+
+// $.fn.ready(handler)
+// 该事件的几种写法
+// 		$( handler ) 
+// 		$( document ).ready( handler ) 
+// 		$( "document" ).ready( handler ) 
+// 		$( "img" ).ready( handler ) 
+// 		$().ready( handler ) 
+// 但建议第一种
+
+$(function(){ console.log('ready 1', arguments)})
+$(function(){ console.log('ready 2', arguments)})
+$(function(){ console.log('ready 3', arguments)})
+// 1. 比上面的 window.onload 还要早
+// 2. 执行了三个
+// 3. 匿名函数有一个参数, 而这个参数，既然就是 jQuery 构造器
+
+
+
+// 先看源码，为什么会有这三个特性
+// $.fn.ready() 源码非常的简单，简单得只有几行
+// 只是将事件处理函数添加进了队列，并没有执行，而执行，则要靠 $.ready()
+
+// $.ready(wait)
+//  wait 用于表明是否要停止执行 ready 事件
+// 1. ready 事件处理函数用一个 readyList 的 promise 对象维护
+// 2. 为页面同时绑定 DOMContentLoaded 和 load 事件，并作兼容
+// 3. DOMContentLoaded 和 load 事件处理函数 completed 会移除绑定的事件，并调用 $.ready()
+// 4. 最后在 $.ready() 中各种判断，执行 readyList 
+</script>
+
+<script>
+// 而 jQuery 神奇的并不是上面用 readyList 管理的策略
+// 而是 holdReady() 可以控制 ready 事件的调用
+
+</script>
+
+
+<body onload="pageOver()">
+
+	<img src="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1527314058229&di=ca4bbf4f8aaec757ef81d72578412c8d&imgtype=0&src=http%3A%2F%2Fp8.aipai.com%2Fphoto%2F358%2F31570358%2Fphoto%2F25%2F2915609%2F2915609_normal.jpg" alt="" onload="imgOver()">
+
+</body>

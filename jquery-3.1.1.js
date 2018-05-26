@@ -3737,7 +3737,7 @@ jQuery.extend( {
                  */
 				then: function( onFulfilled, onRejected, onProgress ) {
                     // 在该方法内部只做了这两件事
-                    console.log('$> Deferred.promise.then', arguments);
+                    // console.log('$> Deferred.promise.then', arguments);
                     var maxDepth = 0;
                     // console.log('$> promise.then this', this)
                     // 这里的 this 表示当前 deferred 对象
@@ -3753,6 +3753,7 @@ jQuery.extend( {
                      * @return {[type]}          [description]
                      */
                     function resolve( depth, deferred, handler, special ) {
+
                         return function () {
 							var that = this, 
                                 // 得到 最外部 传入的回调函数
@@ -4096,8 +4097,9 @@ jQuery.Deferred.exceptionHook = function( error, stack ) {
 
 
 
-
+// ready 事件的异常
 jQuery.readyException = function( error ) {
+	// 异步抛出异常
 	window.setTimeout( function() {
 		throw error;
 	} );
@@ -4107,32 +4109,58 @@ jQuery.readyException = function( error ) {
 
 
 // The deferred used on DOM ready
+// 该对象为 ready 提供的 promise 状态
+// 这也是为什么，ready 事件可以注册多个
 var readyList = jQuery.Deferred();
+// 用于测试
+jQuery.rl = readyList;
 
+
+// $.fn.ready()
+// 也就是为什么可以 $(document).ready(), $('img').ready() 的原因
+// 因为原型上也有 ready() 
 jQuery.fn.ready = function( fn ) {
 
+	// 一旦 DOM 元素调用 ready 事件
 	readyList
+		// 就向 readyList 中添加该函数 fn
+		// 1.8+ then() 指定的回调函数的返回值会作为参数传入后面的回调函数
 		.then( fn )
 
 		// Wrap jQuery.readyException in a function so that the lookup
 		// happens at the time of error handling instead of callback
 		// registration.
+		// -> 将 jQuery.readyException包装在函数中
+		// -> 以便查找发生在错误处理时
+		// -> 而不是回调时。登记。
+		// catch() -> then(null, fn)
+		// 为失败添加一个 failCallback
+		// 内容则是异常
 		.catch( function( error ) {
 			jQuery.readyException( error );
 		} );
 
+	// 同样返回 this
 	return this;
 };
-
+// 很奇怪，$.fn.ready() 只是做这们一件事
+// 就是把每一个元素绑定的 ready 事件添加进 deferred 队列中
+// 并包装异常
+// ！！！ 注意，并没有执行
+// ！！！ 注意，并没有执行
+// ！！！ 注意，并没有执行
 
 // 核心处理-- rady 事件
+// $.ready()
 jQuery.extend( {
 
 	// Is the DOM ready to be used? Set to true once it occurs.
+	// -> DOM准备好使用了吗？一旦发生，就设置为true。
 	isReady: false,
 
 	// A counter to track how many items to wait for before
 	// the ready event fires. See #6781
+	// readyWait > 2 ready() 就不执行
 	readyWait: 1,
 
 	// Hold (or release) the ready event
@@ -4146,7 +4174,7 @@ jQuery.extend( {
 
 	// Handle when the DOM is ready
 	ready: function( wait ) {
-
+		// console.log('$> ready', jQuery.readyWait)
 		// Abort if there are pending holds or we're already ready
 		if ( wait === true ? --jQuery.readyWait : jQuery.isReady ) {
 			return;
@@ -4161,16 +4189,23 @@ jQuery.extend( {
 		}
 
 		// If there are functions bound, to execute
+		// 执行，执行 ready 事件队列
+		// 并将 jQuery 作为参数传递给事件函数
+		// 这也是 $(function($){}) 可以用一个参数接收 jQuery 
+		// ready() 事件执行的源头
 		readyList.resolveWith( document, [ jQuery ] );
 	}
 } );
-
+// 为 $.ready 提供一个 readyList 的 then 方法接口
 jQuery.ready.then = readyList.then;
 
 // The ready event handler and self cleanup method
+// DOMContentLoaded 或 load 事件就绪的处理方法
 function completed() {
+	// 移除事件
 	document.removeEventListener( "DOMContentLoaded", completed );
 	window.removeEventListener( "load", completed );
+	// 执行 $.ready()
 	jQuery.ready();
 }
 
@@ -4178,14 +4213,20 @@ function completed() {
 // after the browser event has already occurred.
 // Support: IE <=9 - 10 only
 // Older IE sometimes signals "interactive" too soon
+
+// 为整个页面绑定 DOMContentLoaded 或 load 事件
+// 并兼容了低 IE 的 doScroll 
 if ( document.readyState === "complete" ||
 	( document.readyState !== "loading" && !document.documentElement.doScroll ) ) {
 
 	// Handle it asynchronously to allow scripts the opportunity to delay ready
+	// 则直接异步执行 $.ready()
 	window.setTimeout( jQuery.ready );
 
 } else {
+	// 否则
 
+	// DOMContentLoaded 比 load 先绑定，先执行
 	// Use the handy event callback
 	document.addEventListener( "DOMContentLoaded", completed );
 

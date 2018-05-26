@@ -75,6 +75,8 @@ console.log(dfd2._tuples[1]);
 
 dfd2.resolve('cao cao cao')
 
+// then() 会用内部的 resolve() 方法将传入的几个不同的 List 回调做处理
+// 处理成一个匿名函数添加进第二个回调队列中
 
 
 // 最后就是 then() 方法的源码了,这个源码非常难懂,就之后来吧
