@@ -1,0 +1,96 @@
+<meta charset="UTF-8">
+<title> 核心处理--- 源生规范</title>
+<script>
+
+// 在function前面加！、+、 -甚至是逗号等到都可以起到函数定义后立即执行的效果
+// 而（）、！、+、-、=等运算符，都将函数声明转换成函数表达式
+// 一个立即执行函数也能返回值并且可以复制给其它变量
+// (function(){})(); <==>(function(){}()); 写法完全等价的
+
+(function(){ console.log('111111')})  // 换行也是可以执行的
+(); 
+
+(function(){ console.log('222222')}());
+
+
+// 利用 UMD 规范自己实现一个
+// root 	代表当前环境的全局变量是什么
+// factory	模块的工厂方法，用于返回一个编写的模块
+(function(root, factory) {
+	// 1. AMD --> define.amd
+	if (typeof define === 'function' && define.amd) {
+		// 则用 define() 定义
+		define(['aquery'], factory);
+	}
+	// 2. CommonJS  --> exports || module.exports
+	else if (typeof exports === 'object') {
+		// CommonJS 以 exports 提供对外接口
+		module.exports = factory(require('aquery'));
+	}
+	// 3. 浏览器全局变量(root 即 window)
+	else {
+		// window.aQuery = factory() return => aQuery
+		root.aQuery = factory(root.aQuery);
+	}
+
+}(this, function($) {
+	// 定义该模块核心类
+	var aQuery = function aQuery(){
+		return new aQuery.prototype.init();
+	}
+	aQuery.fn = aQuery.prototype = {
+		constructor : aQuery,
+		aquery : '+1.0.0',
+		init : function(){
+
+		}
+	}
+	aQuery.version = '1.0.0';
+	aQuery.fn.init.prototype = aQuery.fn;
+
+
+	// 暴露公共方法
+	// 这也是为了给浏览器全局变量设置
+	return aQuery;
+}));
+
+// 得到 aQuery()
+console.log(aQuery().aquery);//=> +1.0.0
+
+// jQuery 神奇就是在于，它能用很少的代码做很多的事
+// jQuery 也能将上面的 UMD 规范变成自己的
+// 见 aQuery.js
+</script>
+
+
+<script src="../aQuery.js"></script>
+<script>
+console.log(aQuery.version);//=> 1.0.0
+// 规范，到此也完了
+// 最后欣赏一下 jQuery 的模块规范
+
+( function( global, factory ) {
+	"use strict";
+	if ( typeof module === "object" && typeof module.exports === "object" ) {
+		module.exports = global.document ?
+			factory( global, true ) :
+			function( w ) {
+				if ( !w.document ) {
+					throw new Error( "jQuery requires a window with a document" );
+				}
+				return factory( w );
+			};
+	} else {
+		factory( global );
+	}
+} )( typeof window !== "undefined" ? window : this, function( window, noGlobal ) {
+	"use strict";
+	var jQuery = function(){}
+	if ( typeof define === "function" && define.amd ) {
+		define( "jquery", [], function() {
+			return jQuery;
+		});
+	}
+	return jQuery;
+})
+</script>

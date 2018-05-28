@@ -1,0 +1,42 @@
+<meta charset="UTF-8">
+<title> 核心处理--- 模块化</title>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// AMD,CMD,CommonJS
+// 这三个规范都是为 js 模块化加载而生的，都是在用到或者预计要用到某些模块时候加载该模块
+// 使得大量的系统巨大的庞杂的代码得以很好的组织和管理
+// 模块化使得我们在使用和管理代码的时候不那么混乱，而且也方便了多人的合作
+
+
+
+// CommonJS
+// 	一个有目标的构建JavaScript生态系统Web服务器组，在浏览器和命令行应用程序和桌面
+// CommonJs 是一个更偏向于服务器端的规范
+// Node.js采用了这个规范
+// 根据 CommonJS 规范，一个单独的文件就是一个模块
+// 加载模块使用require方法，该方法读 取一个文件并执行，最后返回文件内部的exports对象
+// 同步加载模块
+
+// require() 用来引入外部模块
+// exports 对象用于导出当前模块的方法或变量，唯一的导出口
+// module 对象就代表模块本身。
+
+
+
+
+// AMD
+//  Asynchronous Module Definition，中文名是异步模块定义的意思
+//  define 和 require 这两个定义模块、调用模块的方法，合称为 AMD 模式
+// 	异步加载依赖模块
+// 	https://github.com/amdjs/amdjs-api/wiki/AMD
+// 	jQuery 1.7+
+// 	Dojo   1.6+
+
+// CMD
+// 	则是另一个奇特, 主要是因 seaJS 引起
+// 	http://web.jobbole.com/83761/#article-comment
+// 	https://blog.csdn.net/xcymorningsun/article/details/52709608
+
+
+</script>

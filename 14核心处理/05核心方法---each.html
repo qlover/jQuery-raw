@@ -1,0 +1,48 @@
+<meta charset="UTF-8">
+<title> 核心处理--- each</title>
+<script src="../jquery-3.1.1.js"></script>
+<script>
+
+// 这个方法虽然简单，但非常用
+// $.each()/fn.each()
+
+// fn.each() 调用的低级 $.each() API
+
+// $.each(obj, callback) 可遍历类数组与对象
+
+console.log(
+	$.each([1,2,3,4], function (index, value) {
+		console.log(index, value)
+	})
+)// 并返回遍历的对象
+
+$.each({
+	'name': 'qlover',
+	'age' : 20,
+	'sex' : 'man'
+}, function(prop, value){
+	console.log(prop, value)
+	// 还可以模拟 break 
+	if ( prop == 'age') {
+		return false;
+	}
+})
+
+// 用得最多的就是动态绑定
+// 好比
+
+$.each([
+	"ajaxStart",
+	"ajaxStop",
+	"ajaxComplete",
+	"ajaxError",
+	"ajaxSuccess",
+	"ajaxSend"
+], function(_, type){
+	aQuery.fn[type] = function(callback){
+		return this.on(type, fn);
+	}
+})
+
+
+</script>

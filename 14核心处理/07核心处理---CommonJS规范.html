@@ -1,0 +1,108 @@
+<meta charset="UTF-8">
+<title> 核心处理--- CommonJS 规范</title>
+
+<script>
+
+// 在 CommonJS 中，有一个全局性方法 require()，用于加载模块
+// 假设有一个 Math.js 模块，就可以这样加载
+
+// var math = require('Math');
+// console.log(math)
+
+// 模块引用 require
+// 模块定义 exports
+// 模块标识 module
+
+// 浏览器不兼容 CommonJS 的根本原因，在于缺少四个Node.js环境的变量
+// module
+// exports
+// require
+// global
+
+// 也就是说在浏览器不认识这四个全局的变量
+
+// 这个是在 Node 环境下运行的 
+// console.log(Module)
+// //=>
+// Module {
+//   id: '<repl>',
+//   exports: {},
+//   parent: undefined,
+//   filename: null,
+//   loaded: false,
+//   children: [],
+//   paths:
+//    [ 'C:\\Users\\Qlover\\repl\\node_modules',
+//      'C:\\Users\\Qlover\\node_modules',
+//      'C:\\Users\\node_modules',
+//      'C:\\node_modules',
+//      'C:\\Users\\Qlover\\.node_modules',
+//      'C:\\Users\\Qlover\\.node_libraries',
+//      'E:\\Environment\\NodeJS\\lib\\node' ] }
+// 其它的也是一样，
+
+var module = {
+	exports: {}
+};
+
+(function _ii(module, exports) {
+	exports.multiply = function(n) {
+		return n * 1000
+	};
+}(module, module.exports))
+
+var f = module.exports.multiply;
+console.log(f(5)) //=> 5000
+
+// _ii 立即执行函数中提供两个对象
+// module, exports
+// 模块就放在这个立即执行函数里面
+// 模块的输出值放在 module.exports 之中，这样就实现了模块的加载
+
+// Browserify 是目前最常用的 CommonJS 格式转换的工具
+// 接下来用这个工具实现一个加载模块的功能 
+// 首先要在 Node 下安装
+
+// $ npm install browser-unpack -g
+
+
+
+// 新建两个文件
+// commonjs-foo.js
+/*
+module.exports = function(x) {
+  console.log(x);
+};
+*/
+// commonjs-main.js
+/*
+var foo = require("./foo");
+foo("Hi");
+ */
+
+// 将 main 转换成浏览器可用的格式
+
+// $ browserify commonjs-main.js > compiled.js
+// 打开 compiled.js 
+// 没错，那个压缩后的就是 main.js 的 commonJS 规范
+// 最后引用 compiled.js 
+// 这就是实现了 commonJS 规范的 JS
+</script>
+<script src="compiled.js"></script><!-- //=> Hi commonjs -->
+
+<script src="commonjs-require.js"></script>
+<script>
+// 这里在提供一种方法
+// https://github.com/ruanyf/tiny-browser-require、
+// commonjs-require.js 引入
+require.register("./commonjs-foo.js", function(module, exports, require){
+  module.exports = function(x) {
+    console.log(x);
+  };
+});
+
+var foo = require("./commonjs-foo.js");
+foo("Hi commonjs 2");//=> hi commonjs 2
+// 只模拟了 require 、module 、exports 三个变量
+// 如果模块还用到了 global 或者其他 Node 专有变量（比如 process），就通过立即执行函数提供即可
+</script>

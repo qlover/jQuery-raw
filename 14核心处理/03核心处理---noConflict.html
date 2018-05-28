@@ -1,0 +1,41 @@
+<meta charset="UTF-8">
+<title> 核心处理--- noConflict </title>
+<script src="../jquery-3.1.1.js"></script>
+
+
+<script>
+// $.noConflict(deep)
+// 放弃 jQuery $ 的控制
+// deep 是还从全局中去掉 jQuery 
+// 返回 jQuery 
+
+console.log(jQuery().jquery); //=> '3.1.1'
+console.log($().jquery); //=> '3.1.1'
+
+// 放弃 $ 
+$.noConflict();
+console.log(jQuery().jquery); //=> '3.1.1'
+// console.log($().jquery); // $ not is a function
+// 也就是说当前的 jQuery 别名不再是 $
+
+// 放弃 jQuery
+// 	会返回 jQuery 
+// 	所以可以在外面为 jQuery 取别名
+window._$j = jQuery.noConflict(true);
+// console.log(jQuery().jquery); // jQuery is not a function
+
+console.log(_$j().jquery);//=> '3.1.1'
+
+// jQuery 中还有一个方法，也可以在外部指定 jQuery 的别名，就是核心 ready() 方法
+// ready() 中的整个处理函数会接收一个参数，而这个参数就是 jQuery
+
+// 前面已经释放掉了 jQuery 和 $
+
+// 事件处理函数参数的 $, 也是一个 jQuery 的别名
+_$j(document).ready(function($) {
+	console.log($().jquery);//=> '3.1.1'
+	// 一样的使用 jQuery 
+	$('body').css({background: '#f00'})
+});
+
+</script>

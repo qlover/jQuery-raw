@@ -1,0 +1,133 @@
+<meta charset="UTF-8">
+<title> 核心处理--- 源生规范</title>
+
+<script>
+// jQuery 中不仅兼容了 CommonJS 还兼容了 AMD 规范，并且还检查了 CMD 的规范
+// 而这三个规范的兼容，则就是 jQuery 最后的一个框架，同时兼容
+
+// CommonJS
+// 有三个全局变量 module, exports, require (global 在 NodeJS 中讨论)
+// 但 AMD 中也有 require ，所以不用 require 检测
+// 提供对外接口：
+// 	1. exports
+
+/*
+// 文件名: foo.js
+// 依赖
+var $ = require('jquery');
+// 方法
+function foo(){};
+ 
+// 暴露公共方法（一个）
+module.exports = foo;
+
+ */
+
+// AMD
+// AMD 也有两个全局变量， require, define 但 与 CommonJS 都有 require 所以检测 define
+// 公有属性 define.amd
+// 提供对外接口
+// 	1. exports.XXX =
+// 	2. return XXX
+
+/*
+// 文件名: foo.js
+// 依赖
+define(['jquery'], function ($) {
+    //    方法
+    function foo(){};
+ 
+    //    暴露公共方法
+    return foo;
+});
+
+ */
+
+// CMD
+// 与 AMD 类似
+// 公有属性 define.amd
+// 对外接口
+// 	1. exports.XXX
+// 	2. return XXX
+
+/*
+// 文件名: foo.js
+// 依赖
+define(['jquery'], function ($) {
+    //    方法
+    function foo(){};
+ 
+    //    暴露公共方法
+    return foo;
+});
+*/
+</script>
+
+<script>
+// CMD 与 AMD
+// 返回都可以用 return 
+/*
+function MyModule() {
+    // ...
+}
+
+if(typeof define === `function` && define.amd) {
+    define(function() { return MyModule; });
+}
+
+ */
+</script>
+
+<script>
+// CommonJS 与 CMD
+/*
+;
+(function(factory) {
+	// CommonJS/NodeJS
+	if (typeof require === 'function' && typeof exports === "object" && typeof module === "object") {
+		factory(require, exports, module);
+	}
+	// CMD/SeaJS
+	else if (typeof define === "function") {
+		define(factory);
+	}
+	// No module loader
+	else {
+		factory(function() {}, window['idcard'] = {}, {});
+	}
+
+}(function(require, exports, module) {
+	// something...
+	exports.hello = function() {
+		return 'hello212';
+	}
+}));
+ */
+</script>
+
+<script>
+// UMD 通用规范
+/*
+// 这个模式略难看，但是它兼容了AMD和CommonJS，同时还支持老式的“全局”变量规范
+
+(function(root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD
+		define(['jquery'], factory);
+	} else if (typeof exports === 'object') {
+		// Node, CommonJS之类的
+		module.exports = factory(require('jquery'));
+	} else {
+		// 浏览器全局变量(root 即 window)
+		root.returnExports = factory(root.jQuery);
+	}
+}(this, function($) {
+	//    方法
+	function myFunc() {};
+
+	//    暴露公共方法
+	return myFunc;
+}));
+
+ */
+</script>

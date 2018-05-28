@@ -1,0 +1,62 @@
+<meta charset="UTF-8">
+<title> 核心处理--- AMD 规范</title>
+
+<script>
+// CommonJS 是同步的加载
+// 也就是说，如果加载时间很长，整个应用就会停在那里等
+// AMD 则是解决同步加载的另一种规范
+// CommonJS 是主要为了 JS 在后端的表现制定的，他是不适合前端
+// AMD 则是主要为前面的表现制定的
+
+
+// AMD 也采用require([module], callback)语句加载模块，但是不同于CommonJS，它要求两个参数
+// 第一个参数[module]，是一个数组，里面的成员就是要加载的模块
+// 第二个参数callback，则是加载成功之后的回调函数
+
+// 主要有两个Javascript库实现了AMD规范：require.js 和 curl.js
+
+
+// requireJS 
+// 1. 实现js文件的异步加载，避免网页失去响应；
+// 2. 管理模块之间的依赖性，便于代码的编写和维护。
+// 将 require.js 加载
+</script>
+<!-- <script src="js/require.js"></script> -->
+<!-- 避免网页失去响应 IE 不支持 async -->
+<script src="js/require.js" defer async="true" ></script>
+
+<!-- 加载 AMD-main 主模块 -->
+<script  data-main="js/AMD-main"></script>
+
+
+<script>
+// require([modules], callbacks([modules]))
+// [modules] 表示所依赖的模块，
+
+
+// 加载模块
+
+// 比如，加载一个 jQuery 模块
+// 见 AMD-main.js
+
+
+
+// 定义模块
+
+// 如果一个模块不依赖其他模块，那么可以直接定义在 define() 函数之中
+// 定义见 math.js 
+
+// 加载它 见 AMD-main.js
+
+
+
+// 其实，也不难看出， AMD 就只有二个接口，一个定义，一个加载
+// 而定义 define(id, dependencies, factory)
+// 	id 模块名，省略则为文件名
+// 	dependencies 依赖数组，就是该模块需要的依赖
+// 	factory 工厂方法，为模块初始化要执行的函数或对象
+
+
+
+// 剩下就是 CMD 该规范就是说了，和 AMD 很类似，主要就是 sea.js 实现了它
+</script>
